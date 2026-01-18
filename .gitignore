@@ -1,0 +1,50 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# AI assistants
+.crush/
+.cursor/
+.aider/
+.copilot/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Build output
+bin/
+frontend/admin-ui/node_modules/
+frontend/voice-ui/node_modules/
+frontend/admin-ui/dist/
+frontend/voice-ui/dist/
+server/frontend/admin-ui/*
+!server/frontend/admin-ui/.gitkeep
+server/frontend/voice-ui/*
+!server/frontend/voice-ui/.gitkeep
+server/models/wakeword/*
+!server/models/wakeword/.gitkeep
+server/models/auxiliary/*
+!server/models/auxiliary/.gitkeep
+
+# Local config (use config.example.yaml as template)
+config.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (download with make download-model)
+# Auxiliary models (mel-spectrogram, speech-embedding, VAD, etc)
+models/auxiliary/*.onnx
+
+# Test audio
+test/
+
+# Runtime data (admin store — ignore everything except seeds)
+data/*
+!data/seeds/

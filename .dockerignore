@@ -1,0 +1,38 @@
+# Git and development
+.git/
+.github/
+.agents/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Config files (except example)
+*.yaml
+!config.example.yaml
+!models/wakeword/wakewords.yaml
+
+# System and temporary files
+.DS_Store
+*.log
+.env
+.env.local
+*.wav
+
+# IDE
+.vscode/
+.idea/
+
+# Website (Hugo docs)
+website/
+
+# Build artifacts
+bin/
+frontend/admin-ui/node_modules/
+frontend/voice-ui/node_modules/
+frontend/admin-ui/dist/
+frontend/voice-ui/dist/
+
+# Auxiliary models (downloaded during build)
+models/auxiliary/*.onnx

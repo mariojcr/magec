@@ -1,0 +1,21 @@
+# Magec - Server Configuration
+#
+# This file configures server infrastructure only (ports, logging).
+# All resources (agents, backends, MCPs, memory providers, devices, crons)
+# are managed through the Admin API at http://localhost:8081
+#
+# On first run, visit the Admin UI to set up your agents and backends.
+
+server:
+  host: 0.0.0.0 # Use 127.0.0.1 to restrict to localhost only
+  port: 8080
+  adminPort: 8081 # Admin UI + API (separate port for security)
+
+voice:
+  ui:
+    enabled: true # Enable/disable Voice UI, voice routes and static files (default: true)
+  # onnxLibraryPath: /usr/lib/libonnxruntime.so  # Custom ONNX Runtime library path
+
+log:
+  level: info # debug, info, warn, error
+  format: console # console, json

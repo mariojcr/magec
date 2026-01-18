@@ -1,0 +1,4 @@
+{{ $src := .Get "src" }}
+{{ $alt := .Get "alt" | default "" }}
+{{ $extra := .Get "class" | default "screenshot--desktop" }}
+<img src="{{ $src | relURL }}" alt="{{ $alt }}" class="screenshot {{ $extra }}">
