@@ -18,7 +18,7 @@ import (
 // @Security     AdminAuth
 // @Router       /commands [get]
 func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
-	commands := h.store.ListCommands()
+	commands := h.store.ListRawCommands()
 	writeJSON(w, http.StatusOK, commands)
 }
 
@@ -34,7 +34,7 @@ func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
 // @Router       /commands/{id} [get]
 func (h *Handler) getCommand(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	c, ok := h.store.GetCommand(id)
+	c, ok := h.store.GetRawCommand(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "command not found")
 		return
@@ -100,7 +100,7 @@ func (h *Handler) updateCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetCommand(id)
+	updated, _ := h.store.GetRawCommand(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 

@@ -18,7 +18,7 @@ import (
 // @Security     AdminAuth
 // @Router       /agents [get]
 func (h *Handler) listAgents(w http.ResponseWriter, r *http.Request) {
-	agents := h.store.ListAgents()
+	agents := h.store.ListRawAgents()
 	writeJSON(w, http.StatusOK, agents)
 }
 
@@ -34,7 +34,7 @@ func (h *Handler) listAgents(w http.ResponseWriter, r *http.Request) {
 // @Router       /agents/{id} [get]
 func (h *Handler) getAgent(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	a, ok := h.store.GetAgent(id)
+	a, ok := h.store.GetRawAgent(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "agent not found")
 		return
@@ -96,7 +96,7 @@ func (h *Handler) updateAgent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetAgent(id)
+	updated, _ := h.store.GetRawAgent(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -130,7 +130,7 @@ func (h *Handler) deleteAgent(w http.ResponseWriter, r *http.Request) {
 // @Router       /agents/{id}/mcps [get]
 func (h *Handler) listAgentMCPs(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	mcps, err := h.store.ResolveAgentMCPs(id)
+	mcps, err := h.store.ResolveRawAgentMCPs(id)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return

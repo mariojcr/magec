@@ -19,7 +19,7 @@ import (
 // @Security     AdminAuth
 // @Router       /flows [get]
 func (h *Handler) listFlows(w http.ResponseWriter, r *http.Request) {
-	flows := h.store.ListFlows()
+	flows := h.store.ListRawFlows()
 	writeJSON(w, http.StatusOK, flows)
 }
 
@@ -35,7 +35,7 @@ func (h *Handler) listFlows(w http.ResponseWriter, r *http.Request) {
 // @Router       /flows/{id} [get]
 func (h *Handler) getFlow(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	f, ok := h.store.GetFlow(id)
+	f, ok := h.store.GetRawFlow(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "flow not found")
 		return
@@ -105,7 +105,7 @@ func (h *Handler) updateFlow(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetFlow(id)
+	updated, _ := h.store.GetRawFlow(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 

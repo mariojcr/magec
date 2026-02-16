@@ -72,11 +72,35 @@ func (s *Store) OnChange() <-chan struct{} {
 	return ch
 }
 
-// Data returns a copy of the current store data.
+// Data returns a copy of the current (expanded) store data for runtime use.
 func (s *Store) Data() StoreData {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.data
+}
+
+// RawData returns a copy of the unexpanded store data (with $VAR references
+// intact). Safe for API responses — never contains resolved secrets.
+func (s *Store) RawData() StoreData {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.rawData
+}
+
+// expandStruct takes any struct, marshals it to JSON, expands environment
+// variables, and unmarshals back. This mirrors what loadFromDisk does for the
+// entire store file, but scoped to a single entity.
+func expandStruct[T any](v T) T {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return v
+	}
+	expanded := os.ExpandEnv(string(data))
+	var out T
+	if err := json.Unmarshal([]byte(expanded), &out); err != nil {
+		return v
+	}
+	return out
 }
 
 // --- Settings ---
@@ -118,12 +142,31 @@ func (s *Store) GetBackend(id string) (BackendDefinition, bool) {
 	return BackendDefinition{}, false
 }
 
+func (s *Store) ListRawBackends() []BackendDefinition {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]BackendDefinition, len(s.rawData.Backends))
+	copy(result, s.rawData.Backends)
+	return result
+}
+
+func (s *Store) GetRawBackend(id string) (BackendDefinition, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, b := range s.rawData.Backends {
+		if b.ID == id {
+			return b, true
+		}
+	}
+	return BackendDefinition{}, false
+}
+
 func (s *Store) CreateBackend(b BackendDefinition) (BackendDefinition, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	b.ID = generateID()
-	s.data.Backends = append(s.data.Backends, b)
+	s.data.Backends = append(s.data.Backends, expandStruct(b))
 	s.rawData.Backends = append(s.rawData.Backends, b)
 	return b, s.persist()
 }
@@ -135,7 +178,7 @@ func (s *Store) UpdateBackend(id string, b BackendDefinition) error {
 	for i, existing := range s.data.Backends {
 		if existing.ID == id {
 			b.ID = id
-			s.data.Backends[i] = b
+			s.data.Backends[i] = expandStruct(b)
 			s.rawData.Backends[i] = b
 			return s.persist()
 		}
@@ -159,6 +202,8 @@ func (s *Store) DeleteBackend(id string) error {
 
 // --- Memory Providers ---
 
+// --- Memory Providers ---
+
 func (s *Store) ListMemoryProviders() []MemoryProvider {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -178,12 +223,35 @@ func (s *Store) GetMemoryProvider(id string) (MemoryProvider, bool) {
 	return MemoryProvider{}, false
 }
 
+// ListRawMemoryProviders returns providers with original $VAR references
+// intact (from rawData). Safe for API responses.
+func (s *Store) ListRawMemoryProviders() []MemoryProvider {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]MemoryProvider, len(s.rawData.MemoryProviders))
+	copy(result, s.rawData.MemoryProviders)
+	return result
+}
+
+// GetRawMemoryProvider returns a single provider with original $VAR references
+// intact (from rawData). Safe for API responses.
+func (s *Store) GetRawMemoryProvider(id string) (MemoryProvider, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, m := range s.rawData.MemoryProviders {
+		if m.ID == id {
+			return m, true
+		}
+	}
+	return MemoryProvider{}, false
+}
+
 func (s *Store) CreateMemoryProvider(m MemoryProvider) (MemoryProvider, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	m.ID = generateID()
-	s.data.MemoryProviders = append(s.data.MemoryProviders, m)
+	s.data.MemoryProviders = append(s.data.MemoryProviders, expandStruct(m))
 	s.rawData.MemoryProviders = append(s.rawData.MemoryProviders, m)
 	return m, s.persist()
 }
@@ -195,7 +263,7 @@ func (s *Store) UpdateMemoryProvider(id string, m MemoryProvider) error {
 	for i, existing := range s.data.MemoryProviders {
 		if existing.ID == id {
 			m.ID = id
-			s.data.MemoryProviders[i] = m
+			s.data.MemoryProviders[i] = expandStruct(m)
 			s.rawData.MemoryProviders[i] = m
 			return s.persist()
 		}
@@ -238,12 +306,31 @@ func (s *Store) GetMCPServer(id string) (MCPServer, bool) {
 	return MCPServer{}, false
 }
 
+func (s *Store) ListRawMCPServers() []MCPServer {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]MCPServer, len(s.rawData.MCPServers))
+	copy(result, s.rawData.MCPServers)
+	return result
+}
+
+func (s *Store) GetRawMCPServer(id string) (MCPServer, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, m := range s.rawData.MCPServers {
+		if m.ID == id {
+			return m, true
+		}
+	}
+	return MCPServer{}, false
+}
+
 func (s *Store) CreateMCPServer(m MCPServer) (MCPServer, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	m.ID = generateID()
-	s.data.MCPServers = append(s.data.MCPServers, m)
+	s.data.MCPServers = append(s.data.MCPServers, expandStruct(m))
 	s.rawData.MCPServers = append(s.rawData.MCPServers, m)
 	return m, s.persist()
 }
@@ -255,7 +342,7 @@ func (s *Store) UpdateMCPServer(id string, m MCPServer) error {
 	for i, existing := range s.data.MCPServers {
 		if existing.ID == id {
 			m.ID = id
-			s.data.MCPServers[i] = m
+			s.data.MCPServers[i] = expandStruct(m)
 			s.rawData.MCPServers[i] = m
 			return s.persist()
 		}
@@ -298,6 +385,25 @@ func (s *Store) GetAgent(id string) (AgentDefinition, bool) {
 	return AgentDefinition{}, false
 }
 
+func (s *Store) ListRawAgents() []AgentDefinition {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]AgentDefinition, len(s.rawData.Agents))
+	copy(result, s.rawData.Agents)
+	return result
+}
+
+func (s *Store) GetRawAgent(id string) (AgentDefinition, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, a := range s.rawData.Agents {
+		if a.ID == id {
+			return a, true
+		}
+	}
+	return AgentDefinition{}, false
+}
+
 func (s *Store) CreateAgent(a AgentDefinition) (AgentDefinition, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -306,7 +412,7 @@ func (s *Store) CreateAgent(a AgentDefinition) (AgentDefinition, error) {
 	if a.MCPServers == nil {
 		a.MCPServers = []string{}
 	}
-	s.data.Agents = append(s.data.Agents, a)
+	s.data.Agents = append(s.data.Agents, expandStruct(a))
 	s.rawData.Agents = append(s.rawData.Agents, a)
 	return a, s.persist()
 }
@@ -321,7 +427,7 @@ func (s *Store) UpdateAgent(id string, a AgentDefinition) error {
 			if a.MCPServers == nil {
 				a.MCPServers = []string{}
 			}
-			s.data.Agents[i] = a
+			s.data.Agents[i] = expandStruct(a)
 			s.rawData.Agents[i] = a
 			return s.persist()
 		}
@@ -425,6 +531,39 @@ func (s *Store) ResolveAgentMCPs(agentID string) ([]MCPServer, error) {
 	return result, nil
 }
 
+// ResolveRawAgentMCPs returns the unexpanded MCPServer definitions for an
+// agent's linked MCPs. Safe for API responses.
+func (s *Store) ResolveRawAgentMCPs(agentID string) ([]MCPServer, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var agentMCPIDs []string
+	found := false
+	for _, a := range s.rawData.Agents {
+		if a.ID == agentID {
+			agentMCPIDs = a.MCPServers
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("agent %q not found", agentID)
+	}
+
+	mcpMap := make(map[string]MCPServer, len(s.rawData.MCPServers))
+	for _, m := range s.rawData.MCPServers {
+		mcpMap[m.ID] = m
+	}
+
+	result := make([]MCPServer, 0, len(agentMCPIDs))
+	for _, id := range agentMCPIDs {
+		if m, ok := mcpMap[id]; ok {
+			result = append(result, m)
+		}
+	}
+	return result, nil
+}
+
 // --- Clients ---
 
 // generateToken creates a random API token with the "mgc_" prefix.
@@ -453,6 +592,25 @@ func (s *Store) GetClient(id string) (ClientDefinition, bool) {
 	return ClientDefinition{}, false
 }
 
+func (s *Store) ListRawClients() []ClientDefinition {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]ClientDefinition, len(s.rawData.Clients))
+	copy(result, s.rawData.Clients)
+	return result
+}
+
+func (s *Store) GetRawClient(id string) (ClientDefinition, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.rawData.Clients {
+		if c.ID == id {
+			return c, true
+		}
+	}
+	return ClientDefinition{}, false
+}
+
 // GetClientByToken looks up a client by its API token. Used by the auth middleware.
 func (s *Store) GetClientByToken(token string) (ClientDefinition, bool) {
 	s.mu.RLock()
@@ -474,7 +632,7 @@ func (s *Store) CreateClient(c ClientDefinition) (ClientDefinition, error) {
 	if c.AllowedAgents == nil {
 		c.AllowedAgents = []string{}
 	}
-	s.data.Clients = append(s.data.Clients, c)
+	s.data.Clients = append(s.data.Clients, expandStruct(c))
 	s.rawData.Clients = append(s.rawData.Clients, c)
 	return c, s.persist()
 }
@@ -490,7 +648,7 @@ func (s *Store) UpdateClient(id string, c ClientDefinition) error {
 			if c.AllowedAgents == nil {
 				c.AllowedAgents = []string{}
 			}
-			s.data.Clients[i] = c
+			s.data.Clients[i] = expandStruct(c)
 			s.rawData.Clients[i] = c
 			return s.persist()
 		}
@@ -522,7 +680,7 @@ func (s *Store) RegenerateClientToken(id string) (ClientDefinition, error) {
 			newToken := generateToken()
 			s.data.Clients[i].Token = newToken
 			s.rawData.Clients[i].Token = newToken
-			return s.data.Clients[i], s.persist()
+			return s.rawData.Clients[i], s.persist()
 		}
 	}
 	return ClientDefinition{}, fmt.Errorf("client %q not found", id)
@@ -549,12 +707,31 @@ func (s *Store) GetFlow(id string) (FlowDefinition, bool) {
 	return FlowDefinition{}, false
 }
 
+func (s *Store) ListRawFlows() []FlowDefinition {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]FlowDefinition, len(s.rawData.Flows))
+	copy(result, s.rawData.Flows)
+	return result
+}
+
+func (s *Store) GetRawFlow(id string) (FlowDefinition, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, f := range s.rawData.Flows {
+		if f.ID == id {
+			return f, true
+		}
+	}
+	return FlowDefinition{}, false
+}
+
 func (s *Store) CreateFlow(f FlowDefinition) (FlowDefinition, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	f.ID = generateID()
-	s.data.Flows = append(s.data.Flows, f)
+	s.data.Flows = append(s.data.Flows, expandStruct(f))
 	s.rawData.Flows = append(s.rawData.Flows, f)
 	return f, s.persist()
 }
@@ -566,7 +743,7 @@ func (s *Store) UpdateFlow(id string, f FlowDefinition) error {
 	for i, existing := range s.data.Flows {
 		if existing.ID == id {
 			f.ID = id
-			s.data.Flows[i] = f
+			s.data.Flows[i] = expandStruct(f)
 			s.rawData.Flows[i] = f
 			return s.persist()
 		}
@@ -609,12 +786,31 @@ func (s *Store) GetCommand(id string) (Command, bool) {
 	return Command{}, false
 }
 
+func (s *Store) ListRawCommands() []Command {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Command, len(s.rawData.Commands))
+	copy(result, s.rawData.Commands)
+	return result
+}
+
+func (s *Store) GetRawCommand(id string) (Command, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.rawData.Commands {
+		if c.ID == id {
+			return c, true
+		}
+	}
+	return Command{}, false
+}
+
 func (s *Store) CreateCommand(c Command) (Command, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	c.ID = generateID()
-	s.data.Commands = append(s.data.Commands, c)
+	s.data.Commands = append(s.data.Commands, expandStruct(c))
 	s.rawData.Commands = append(s.rawData.Commands, c)
 	return c, s.persist()
 }
@@ -626,7 +822,7 @@ func (s *Store) UpdateCommand(id string, c Command) error {
 	for i, existing := range s.data.Commands {
 		if existing.ID == id {
 			c.ID = id
-			s.data.Commands[i] = c
+			s.data.Commands[i] = expandStruct(c)
 			s.rawData.Commands[i] = c
 			return s.persist()
 		}

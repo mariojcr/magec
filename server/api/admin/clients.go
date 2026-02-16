@@ -19,7 +19,7 @@ import (
 // @Security     AdminAuth
 // @Router       /clients [get]
 func (h *Handler) listClients(w http.ResponseWriter, r *http.Request) {
-	clients := h.store.ListClients()
+	clients := h.store.ListRawClients()
 	writeJSON(w, http.StatusOK, clients)
 }
 
@@ -35,7 +35,7 @@ func (h *Handler) listClients(w http.ResponseWriter, r *http.Request) {
 // @Router       /clients/{id} [get]
 func (h *Handler) getClient(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	c, ok := h.store.GetClient(id)
+	c, ok := h.store.GetRawClient(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "client not found")
 		return
@@ -115,7 +115,7 @@ func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetClient(id)
+	updated, _ := h.store.GetRawClient(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 

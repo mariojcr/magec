@@ -18,7 +18,7 @@ import (
 // @Security     AdminAuth
 // @Router       /mcps [get]
 func (h *Handler) listMCPServers(w http.ResponseWriter, r *http.Request) {
-	mcps := h.store.ListMCPServers()
+	mcps := h.store.ListRawMCPServers()
 	writeJSON(w, http.StatusOK, mcps)
 }
 
@@ -34,7 +34,7 @@ func (h *Handler) listMCPServers(w http.ResponseWriter, r *http.Request) {
 // @Router       /mcps/{id} [get]
 func (h *Handler) getMCPServer(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	m, ok := h.store.GetMCPServer(id)
+	m, ok := h.store.GetRawMCPServer(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "MCP server not found")
 		return
@@ -96,7 +96,7 @@ func (h *Handler) updateMCPServer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetMCPServer(id)
+	updated, _ := h.store.GetRawMCPServer(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 

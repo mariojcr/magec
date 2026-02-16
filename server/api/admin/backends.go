@@ -18,7 +18,7 @@ import (
 // @Security     AdminAuth
 // @Router       /backends [get]
 func (h *Handler) listBackends(w http.ResponseWriter, r *http.Request) {
-	backends := h.store.ListBackends()
+	backends := h.store.ListRawBackends()
 	writeJSON(w, http.StatusOK, backends)
 }
 
@@ -34,7 +34,7 @@ func (h *Handler) listBackends(w http.ResponseWriter, r *http.Request) {
 // @Router       /backends/{id} [get]
 func (h *Handler) getBackend(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	b, ok := h.store.GetBackend(id)
+	b, ok := h.store.GetRawBackend(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "backend not found")
 		return
@@ -100,7 +100,7 @@ func (h *Handler) updateBackend(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetBackend(id)
+	updated, _ := h.store.GetRawBackend(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 

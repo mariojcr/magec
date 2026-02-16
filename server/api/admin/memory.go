@@ -22,7 +22,7 @@ import (
 // @Security     AdminAuth
 // @Router       /memory [get]
 func (h *Handler) listMemoryProviders(w http.ResponseWriter, r *http.Request) {
-	providers := h.store.ListMemoryProviders()
+	providers := h.store.ListRawMemoryProviders()
 	writeJSON(w, http.StatusOK, providers)
 }
 
@@ -38,7 +38,7 @@ func (h *Handler) listMemoryProviders(w http.ResponseWriter, r *http.Request) {
 // @Router       /memory/{id} [get]
 func (h *Handler) getMemoryProvider(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	m, ok := h.store.GetMemoryProvider(id)
+	m, ok := h.store.GetRawMemoryProvider(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "memory provider not found")
 		return
@@ -116,7 +116,7 @@ func (h *Handler) updateMemoryProvider(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	updated, _ := h.store.GetMemoryProvider(id)
+	updated, _ := h.store.GetRawMemoryProvider(id)
 	writeJSON(w, http.StatusOK, updated)
 }
 
