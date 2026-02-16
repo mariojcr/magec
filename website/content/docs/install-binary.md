@@ -14,7 +14,6 @@ Download the latest release for your platform from the [GitHub Releases](https:/
 |----------|------|
 | Linux (x86_64) | `magec-linux-amd64.tar.gz` |
 | Linux (ARM64) | `magec-linux-arm64.tar.gz` |
-| macOS (Intel) | `magec-darwin-amd64.tar.gz` |
 | macOS (Apple Silicon) | `magec-darwin-arm64.tar.gz` |
 | Windows (x86_64) | `magec-windows-amd64.zip` |
 

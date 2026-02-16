@@ -12,9 +12,17 @@ import (
 )
 
 // Store manages agent, backend, and MCP configurations with JSON persistence.
+// It maintains two copies of the data:
+//   - data: expanded (env vars resolved, secrets decrypted) — used at runtime
+//   - rawData: unexpanded (original ${VAR} references, secrets encrypted) — written to disk
+//
+// Mutations from the API update both copies identically. Data loaded from disk
+// with ${VAR} references is preserved in rawData so that persist() never writes
+// expanded secrets or API keys to the store file.
 type Store struct {
 	mu       sync.RWMutex
 	data     StoreData
+	rawData  StoreData
 	filePath string
 	encryptionKey string
 
@@ -25,19 +33,21 @@ type Store struct {
 // New creates a new Store. If filePath is non-empty and the file exists, it loads from it.
 // The encryptionKey is used to encrypt/decrypt secret values at rest. If empty, secrets are stored in cleartext.
 func New(filePath string, encryptionKey string) (*Store, error) {
+	defaults := StoreData{
+		Backends:        []BackendDefinition{},
+		MemoryProviders: []MemoryProvider{},
+		MCPServers:      []MCPServer{},
+		Agents:          []AgentDefinition{},
+		Clients:         []ClientDefinition{},
+		Flows:           []FlowDefinition{},
+		Commands:        []Command{},
+		Secrets:         []Secret{},
+	}
 	s := &Store{
 		filePath:      filePath,
 		encryptionKey: encryptionKey,
-		data: StoreData{
-			Backends:        []BackendDefinition{},
-			MemoryProviders: []MemoryProvider{},
-			MCPServers:      []MCPServer{},
-			Agents:          []AgentDefinition{},
-			Clients:         []ClientDefinition{},
-			Flows:           []FlowDefinition{},
-			Commands:        []Command{},
-			Secrets:         []Secret{},
-		},
+		data:          defaults,
+		rawData:       defaults,
 	}
 
 	if filePath != "" {
@@ -83,6 +93,7 @@ func (s *Store) UpdateSettings(settings Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.data.Settings = settings
+	s.rawData.Settings = settings
 	return s.persist()
 }
 
@@ -113,6 +124,7 @@ func (s *Store) CreateBackend(b BackendDefinition) (BackendDefinition, error) {
 
 	b.ID = generateID()
 	s.data.Backends = append(s.data.Backends, b)
+	s.rawData.Backends = append(s.rawData.Backends, b)
 	return b, s.persist()
 }
 
@@ -124,6 +136,7 @@ func (s *Store) UpdateBackend(id string, b BackendDefinition) error {
 		if existing.ID == id {
 			b.ID = id
 			s.data.Backends[i] = b
+			s.rawData.Backends[i] = b
 			return s.persist()
 		}
 	}
@@ -137,6 +150,7 @@ func (s *Store) DeleteBackend(id string) error {
 	for i, existing := range s.data.Backends {
 		if existing.ID == id {
 			s.data.Backends = append(s.data.Backends[:i], s.data.Backends[i+1:]...)
+			s.rawData.Backends = append(s.rawData.Backends[:i], s.rawData.Backends[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -170,6 +184,7 @@ func (s *Store) CreateMemoryProvider(m MemoryProvider) (MemoryProvider, error) {
 
 	m.ID = generateID()
 	s.data.MemoryProviders = append(s.data.MemoryProviders, m)
+	s.rawData.MemoryProviders = append(s.rawData.MemoryProviders, m)
 	return m, s.persist()
 }
 
@@ -181,6 +196,7 @@ func (s *Store) UpdateMemoryProvider(id string, m MemoryProvider) error {
 		if existing.ID == id {
 			m.ID = id
 			s.data.MemoryProviders[i] = m
+			s.rawData.MemoryProviders[i] = m
 			return s.persist()
 		}
 	}
@@ -194,6 +210,7 @@ func (s *Store) DeleteMemoryProvider(id string) error {
 	for i, existing := range s.data.MemoryProviders {
 		if existing.ID == id {
 			s.data.MemoryProviders = append(s.data.MemoryProviders[:i], s.data.MemoryProviders[i+1:]...)
+			s.rawData.MemoryProviders = append(s.rawData.MemoryProviders[:i], s.rawData.MemoryProviders[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -227,6 +244,7 @@ func (s *Store) CreateMCPServer(m MCPServer) (MCPServer, error) {
 
 	m.ID = generateID()
 	s.data.MCPServers = append(s.data.MCPServers, m)
+	s.rawData.MCPServers = append(s.rawData.MCPServers, m)
 	return m, s.persist()
 }
 
@@ -238,6 +256,7 @@ func (s *Store) UpdateMCPServer(id string, m MCPServer) error {
 		if existing.ID == id {
 			m.ID = id
 			s.data.MCPServers[i] = m
+			s.rawData.MCPServers[i] = m
 			return s.persist()
 		}
 	}
@@ -251,6 +270,7 @@ func (s *Store) DeleteMCPServer(id string) error {
 	for i, existing := range s.data.MCPServers {
 		if existing.ID == id {
 			s.data.MCPServers = append(s.data.MCPServers[:i], s.data.MCPServers[i+1:]...)
+			s.rawData.MCPServers = append(s.rawData.MCPServers[:i], s.rawData.MCPServers[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -287,6 +307,7 @@ func (s *Store) CreateAgent(a AgentDefinition) (AgentDefinition, error) {
 		a.MCPServers = []string{}
 	}
 	s.data.Agents = append(s.data.Agents, a)
+	s.rawData.Agents = append(s.rawData.Agents, a)
 	return a, s.persist()
 }
 
@@ -301,6 +322,7 @@ func (s *Store) UpdateAgent(id string, a AgentDefinition) error {
 				a.MCPServers = []string{}
 			}
 			s.data.Agents[i] = a
+			s.rawData.Agents[i] = a
 			return s.persist()
 		}
 	}
@@ -314,6 +336,7 @@ func (s *Store) DeleteAgent(id string) error {
 	for i, existing := range s.data.Agents {
 		if existing.ID == id {
 			s.data.Agents = append(s.data.Agents[:i], s.data.Agents[i+1:]...)
+			s.rawData.Agents = append(s.rawData.Agents[:i], s.rawData.Agents[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -344,6 +367,7 @@ func (s *Store) LinkAgentMCP(agentID, mcpID string) error {
 				return fmt.Errorf("MCP %q already linked to agent %q", mcpID, agentID)
 			}
 			s.data.Agents[i].MCPServers = append(s.data.Agents[i].MCPServers, mcpID)
+			s.rawData.Agents[i].MCPServers = append(s.rawData.Agents[i].MCPServers, mcpID)
 			return s.persist()
 		}
 	}
@@ -362,6 +386,7 @@ func (s *Store) UnlinkAgentMCP(agentID, mcpID string) error {
 				return fmt.Errorf("MCP %q not linked to agent %q", mcpID, agentID)
 			}
 			s.data.Agents[i].MCPServers = slices.Delete(a.MCPServers, idx, idx+1)
+			s.rawData.Agents[i].MCPServers = slices.Delete(s.rawData.Agents[i].MCPServers, idx, idx+1)
 			return s.persist()
 		}
 	}
@@ -450,6 +475,7 @@ func (s *Store) CreateClient(c ClientDefinition) (ClientDefinition, error) {
 		c.AllowedAgents = []string{}
 	}
 	s.data.Clients = append(s.data.Clients, c)
+	s.rawData.Clients = append(s.rawData.Clients, c)
 	return c, s.persist()
 }
 
@@ -465,6 +491,7 @@ func (s *Store) UpdateClient(id string, c ClientDefinition) error {
 				c.AllowedAgents = []string{}
 			}
 			s.data.Clients[i] = c
+			s.rawData.Clients[i] = c
 			return s.persist()
 		}
 	}
@@ -478,6 +505,7 @@ func (s *Store) DeleteClient(id string) error {
 	for i, existing := range s.data.Clients {
 		if existing.ID == id {
 			s.data.Clients = append(s.data.Clients[:i], s.data.Clients[i+1:]...)
+			s.rawData.Clients = append(s.rawData.Clients[:i], s.rawData.Clients[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -491,7 +519,9 @@ func (s *Store) RegenerateClientToken(id string) (ClientDefinition, error) {
 
 	for i, existing := range s.data.Clients {
 		if existing.ID == id {
-			s.data.Clients[i].Token = generateToken()
+			newToken := generateToken()
+			s.data.Clients[i].Token = newToken
+			s.rawData.Clients[i].Token = newToken
 			return s.data.Clients[i], s.persist()
 		}
 	}
@@ -525,6 +555,7 @@ func (s *Store) CreateFlow(f FlowDefinition) (FlowDefinition, error) {
 
 	f.ID = generateID()
 	s.data.Flows = append(s.data.Flows, f)
+	s.rawData.Flows = append(s.rawData.Flows, f)
 	return f, s.persist()
 }
 
@@ -536,6 +567,7 @@ func (s *Store) UpdateFlow(id string, f FlowDefinition) error {
 		if existing.ID == id {
 			f.ID = id
 			s.data.Flows[i] = f
+			s.rawData.Flows[i] = f
 			return s.persist()
 		}
 	}
@@ -549,6 +581,7 @@ func (s *Store) DeleteFlow(id string) error {
 	for i, existing := range s.data.Flows {
 		if existing.ID == id {
 			s.data.Flows = append(s.data.Flows[:i], s.data.Flows[i+1:]...)
+			s.rawData.Flows = append(s.rawData.Flows[:i], s.rawData.Flows[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -582,6 +615,7 @@ func (s *Store) CreateCommand(c Command) (Command, error) {
 
 	c.ID = generateID()
 	s.data.Commands = append(s.data.Commands, c)
+	s.rawData.Commands = append(s.rawData.Commands, c)
 	return c, s.persist()
 }
 
@@ -593,6 +627,7 @@ func (s *Store) UpdateCommand(id string, c Command) error {
 		if existing.ID == id {
 			c.ID = id
 			s.data.Commands[i] = c
+			s.rawData.Commands[i] = c
 			return s.persist()
 		}
 	}
@@ -606,6 +641,7 @@ func (s *Store) DeleteCommand(id string) error {
 	for i, existing := range s.data.Commands {
 		if existing.ID == id {
 			s.data.Commands = append(s.data.Commands[:i], s.data.Commands[i+1:]...)
+			s.rawData.Commands = append(s.rawData.Commands[:i], s.rawData.Commands[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -646,14 +682,22 @@ func (s *Store) CreateSecret(sec Secret) (Secret, error) {
 	}
 
 	sec.ID = generateID()
+
+	rawSec := sec
 	if s.encryptionKey != "" && sec.Value != "" && !isEncrypted(sec.Value) {
 		enc, err := encryptValue(sec.Value, s.encryptionKey)
 		if err != nil {
 			return Secret{}, fmt.Errorf("encrypt: %w", err)
 		}
-		sec.Value = enc
+		rawSec.Value = enc
 	}
+
+	if sec.Key != "" && sec.Value != "" {
+		os.Setenv(sec.Key, sec.Value)
+	}
+
 	s.data.Secrets = append(s.data.Secrets, sec)
+	s.rawData.Secrets = append(s.rawData.Secrets, rawSec)
 	return sec, s.persist()
 }
 
@@ -670,14 +714,25 @@ func (s *Store) UpdateSecret(id string, sec Secret) error {
 	for i, existing := range s.data.Secrets {
 		if existing.ID == id {
 			sec.ID = id
-			if s.encryptionKey != "" && sec.Value != "" && !isEncrypted(sec.Value) {
-				enc, err := encryptValue(sec.Value, s.encryptionKey)
+			if sec.Value == "" {
+				sec.Value = existing.Value
+			}
+
+			rawSec := sec
+			if s.encryptionKey != "" && rawSec.Value != "" && !isEncrypted(rawSec.Value) {
+				enc, err := encryptValue(rawSec.Value, s.encryptionKey)
 				if err != nil {
 					return fmt.Errorf("encrypt: %w", err)
 				}
-				sec.Value = enc
+				rawSec.Value = enc
 			}
+
+			if sec.Key != "" && sec.Value != "" {
+				os.Setenv(sec.Key, sec.Value)
+			}
+
 			s.data.Secrets[i] = sec
+			s.rawData.Secrets[i] = rawSec
 			return s.persist()
 		}
 	}
@@ -691,6 +746,7 @@ func (s *Store) DeleteSecret(id string) error {
 	for i, existing := range s.data.Secrets {
 		if existing.ID == id {
 			s.data.Secrets = append(s.data.Secrets[:i], s.data.Secrets[i+1:]...)
+			s.rawData.Secrets = append(s.rawData.Secrets[:i], s.rawData.Secrets[i+1:]...)
 			return s.persist()
 		}
 	}
@@ -711,7 +767,7 @@ func (s *Store) persist() error {
 		return fmt.Errorf("failed to create store directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(s.data, "", "  ")
+	data, err := json.MarshalIndent(s.rawData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal store data: %w", err)
 	}
@@ -771,32 +827,38 @@ func (s *Store) loadFromDisk() error {
 		return err
 	}
 
-	if storeData.Backends == nil {
-		storeData.Backends = []BackendDefinition{}
-	}
-	if storeData.MemoryProviders == nil {
-		storeData.MemoryProviders = []MemoryProvider{}
-	}
-	if storeData.MCPServers == nil {
-		storeData.MCPServers = []MCPServer{}
-	}
-	if storeData.Agents == nil {
-		storeData.Agents = []AgentDefinition{}
-	}
-	if storeData.Clients == nil {
-		storeData.Clients = []ClientDefinition{}
-	}
-	if storeData.Flows == nil {
-		storeData.Flows = []FlowDefinition{}
-	}
-	if storeData.Commands == nil {
-		storeData.Commands = []Command{}
-	}
-	if storeData.Secrets == nil {
-		storeData.Secrets = []Secret{}
+	initSlices := func(sd *StoreData) {
+		if sd.Backends == nil {
+			sd.Backends = []BackendDefinition{}
+		}
+		if sd.MemoryProviders == nil {
+			sd.MemoryProviders = []MemoryProvider{}
+		}
+		if sd.MCPServers == nil {
+			sd.MCPServers = []MCPServer{}
+		}
+		if sd.Agents == nil {
+			sd.Agents = []AgentDefinition{}
+		}
+		if sd.Clients == nil {
+			sd.Clients = []ClientDefinition{}
+		}
+		if sd.Flows == nil {
+			sd.Flows = []FlowDefinition{}
+		}
+		if sd.Commands == nil {
+			sd.Commands = []Command{}
+		}
+		if sd.Secrets == nil {
+			sd.Secrets = []Secret{}
+		}
 	}
 
+	initSlices(&storeData)
+	initSlices(&raw)
+
 	s.data = storeData
+	s.rawData = raw
 
 	return nil
 }
