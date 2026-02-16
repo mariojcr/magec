@@ -65,17 +65,21 @@ services:
     depends_on:
       - ollama
     restart: "no"
-    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: [""]
     command:
+      - /bin/sh
+      - -c
       - |
         echo "Waiting for Ollama to be ready..."
-        until curl -sf http://ollama:11434/api/tags > /dev/null 2>&1; do
+        until ollama list > /dev/null 2>&1; do
           sleep 2
         done
         echo "Pulling qwen3:8b (LLM)..."
-        curl -sf http://ollama:11434/api/pull -d '{"name":"qwen3:8b"}' > /dev/null
+        ollama pull qwen3:8b
         echo "Pulling nomic-embed-text (embeddings)..."
-        curl -sf http://ollama:11434/api/pull -d '{"name":"nomic-embed-text"}' > /dev/null
+        ollama pull nomic-embed-text
         echo "Models ready."
 
   parakeet:
