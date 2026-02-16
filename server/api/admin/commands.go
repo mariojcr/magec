@@ -15,6 +15,7 @@ import (
 // @Tags         commands
 // @Produce      json
 // @Success      200  {array}  store.Command
+// @Security     AdminAuth
 // @Router       /commands [get]
 func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
 	commands := h.store.ListCommands()
@@ -29,6 +30,7 @@ func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Command ID"
 // @Success      200   {object}  store.Command
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /commands/{id} [get]
 func (h *Handler) getCommand(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -50,6 +52,7 @@ func (h *Handler) getCommand(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.Command
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /commands [post]
 func (h *Handler) createCommand(w http.ResponseWriter, r *http.Request) {
 	var c store.Command
@@ -84,6 +87,7 @@ func (h *Handler) createCommand(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.Command
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /commands/{id} [put]
 func (h *Handler) updateCommand(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -107,6 +111,7 @@ func (h *Handler) updateCommand(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Command ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /commands/{id} [delete]
 func (h *Handler) deleteCommand(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

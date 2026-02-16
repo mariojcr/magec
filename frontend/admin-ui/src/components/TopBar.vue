@@ -101,6 +101,7 @@ const sectionIconBg = computed(() => {
     indigo: 'bg-indigo-500/15',
     teal: 'bg-teal-500/15',
     lava: 'bg-lava-500/15',
+    amber: 'bg-amber-500/15',
   }
   return map[section.value.color] || map.sol
 })
@@ -115,6 +116,7 @@ const sectionIconText = computed(() => {
     indigo: 'text-indigo-400',
     teal: 'text-teal-400',
     lava: 'text-lava-400',
+    amber: 'text-amber-400',
   }
   return map[section.value.color] || map.sol
 })

@@ -3,13 +3,13 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag (e.g., latest, dev)'
+        description: "Image tag (e.g., latest, dev)"
         required: true
-        default: 'latest'
+        default: "latest"
 
 env:
   REGISTRY: ghcr.io
@@ -29,9 +29,6 @@ jobs:
             runner: ubuntu-latest
             cross: true
             zig_target: aarch64-linux-gnu
-          - goos: darwin
-            goarch: amd64
-            runner: macos-13
           - goos: darwin
             goarch: arm64
             runner: macos-latest

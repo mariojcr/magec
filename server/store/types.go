@@ -238,6 +238,17 @@ type Settings struct {
 	LongTermProvider string `json:"longTermProvider,omitempty" yaml:"longTermProvider,omitempty"`
 }
 
+// Secret represents an encrypted key-value pair used for environment variable injection.
+// The Key field is the environment variable name (e.g. OPENAI_API_KEY).
+// The Value is stored encrypted at rest when an admin password is configured.
+type Secret struct {
+	ID          string `json:"id" yaml:"id"`
+	Name        string `json:"name" yaml:"name"`
+	Key         string `json:"key" yaml:"key"`
+	Value       string `json:"value" yaml:"value"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+}
+
 // StoreData is the top-level structure persisted to disk.
 type StoreData struct {
 	Settings        Settings            `json:"settings"`
@@ -248,4 +259,5 @@ type StoreData struct {
 	Clients         []ClientDefinition  `json:"clients"`
 	Flows           []FlowDefinition    `json:"flows"`
 	Commands        []Command           `json:"commands"`
+	Secrets         []Secret            `json:"secrets"`
 }

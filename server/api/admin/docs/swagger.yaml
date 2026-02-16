@@ -34,6 +34,51 @@ definitions:
         example: redis
         type: string
     type: object
+  admin.SecretCreateRequest:
+    properties:
+      description:
+        example: Production key for GPT-4o
+        type: string
+      key:
+        example: OPENAI_API_KEY
+        type: string
+      name:
+        example: OpenAI API Key
+        type: string
+      value:
+        example: sk-...
+        type: string
+    type: object
+  admin.SecretResponse:
+    properties:
+      description:
+        example: Production key for GPT-4o
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      key:
+        example: OPENAI_API_KEY
+        type: string
+      name:
+        example: OpenAI API Key
+        type: string
+    type: object
+  admin.SecretUpdateRequest:
+    properties:
+      description:
+        example: Production key for GPT-4o
+        type: string
+      key:
+        example: OPENAI_API_KEY
+        type: string
+      name:
+        example: OpenAI API Key
+        type: string
+      value:
+        example: sk-...
+        type: string
+    type: object
   clients.Schema:
     additionalProperties: true
     type: object
@@ -267,6 +312,8 @@ definitions:
         type: object
       id:
         type: string
+      insecure:
+        type: boolean
       name:
         type: string
       systemPrompt:
@@ -373,9 +420,11 @@ definitions:
 host: localhost:8081
 info:
   contact: {}
-  description: Administration API for managing Magec multi-agent voice assistant resources.
+  description: |-
+    Administration API for managing Magec multi-agent voice assistant resources.
+    When server.adminPassword is configured, all /api/ endpoints require a Bearer token.
   title: Magec Admin API
-  version: "1.0"
+  version: "2.0"
 paths:
   /agents:
     get:
@@ -389,6 +438,8 @@ paths:
             items:
               $ref: '#/definitions/store.AgentDefinition'
             type: array
+      security:
+      - AdminAuth: []
       summary: List agents
       tags:
       - agents
@@ -418,6 +469,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create agent
       tags:
       - agents
@@ -437,6 +490,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete agent
       tags:
       - agents
@@ -459,6 +514,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get agent
       tags:
       - agents
@@ -493,6 +550,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update agent
       tags:
       - agents
@@ -518,6 +577,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: List agent MCP servers
       tags:
       - agents
@@ -542,6 +603,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Unlink MCP from agent
       tags:
       - agents
@@ -566,6 +629,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Link MCP to agent
       tags:
       - agents
@@ -581,6 +646,8 @@ paths:
             items:
               $ref: '#/definitions/store.BackendDefinition'
             type: array
+      security:
+      - AdminAuth: []
       summary: List backends
       tags:
       - backends
@@ -610,6 +677,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create backend
       tags:
       - backends
@@ -629,6 +698,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete backend
       tags:
       - backends
@@ -651,6 +722,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get backend
       tags:
       - backends
@@ -685,6 +758,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update backend
       tags:
       - backends
@@ -700,6 +775,8 @@ paths:
             items:
               $ref: '#/definitions/store.ClientDefinition'
             type: array
+      security:
+      - AdminAuth: []
       summary: List clients
       tags:
       - clients
@@ -729,6 +806,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create client
       tags:
       - clients
@@ -748,6 +827,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete client
       tags:
       - clients
@@ -770,6 +851,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get client
       tags:
       - clients
@@ -804,6 +887,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update client
       tags:
       - clients
@@ -828,6 +913,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Regenerate client token
       tags:
       - clients
@@ -844,6 +931,8 @@ paths:
             items:
               $ref: '#/definitions/admin.ClientTypeInfo'
             type: array
+      security:
+      - AdminAuth: []
       summary: List client types
       tags:
       - clients
@@ -859,6 +948,8 @@ paths:
             items:
               $ref: '#/definitions/store.Command'
             type: array
+      security:
+      - AdminAuth: []
       summary: List commands
       tags:
       - commands
@@ -888,6 +979,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create command
       tags:
       - commands
@@ -907,6 +1000,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete command
       tags:
       - commands
@@ -929,6 +1024,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get command
       tags:
       - commands
@@ -963,6 +1060,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update command
       tags:
       - commands
@@ -1003,6 +1102,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/store.PaginatedResult-store_Conversation'
+      security:
+      - AdminAuth: []
       summary: List conversations
       tags:
       - conversations
@@ -1023,6 +1124,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete conversation
       tags:
       - conversations
@@ -1055,6 +1158,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get conversation
       tags:
       - conversations
@@ -1093,6 +1198,8 @@ paths:
           description: Service Unavailable
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Reset ADK session
       tags:
       - conversations
@@ -1129,6 +1236,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update conversation summary
       tags:
       - conversations
@@ -1142,6 +1251,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Clear all conversations
       tags:
       - conversations
@@ -1156,6 +1267,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - AdminAuth: []
       summary: Conversation statistics
       tags:
       - conversations
@@ -1171,6 +1284,8 @@ paths:
             items:
               $ref: '#/definitions/store.FlowDefinition'
             type: array
+      security:
+      - AdminAuth: []
       summary: List flows
       tags:
       - flows
@@ -1200,6 +1315,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create flow
       tags:
       - flows
@@ -1219,6 +1336,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete flow
       tags:
       - flows
@@ -1241,6 +1360,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get flow
       tags:
       - flows
@@ -1275,6 +1396,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update flow
       tags:
       - flows
@@ -1290,6 +1413,8 @@ paths:
             items:
               $ref: '#/definitions/store.MCPServer'
             type: array
+      security:
+      - AdminAuth: []
       summary: List MCP servers
       tags:
       - mcps
@@ -1319,6 +1444,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create MCP server
       tags:
       - mcps
@@ -1338,6 +1465,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete MCP server
       tags:
       - mcps
@@ -1360,6 +1489,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get MCP server
       tags:
       - mcps
@@ -1394,6 +1525,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update MCP server
       tags:
       - mcps
@@ -1409,6 +1542,8 @@ paths:
             items:
               $ref: '#/definitions/store.MemoryProvider'
             type: array
+      security:
+      - AdminAuth: []
       summary: List memory providers
       tags:
       - memory
@@ -1438,6 +1573,8 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Create memory provider
       tags:
       - memory
@@ -1457,6 +1594,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Delete memory provider
       tags:
       - memory
@@ -1479,6 +1618,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Get memory provider
       tags:
       - memory
@@ -1513,6 +1654,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update memory provider
       tags:
       - memory
@@ -1536,6 +1679,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Check memory provider health
       tags:
       - memory
@@ -1552,9 +1697,141 @@ paths:
             items:
               $ref: '#/definitions/admin.MemoryTypeInfo'
             type: array
+      security:
+      - AdminAuth: []
       summary: List memory types
       tags:
       - memory
+  /secrets:
+    get:
+      description: Returns all configured secrets without their values
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/admin.SecretResponse'
+            type: array
+      security:
+      - AdminAuth: []
+      summary: List secrets
+      tags:
+      - secrets
+    post:
+      consumes:
+      - application/json
+      description: Creates a new secret. The value is encrypted at rest when adminPassword
+        is configured.
+      parameters:
+      - description: Secret definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/admin.SecretCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/admin.SecretResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Create secret
+      tags:
+      - secrets
+  /secrets/{id}:
+    delete:
+      description: Deletes a secret by ID
+      parameters:
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Delete secret
+      tags:
+      - secrets
+    get:
+      description: Returns a secret by its unique ID without the value
+      parameters:
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.SecretResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get secret
+      tags:
+      - secrets
+    put:
+      consumes:
+      - application/json
+      description: Updates a secret by ID. Omit value to keep the current one.
+      parameters:
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Secret definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/admin.SecretUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.SecretResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update secret
+      tags:
+      - secrets
   /settings:
     get:
       description: Returns the global settings (session provider, long-term memory
@@ -1566,6 +1843,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/store.Settings'
+      security:
+      - AdminAuth: []
       summary: Get settings
       tags:
       - settings
@@ -1596,9 +1875,18 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
       summary: Update settings
       tags:
       - settings
 schemes:
 - http
+securityDefinitions:
+  AdminAuth:
+    description: Enter "Bearer {adminPassword}" to authenticate. Only required when
+      server.adminPassword is set.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -2,52 +2,52 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://achetronic.github.io/magec/docs/flows/</loc>
+    <loc>https://magec.dev:43161/docs/flows/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/agents/</loc>
+    <loc>https://magec.dev:43161/docs/agents/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/backends/</loc>
+    <loc>https://magec.dev:43161/docs/backends/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/api/</loc>
+    <loc>https://magec.dev:43161/docs/api/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/install-binary/</loc>
+    <loc>https://magec.dev:43161/docs/install-binary/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/categories/</loc>
+    <loc>https://magec.dev:43161/categories/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/clients/</loc>
+    <loc>https://magec.dev:43161/docs/clients/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/commands/</loc>
+    <loc>https://magec.dev:43161/docs/commands/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/configuration/</loc>
+    <loc>https://magec.dev:43161/docs/configuration/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/cron/</loc>
+    <loc>https://magec.dev:43161/docs/cron/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/install-compose-local/</loc>
+    <loc>https://magec.dev:43161/docs/install-compose-local/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/install-docker/</loc>
+    <loc>https://magec.dev:43161/docs/install-docker/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/docker/</loc>
+    <loc>https://magec.dev:43161/docs/docker/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/</loc>
+    <loc>https://magec.dev:43161/docs/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/getting-started/</loc>
+    <loc>https://magec.dev:43161/docs/getting-started/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/</loc>
+    <loc>https://magec.dev:43161/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/mcp/</loc>
+    <loc>https://magec.dev:43161/docs/mcp/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/memory/</loc>
+    <loc>https://magec.dev:43161/docs/memory/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/screenshots/</loc>
+    <loc>https://magec.dev:43161/docs/screenshots/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/tags/</loc>
+    <loc>https://magec.dev:43161/tags/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/telegram/</loc>
+    <loc>https://magec.dev:43161/docs/telegram/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/voice-system/</loc>
+    <loc>https://magec.dev:43161/docs/voice-system/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/voice-ui/</loc>
+    <loc>https://magec.dev:43161/docs/voice-ui/</loc>
   </url><url>
-    <loc>https://achetronic.github.io/magec/docs/webhooks/</loc>
+    <loc>https://magec.dev:43161/docs/webhooks/</loc>
   </url>
 </urlset>

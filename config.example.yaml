@@ -10,6 +10,7 @@ server:
   host: 0.0.0.0 # Use 127.0.0.1 to restrict to localhost only
   port: 8080
   adminPort: 8081 # Admin UI + API (separate port for security)
+  # adminPassword: ${MAGEC_ADMIN_PASSWORD}  # Protect admin API with a password
 
 voice:
   ui:

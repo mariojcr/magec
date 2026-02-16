@@ -25,10 +25,8 @@ title: "Magec — Self-hosted Multi-Agent AI Platform"
         <div class="terminal__body">
           <span class="terminal__comment"># One command. Fully local. No API keys.</span><br>
           <span class="terminal__prompt">$</span> curl -fsSL <span class="terminal__url">https://magec.dev/install</span> | bash<br><br>
-          <span class="terminal__comment"># Or bring your cloud provider</span><br>
-          <span class="terminal__prompt">$</span> ... | bash -s -- --openai<br>
-          <span class="terminal__prompt">$</span> ... | bash -s -- --anthropic<br>
-          <span class="terminal__prompt">$</span> ... | bash -s -- --gemini<br><br>
+          <span class="terminal__comment"># With NVIDIA GPU support</span><br>
+          <span class="terminal__prompt">$</span> ... | bash -s -- --gpu<br><br>
           <span class="terminal__comment"># Admin panel → <span class="terminal__url">localhost:8081</span></span><br>
           <span class="terminal__comment"># Voice interface → <span class="terminal__url">localhost:8080</span></span>
         </div>

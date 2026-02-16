@@ -15,6 +15,7 @@ import (
 // @Tags         mcps
 // @Produce      json
 // @Success      200  {array}  store.MCPServer
+// @Security     AdminAuth
 // @Router       /mcps [get]
 func (h *Handler) listMCPServers(w http.ResponseWriter, r *http.Request) {
 	mcps := h.store.ListMCPServers()
@@ -29,6 +30,7 @@ func (h *Handler) listMCPServers(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "MCP Server ID"
 // @Success      200   {object}  store.MCPServer
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /mcps/{id} [get]
 func (h *Handler) getMCPServer(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -50,6 +52,7 @@ func (h *Handler) getMCPServer(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.MCPServer
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /mcps [post]
 func (h *Handler) createMCPServer(w http.ResponseWriter, r *http.Request) {
 	var m store.MCPServer
@@ -80,6 +83,7 @@ func (h *Handler) createMCPServer(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.MCPServer
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /mcps/{id} [put]
 func (h *Handler) updateMCPServer(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -103,6 +107,7 @@ func (h *Handler) updateMCPServer(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "MCP Server ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /mcps/{id} [delete]
 func (h *Handler) deleteMCPServer(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

@@ -116,6 +116,13 @@ func (h *Handler) buildRouter() *mux.Router {
 	r.HandleFunc("/settings", h.getSettings).Methods("GET")
 	r.HandleFunc("/settings", h.updateSettings).Methods("PUT")
 
+	// Secrets
+	r.HandleFunc("/secrets", h.listSecrets).Methods("GET")
+	r.HandleFunc("/secrets", h.createSecret).Methods("POST")
+	r.HandleFunc("/secrets/{id}", h.getSecret).Methods("GET")
+	r.HandleFunc("/secrets/{id}", h.updateSecret).Methods("PUT")
+	r.HandleFunc("/secrets/{id}", h.deleteSecret).Methods("DELETE")
+
 	// Conversations (audit)
 	r.HandleFunc("/conversations", h.listConversations).Methods("GET")
 	r.HandleFunc("/conversations/stats", h.conversationStats).Methods("GET")

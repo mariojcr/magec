@@ -19,6 +19,7 @@ import (
 // @Tags         memory
 // @Produce      json
 // @Success      200  {array}  store.MemoryProvider
+// @Security     AdminAuth
 // @Router       /memory [get]
 func (h *Handler) listMemoryProviders(w http.ResponseWriter, r *http.Request) {
 	providers := h.store.ListMemoryProviders()
@@ -33,6 +34,7 @@ func (h *Handler) listMemoryProviders(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Memory Provider ID"
 // @Success      200   {object}  store.MemoryProvider
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /memory/{id} [get]
 func (h *Handler) getMemoryProvider(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -54,6 +56,7 @@ func (h *Handler) getMemoryProvider(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.MemoryProvider
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /memory [post]
 func (h *Handler) createMemoryProvider(w http.ResponseWriter, r *http.Request) {
 	var m store.MemoryProvider
@@ -100,6 +103,7 @@ func (h *Handler) createMemoryProvider(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.MemoryProvider
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /memory/{id} [put]
 func (h *Handler) updateMemoryProvider(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -123,6 +127,7 @@ func (h *Handler) updateMemoryProvider(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Memory Provider ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /memory/{id} [delete]
 func (h *Handler) deleteMemoryProvider(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -141,6 +146,7 @@ func (h *Handler) deleteMemoryProvider(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Memory Provider ID"
 // @Success      200   {object}  memory.HealthResult
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /memory/{id}/health [get]
 func (h *Handler) checkMemoryProviderHealth(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -177,6 +183,7 @@ type MemoryTypeInfo struct {
 // @Tags         memory
 // @Produce      json
 // @Success      200  {array}  MemoryTypeInfo
+// @Security     AdminAuth
 // @Router       /memory/types [get]
 func (h *Handler) listMemoryTypes(w http.ResponseWriter, r *http.Request) {
 	var types []MemoryTypeInfo

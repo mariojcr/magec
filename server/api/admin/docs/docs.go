@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/agents": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured AI agents",
                 "produces": [
                     "application/json"
@@ -38,6 +43,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new AI agent with LLM, TTS, and memory configuration",
                 "consumes": [
                     "application/json"
@@ -84,6 +94,11 @@ const docTemplate = `{
         },
         "/agents/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns an agent by its unique ID",
                 "produces": [
                     "application/json"
@@ -117,6 +132,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates an agent by ID",
                 "consumes": [
                     "application/json"
@@ -168,6 +188,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes an agent by ID",
                 "tags": [
                     "agents"
@@ -197,6 +222,11 @@ const docTemplate = `{
         },
         "/agents/{id}/mcps": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns the MCP servers linked to a specific agent",
                 "produces": [
                     "application/json"
@@ -235,6 +265,11 @@ const docTemplate = `{
         },
         "/agents/{id}/mcps/{mcpId}": {
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Associates an MCP server with an agent, giving the agent access to its tools",
                 "tags": [
                     "agents"
@@ -269,6 +304,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Removes the association between an MCP server and an agent",
                 "tags": [
                     "agents"
@@ -305,6 +345,11 @@ const docTemplate = `{
         },
         "/backends": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured LLM/TTS/transcription backends",
                 "produces": [
                     "application/json"
@@ -326,6 +371,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new LLM/TTS/transcription backend",
                 "consumes": [
                     "application/json"
@@ -372,6 +422,11 @@ const docTemplate = `{
         },
         "/backends/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a backend by its unique ID",
                 "produces": [
                     "application/json"
@@ -405,6 +460,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates a backend by ID",
                 "consumes": [
                     "application/json"
@@ -456,6 +516,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a backend by ID",
                 "tags": [
                     "backends"
@@ -485,6 +550,11 @@ const docTemplate = `{
         },
         "/clients": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured clients (devices, Telegram bots, etc.)",
                 "produces": [
                     "application/json"
@@ -506,6 +576,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new client. A unique auth token is generated automatically.",
                 "consumes": [
                     "application/json"
@@ -552,6 +627,11 @@ const docTemplate = `{
         },
         "/clients/types": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns registered client types with config field specifications for dynamic form rendering",
                 "produces": [
                     "application/json"
@@ -575,6 +655,11 @@ const docTemplate = `{
         },
         "/clients/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a client by its unique ID",
                 "produces": [
                     "application/json"
@@ -608,6 +693,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates a client by ID. Token and ID are preserved.",
                 "consumes": [
                     "application/json"
@@ -659,6 +749,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a client by ID, revoking its access token",
                 "tags": [
                     "clients"
@@ -688,6 +783,11 @@ const docTemplate = `{
         },
         "/clients/{id}/regenerate-token": {
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Generates a new authentication token for a client, invalidating the previous one",
                 "produces": [
                     "application/json"
@@ -723,6 +823,11 @@ const docTemplate = `{
         },
         "/commands": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured reusable prompt commands",
                 "produces": [
                     "application/json"
@@ -744,6 +849,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new reusable prompt command",
                 "consumes": [
                     "application/json"
@@ -790,6 +900,11 @@ const docTemplate = `{
         },
         "/commands/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a command by its unique ID",
                 "produces": [
                     "application/json"
@@ -823,6 +938,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates a command by ID",
                 "consumes": [
                     "application/json"
@@ -874,6 +994,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a command by ID",
                 "tags": [
                     "commands"
@@ -903,6 +1028,11 @@ const docTemplate = `{
         },
         "/conversations": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a paginated list of conversation audit logs, newest first. Filters by agent, source, or client.",
                 "produces": [
                     "application/json"
@@ -961,6 +1091,11 @@ const docTemplate = `{
         },
         "/conversations/clear": {
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes all conversation audit logs. Does not affect ADK sessions.",
                 "tags": [
                     "conversations"
@@ -981,6 +1116,11 @@ const docTemplate = `{
         },
         "/conversations/stats": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns total count and breakdowns by source and agent.",
                 "produces": [
                     "application/json"
@@ -1002,6 +1142,11 @@ const docTemplate = `{
         },
         "/conversations/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a conversation by ID with paginated messages (latest first). Includes totalMessages for client-side pagination.",
                 "produces": [
                     "application/json"
@@ -1048,6 +1193,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a conversation audit log by ID. Does not affect the ADK session.",
                 "tags": [
                     "conversations"
@@ -1077,6 +1227,11 @@ const docTemplate = `{
         },
         "/conversations/{id}/reset-session": {
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes the ADK session (in Redis or in-memory) for the agent/user/session referenced by this conversation. The user will start a fresh session on their next message. The conversation audit log is preserved.",
                 "produces": [
                     "application/json"
@@ -1131,6 +1286,11 @@ const docTemplate = `{
         },
         "/conversations/{id}/summary": {
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Sets the summary text for a conversation. Used for context window summarization.",
                 "consumes": [
                     "application/json"
@@ -1184,6 +1344,11 @@ const docTemplate = `{
         },
         "/flows": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured agent orchestration flows",
                 "produces": [
                     "application/json"
@@ -1205,6 +1370,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new agent orchestration flow with a recursive step tree",
                 "consumes": [
                     "application/json"
@@ -1251,6 +1421,11 @@ const docTemplate = `{
         },
         "/flows/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a flow by its unique ID",
                 "produces": [
                     "application/json"
@@ -1284,6 +1459,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates a flow by ID",
                 "consumes": [
                     "application/json"
@@ -1335,6 +1515,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a flow by ID",
                 "tags": [
                     "flows"
@@ -1364,6 +1549,11 @@ const docTemplate = `{
         },
         "/mcps": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured MCP (Model Context Protocol) servers",
                 "produces": [
                     "application/json"
@@ -1385,6 +1575,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new MCP server configuration",
                 "consumes": [
                     "application/json"
@@ -1431,6 +1626,11 @@ const docTemplate = `{
         },
         "/mcps/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns an MCP server by its unique ID",
                 "produces": [
                     "application/json"
@@ -1464,6 +1664,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates an MCP server by ID",
                 "consumes": [
                     "application/json"
@@ -1515,6 +1720,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes an MCP server by ID",
                 "tags": [
                     "mcps"
@@ -1544,6 +1754,11 @@ const docTemplate = `{
         },
         "/memory": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns all configured memory providers (Redis, Postgres, etc.)",
                 "produces": [
                     "application/json"
@@ -1565,6 +1780,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Creates a new memory provider (session, semantic, etc.)",
                 "consumes": [
                     "application/json"
@@ -1611,6 +1831,11 @@ const docTemplate = `{
         },
         "/memory/types": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns registered memory provider types with config schemas for dynamic form rendering",
                 "produces": [
                     "application/json"
@@ -1634,6 +1859,11 @@ const docTemplate = `{
         },
         "/memory/{id}": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns a memory provider by its unique ID",
                 "produces": [
                     "application/json"
@@ -1667,6 +1897,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Updates a memory provider by ID",
                 "consumes": [
                     "application/json"
@@ -1718,6 +1953,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Deletes a memory provider by ID",
                 "tags": [
                     "memory"
@@ -1747,6 +1987,11 @@ const docTemplate = `{
         },
         "/memory/{id}/health": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Pings the memory provider to verify connectivity",
                 "produces": [
                     "application/json"
@@ -1780,8 +2025,218 @@ const docTemplate = `{
                 }
             }
         },
+        "/secrets": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns all configured secrets without their values",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "List secrets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/admin.SecretResponse"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Creates a new secret. The value is encrypted at rest when adminPassword is configured.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Create secret",
+                "parameters": [
+                    {
+                        "description": "Secret definition",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SecretCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/admin.SecretResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/secrets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Returns a secret by its unique ID without the value",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Get secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.SecretResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Updates a secret by ID. Omit value to keep the current one.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Update secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Secret definition",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.SecretUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.SecretResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Deletes a secret by ID",
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Delete secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Secret ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/settings": {
             "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Returns the global settings (session provider, long-term memory provider).",
                 "produces": [
                     "application/json"
@@ -1800,6 +2255,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
                 "description": "Replaces the global settings. Changes take effect on next agent rebuild.",
                 "consumes": [
                     "application/json"
@@ -1893,6 +2353,69 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "redis"
+                }
+            }
+        },
+        "admin.SecretCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Production key for GPT-4o"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "OPENAI_API_KEY"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "OpenAI API Key"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "sk-..."
+                }
+            }
+        },
+        "admin.SecretResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Production key for GPT-4o"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "OPENAI_API_KEY"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "OpenAI API Key"
+                }
+            }
+        },
+        "admin.SecretUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Production key for GPT-4o"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "OPENAI_API_KEY"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "OpenAI API Key"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "sk-..."
                 }
             }
         },
@@ -2250,6 +2773,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "insecure": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -2408,17 +2934,25 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "AdminAuth": {
+            "description": "Enter \"Bearer {adminPassword}\" to authenticate. Only required when server.adminPassword is set.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "2.0",
 	Host:             "localhost:8081",
 	BasePath:         "/api/v1/admin",
 	Schemes:          []string{"http"},
 	Title:            "Magec Admin API",
-	Description:      "Administration API for managing Magec multi-agent voice assistant resources.",
+	Description:      "Administration API for managing Magec multi-agent voice assistant resources.\nWhen server.adminPassword is configured, all /api/ endpoints require a Bearer token.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

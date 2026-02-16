@@ -13,6 +13,7 @@ import (
 // @Tags         settings
 // @Produce      json
 // @Success      200  {object}  store.Settings
+// @Security     AdminAuth
 // @Router       /settings [get]
 func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, h.store.GetSettings())
@@ -28,6 +29,7 @@ func (h *Handler) getSettings(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}  store.Settings
 // @Failure      400  {object}  ErrorResponse
 // @Failure      500  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /settings [put]
 func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	var settings store.Settings

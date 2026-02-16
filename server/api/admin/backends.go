@@ -15,6 +15,7 @@ import (
 // @Tags         backends
 // @Produce      json
 // @Success      200  {array}  store.BackendDefinition
+// @Security     AdminAuth
 // @Router       /backends [get]
 func (h *Handler) listBackends(w http.ResponseWriter, r *http.Request) {
 	backends := h.store.ListBackends()
@@ -29,6 +30,7 @@ func (h *Handler) listBackends(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Backend ID"
 // @Success      200   {object}  store.BackendDefinition
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /backends/{id} [get]
 func (h *Handler) getBackend(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -50,6 +52,7 @@ func (h *Handler) getBackend(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.BackendDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /backends [post]
 func (h *Handler) createBackend(w http.ResponseWriter, r *http.Request) {
 	var b store.BackendDefinition
@@ -84,6 +87,7 @@ func (h *Handler) createBackend(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.BackendDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /backends/{id} [put]
 func (h *Handler) updateBackend(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -107,6 +111,7 @@ func (h *Handler) updateBackend(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Backend ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /backends/{id} [delete]
 func (h *Handler) deleteBackend(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

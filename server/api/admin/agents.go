@@ -15,6 +15,7 @@ import (
 // @Tags         agents
 // @Produce      json
 // @Success      200  {array}  store.AgentDefinition
+// @Security     AdminAuth
 // @Router       /agents [get]
 func (h *Handler) listAgents(w http.ResponseWriter, r *http.Request) {
 	agents := h.store.ListAgents()
@@ -29,6 +30,7 @@ func (h *Handler) listAgents(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Agent ID"
 // @Success      200   {object}  store.AgentDefinition
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id} [get]
 func (h *Handler) getAgent(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -50,6 +52,7 @@ func (h *Handler) getAgent(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.AgentDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents [post]
 func (h *Handler) createAgent(w http.ResponseWriter, r *http.Request) {
 	var a store.AgentDefinition
@@ -80,6 +83,7 @@ func (h *Handler) createAgent(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.AgentDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id} [put]
 func (h *Handler) updateAgent(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -103,6 +107,7 @@ func (h *Handler) updateAgent(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Agent ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id} [delete]
 func (h *Handler) deleteAgent(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -121,6 +126,7 @@ func (h *Handler) deleteAgent(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Agent ID"
 // @Success      200   {array}   store.MCPServer
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id}/mcps [get]
 func (h *Handler) listAgentMCPs(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -140,6 +146,7 @@ func (h *Handler) listAgentMCPs(w http.ResponseWriter, r *http.Request) {
 // @Param        mcpId   path  string  true  "MCP Server ID"
 // @Success      204
 // @Failure      409  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id}/mcps/{mcpId} [put]
 func (h *Handler) linkAgentMCP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -160,6 +167,7 @@ func (h *Handler) linkAgentMCP(w http.ResponseWriter, r *http.Request) {
 // @Param        mcpId   path  string  true  "MCP Server ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /agents/{id}/mcps/{mcpId} [delete]
 func (h *Handler) unlinkAgentMCP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

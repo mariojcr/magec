@@ -9,6 +9,7 @@ import {
   flowsApi,
   commandsApi,
   settingsApi,
+  secretsApi,
 } from '../api/index.js'
 
 export const useDataStore = defineStore('data', () => {
@@ -19,6 +20,7 @@ export const useDataStore = defineStore('data', () => {
   const clients = ref([])
   const flows = ref([])
   const commands = ref([])
+  const secrets = ref([])
   const memoryTypes = ref([])
   const clientTypes = ref([])
   const settings = ref({ sessionProvider: '', longTermProvider: '' })
@@ -42,6 +44,7 @@ export const useDataStore = defineStore('data', () => {
         flowsApi.list(),
         commandsApi.list(),
         settingsApi.get(),
+        secretsApi.list(),
       ])
       backends.value = results[0] || []
       agents.value = results[1] || []
@@ -51,6 +54,7 @@ export const useDataStore = defineStore('data', () => {
       flows.value = results[5] || []
       commands.value = results[6] || []
       settings.value = results[7] || { sessionProvider: '', longTermProvider: '' }
+      secrets.value = results[8] || []
     } catch (e) {
       console.error('Failed to load data:', e)
     } finally {
@@ -94,6 +98,7 @@ export const useDataStore = defineStore('data', () => {
     clients,
     flows,
     commands,
+    secrets,
     memoryTypes,
     clientTypes,
     settings,

@@ -16,6 +16,7 @@ import (
 // @Tags         flows
 // @Produce      json
 // @Success      200  {array}  store.FlowDefinition
+// @Security     AdminAuth
 // @Router       /flows [get]
 func (h *Handler) listFlows(w http.ResponseWriter, r *http.Request) {
 	flows := h.store.ListFlows()
@@ -30,6 +31,7 @@ func (h *Handler) listFlows(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Flow ID"
 // @Success      200   {object}  store.FlowDefinition
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /flows/{id} [get]
 func (h *Handler) getFlow(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -51,6 +53,7 @@ func (h *Handler) getFlow(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.FlowDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /flows [post]
 func (h *Handler) createFlow(w http.ResponseWriter, r *http.Request) {
 	var f store.FlowDefinition
@@ -85,6 +88,7 @@ func (h *Handler) createFlow(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.FlowDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /flows/{id} [put]
 func (h *Handler) updateFlow(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -112,6 +116,7 @@ func (h *Handler) updateFlow(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Flow ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /flows/{id} [delete]
 func (h *Handler) deleteFlow(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]

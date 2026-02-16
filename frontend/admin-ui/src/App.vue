@@ -1,5 +1,7 @@
 <template>
-  <div class="h-full flex">
+  <LoginScreen v-if="showLogin" @authenticated="onAuthenticated" />
+
+  <div v-else class="h-full flex">
     <!-- Mobile backdrop -->
     <Transition name="fade">
       <div v-if="mobileOpen" class="fixed inset-0 bg-black/50 z-30 md:hidden" @click="mobileOpen = false" />
@@ -30,6 +32,7 @@
             <FlowsList v-else-if="activeTab === 'flows'" />
             <CommandsList v-else-if="activeTab === 'commands'" />
             <ClientsList v-else-if="activeTab === 'clients'" />
+            <SecretsList v-else-if="activeTab === 'secrets'" />
             <ConversationsView v-else-if="activeTab === 'conversations'" />
           </div>
         </Transition>
@@ -49,6 +52,8 @@
 <script setup>
 import { ref, provide, onMounted, onUnmounted, watch } from 'vue'
 import { useDataStore } from './lib/stores/data.js'
+import { checkAuth, isAuthRequired, isAuthenticated } from './lib/auth.js'
+import LoginScreen from './components/LoginScreen.vue'
 import Sidebar from './components/Sidebar.vue'
 import TopBar from './components/TopBar.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
@@ -61,11 +66,15 @@ import AgentsList from './views/agents/AgentsList.vue'
 import FlowsList from './views/flows/FlowsList.vue'
 import CommandsList from './views/commands/CommandsList.vue'
 import ClientsList from './views/clients/ClientsList.vue'
+import SecretsList from './views/secrets/SecretsList.vue'
 import ConversationsView from './views/conversations/ConversationsView.vue'
 
 const store = useDataStore()
 
-const validTabs = ['backends', 'memory', 'mcps', 'agents', 'flows', 'commands', 'clients', 'conversations']
+const showLogin = ref(false)
+const appReady = ref(false)
+
+const validTabs = ['backends', 'memory', 'mcps', 'agents', 'flows', 'commands', 'clients', 'secrets', 'conversations']
 const saved = location.hash.slice(1)
 const activeTab = ref(validTabs.includes(saved) ? saved : 'backends')
 const sidebarCollapsed = ref(localStorage.getItem('sidebar-collapsed') === 'true')
@@ -74,6 +83,11 @@ const mobileOpen = ref(false)
 function onNavigate(tab) {
   activeTab.value = tab
   mobileOpen.value = false
+}
+
+function onAuthenticated() {
+  showLogin.value = false
+  store.init()
 }
 
 watch(sidebarCollapsed, (v) => {
@@ -118,6 +132,7 @@ const newEntityHandler = ref(null)
 provide('registerNew', (fn) => { newEntityHandler.value = fn })
 
 function onGlobalKeydown(e) {
+  if (showLogin.value) return
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
   if (e.target.closest('dialog[open]')) return
 
@@ -131,9 +146,14 @@ function onGlobalKeydown(e) {
   }
 }
 
-onMounted(() => {
-  store.init()
+onMounted(async () => {
   document.addEventListener('keydown', onGlobalKeydown)
+  const ok = await checkAuth()
+  if (!ok && isAuthRequired()) {
+    showLogin.value = true
+  } else {
+    store.init()
+  }
 })
 onUnmounted(() => document.removeEventListener('keydown', onGlobalKeydown))
 </script>

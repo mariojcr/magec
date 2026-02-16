@@ -57,9 +57,9 @@ On mobile, microphone picks up speaker output and triggers wake word during TTS 
 
 ---
 
-### Admin API Authentication
+### ~~Admin API Authentication~~ (v0.2.0 ✅)
 
-Port 8081 has no auth. Anyone with network access can modify everything. Options: basic auth, API key, or session-based login.
+~~Port 8081 has no auth. Anyone with network access can modify everything.~~ **Implemented**: `server.adminPassword` in config, `AdminAuth` middleware with constant-time comparison and rate limiting, login screen in Admin UI.
 
 ---
 
@@ -93,9 +93,9 @@ ADK supports agents as tools — orchestrator decides at runtime which specialis
 
 ## Low Priority
 
-### Credential Management from Admin UI
+### ~~Credential Management from Admin UI~~ (v0.2.0 ✅)
 
-Credentials are in plain text in `data/store.json`. `${VAR}` expansion works via `os.ExpandEnv()` but there's no UI to manage variables. Options: `.env` file + UI editor, separate encrypted secrets store, or leverage `x-format: password` fields for differential persistence.
+~~Credentials are in plain text in `data/store.json`.~~ **Implemented**: Secrets entity with CRUD API, AES-256-GCM encryption at rest (derived from admin password), env var injection before `ExpandEnv()`, Admin UI section for managing secrets.
 
 ---
 

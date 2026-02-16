@@ -16,6 +16,7 @@ import (
 // @Tags         clients
 // @Produce      json
 // @Success      200  {array}  store.ClientDefinition
+// @Security     AdminAuth
 // @Router       /clients [get]
 func (h *Handler) listClients(w http.ResponseWriter, r *http.Request) {
 	clients := h.store.ListClients()
@@ -30,6 +31,7 @@ func (h *Handler) listClients(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Client ID"
 // @Success      200   {object}  store.ClientDefinition
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /clients/{id} [get]
 func (h *Handler) getClient(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -51,6 +53,7 @@ func (h *Handler) getClient(w http.ResponseWriter, r *http.Request) {
 // @Success      201   {object}  store.ClientDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      409   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /clients [post]
 func (h *Handler) createClient(w http.ResponseWriter, r *http.Request) {
 	var c store.ClientDefinition
@@ -93,6 +96,7 @@ func (h *Handler) createClient(w http.ResponseWriter, r *http.Request) {
 // @Success      200   {object}  store.ClientDefinition
 // @Failure      400   {object}  ErrorResponse
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /clients/{id} [put]
 func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -122,6 +126,7 @@ func (h *Handler) updateClient(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Client ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /clients/{id} [delete]
 func (h *Handler) deleteClient(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -140,6 +145,7 @@ func (h *Handler) deleteClient(w http.ResponseWriter, r *http.Request) {
 // @Param        id    path      string  true  "Client ID"
 // @Success      200   {object}  store.ClientDefinition
 // @Failure      404   {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /clients/{id}/regenerate-token [post]
 func (h *Handler) regenerateClientToken(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
@@ -164,6 +170,7 @@ type ClientTypeInfo struct {
 // @Tags         clients
 // @Produce      json
 // @Success      200  {array}  ClientTypeInfo
+// @Security     AdminAuth
 // @Router       /clients/types [get]
 func (h *Handler) listClientTypes(w http.ResponseWriter, r *http.Request) {
 	var types []ClientTypeInfo

@@ -42,6 +42,7 @@ const iconBg = computed(() => {
     indigo: 'bg-indigo-500/10',
     teal: 'bg-teal-500/10',
     lava: 'bg-lava-500/10',
+    amber: 'bg-amber-500/10',
   }
   return map[props.color] || 'bg-piedra-800/60'
 })
@@ -56,6 +57,7 @@ const iconText = computed(() => {
     indigo: 'text-indigo-400',
     teal: 'text-teal-400',
     lava: 'text-lava-400',
+    amber: 'text-amber-400',
   }
   return map[props.color] || 'text-arena-500'
 })

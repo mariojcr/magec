@@ -98,6 +98,7 @@ const groups = [
       { id: 'backends', label: 'Backends', icon: 'server', color: 'purple' },
       { id: 'memory', label: 'Memory', icon: 'database', color: 'green' },
       { id: 'mcps', label: 'MCP Servers', icon: 'bolt', color: 'atlantico' },
+      { id: 'secrets', label: 'Secrets', icon: 'key', color: 'amber' },
     ],
   },
   {
@@ -131,6 +132,7 @@ function itemCount(id) {
     flows: store.flows,
     commands: store.commands,
     clients: store.clients,
+    secrets: store.secrets,
   }
   return map[id]?.length || 0
 }
@@ -145,6 +147,7 @@ function activeClasses(color) {
     indigo: 'bg-indigo-500/10 text-indigo-200',
     teal: 'bg-teal-500/10 text-teal-200',
     lava: 'bg-lava-500/10 text-lava-200',
+    amber: 'bg-amber-500/10 text-amber-200',
     arena: 'bg-arena-500/10 text-arena-200',
   }
   return map[color] || map.sol
@@ -160,6 +163,7 @@ function iconBgClasses(color) {
     indigo: 'bg-indigo-500/20 text-indigo-300',
     teal: 'bg-teal-500/20 text-teal-300',
     lava: 'bg-lava-500/20 text-lava-300',
+    amber: 'bg-amber-500/20 text-amber-300',
     arena: 'bg-arena-500/20 text-arena-300',
   }
   return map[color] || map.sol
@@ -175,6 +179,7 @@ function countActiveClasses(color) {
     indigo: 'text-indigo-300 bg-indigo-500/15',
     teal: 'text-teal-300 bg-teal-500/15',
     lava: 'text-lava-300 bg-lava-500/15',
+    amber: 'text-amber-300 bg-amber-500/15',
     arena: 'text-arena-300 bg-arena-500/15',
   }
   return map[color] || map.sol

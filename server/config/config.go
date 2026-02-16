@@ -41,9 +41,10 @@ type Config struct {
 
 // Server holds network and runtime settings for the HTTP servers.
 type Server struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	AdminPort int    `yaml:"adminPort"`
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	AdminPort     int    `yaml:"adminPort"`
+	AdminPassword string `yaml:"adminPassword"`
 }
 
 // Voice holds voice-related configuration (UI, ONNX runtime, etc.).

@@ -23,6 +23,7 @@ import (
 // @Param        limit     query     int     false  "Max items to return (default 30, 0 for all)"
 // @Param        offset    query     int     false  "Items to skip (default 0)"
 // @Success      200  {object}  store.PaginatedResult[store.Conversation]
+// @Security     AdminAuth
 // @Router       /conversations [get]
 func (h *Handler) listConversations(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -54,6 +55,7 @@ func (h *Handler) listConversations(w http.ResponseWriter, r *http.Request) {
 // @Param        msgOffset  query  int     false  "Messages to skip from the end (default 0)"
 // @Success      200  {object}  map[string]interface{}  "conversation + totalMessages"
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /conversations/{id} [get]
 func (h *Handler) getConversation(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -83,6 +85,7 @@ func (h *Handler) getConversation(w http.ResponseWriter, r *http.Request) {
 // @Param        id  path  string  true  "Conversation ID"
 // @Success      204
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /conversations/{id} [delete]
 func (h *Handler) deleteConversation(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -104,6 +107,7 @@ func (h *Handler) deleteConversation(w http.ResponseWriter, r *http.Request) {
 // @Tags         conversations
 // @Success      204
 // @Failure      500  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /conversations/clear [delete]
 func (h *Handler) clearConversations(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -124,6 +128,7 @@ func (h *Handler) clearConversations(w http.ResponseWriter, r *http.Request) {
 // @Tags         conversations
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}  "total, bySources, byAgents"
+// @Security     AdminAuth
 // @Router       /conversations/stats [get]
 func (h *Handler) conversationStats(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -162,6 +167,7 @@ func (h *Handler) conversationStats(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object}  store.Conversation
 // @Failure      400  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /conversations/{id}/summary [put]
 func (h *Handler) updateConversationSummary(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {
@@ -199,6 +205,7 @@ func (h *Handler) updateConversationSummary(w http.ResponseWriter, r *http.Reque
 // @Failure      404  {object}  ErrorResponse
 // @Failure      502  {object}  ErrorResponse
 // @Failure      503  {object}  ErrorResponse
+// @Security     AdminAuth
 // @Router       /conversations/{id}/reset-session [post]
 func (h *Handler) resetConversationSession(w http.ResponseWriter, r *http.Request) {
 	if h.conversations == nil {

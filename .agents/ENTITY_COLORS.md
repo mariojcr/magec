@@ -14,6 +14,7 @@ Each entity type in the admin UI has an assigned color for visual consistency ac
 | **Commands** | Indigo | `indigo` | `#818cf8` |
 | **Flows** | Rose | `rose` | `#fb7185` |
 | **Conversations** | Teal | `teal` | `#2dd4bf` |
+| **Secrets** | Amber | `amber` | `#f59e0b` |
 
 ## Client Type Badges
 
@@ -38,11 +39,11 @@ Badge:    <Badge variant="{color}">
 
 ## Custom Palette Colors
 
-`sol`, `atlantico`, `lava`, `piedra`, and `arena` are custom colors defined in `admin-ui/src/style.css` via `@theme`. The rest (`purple`, `green`, `teal`, `rose`, `indigo`) come from Tailwind's default palette and require no extra config.
+`sol`, `atlantico`, `lava`, `piedra`, and `arena` are custom colors defined in `admin-ui/src/style.css` via `@theme`. The rest (`purple`, `green`, `teal`, `rose`, `indigo`, `amber`) come from Tailwind's default palette and require no extra config.
 
 ## Badge Variants
 
-The `Badge.vue` component supports a `variant` prop matching each entity color. All seven entity colors are registered as variants.
+The `Badge.vue` component supports a `variant` prop matching each entity color. All nine entity colors are registered as variants.
 
 ## Notes
 

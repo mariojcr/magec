@@ -271,3 +271,54 @@ friendly notification instead of failing silently or blocking the UI:
 **Do not**: Filter spokespersons by whether they have voice configured (couples the endpoint
 to the concept of voice). Do not block the selection — the user can choose any
 responseAgent and receive feedback if it doesn't work.
+
+---
+
+## Admin password authentication (v0.2.0)
+
+**Date**: 2026-02-14
+**Status**: Implemented
+
+Admin API (port 8081) is protected by a password configured in `server.adminPassword`.
+Authentication uses `Authorization: Bearer <password>` header with constant-time
+comparison (`crypto/subtle.ConstantTimeCompare`) and per-IP rate limiting (5 attempts/minute).
+
+If no password is set, the admin remains open (backwards compatible) with a warning log.
+
+The middleware bypasses auth for `OPTIONS` preflight and static files (non-`/api/` paths).
+A dedicated `/api/v1/admin/auth/check` endpoint allows the UI to verify credentials
+without hitting a real resource.
+
+The Admin UI shows a login screen when auth is required. The password is stored in
+memory only (not localStorage) — closing the tab requires re-authentication.
+
+**Do not**: Use cookies or sessions. Do not store the password in localStorage.
+Do not use `X-Admin-Password` custom header — use standard `Authorization: Bearer`.
+
+---
+
+## Secrets with env var injection and encryption at rest (v0.2.0)
+
+**Date**: 2026-02-14
+**Status**: Implemented
+
+Secrets are key-value pairs stored in `StoreData.Secrets`. Each secret has:
+`{id, name, key, value, description}` where `key` is the env var name (e.g. `OPENAI_API_KEY`).
+
+**Injection flow**: On store load, secrets are extracted first (raw unmarshal), decrypted
+if encrypted, injected via `os.Setenv()`, then the full store is expanded via `os.ExpandEnv()`.
+This allows `${OPENAI_API_KEY}` in any store field (backend URLs, API keys, bot tokens).
+
+**Encryption**: When `adminPassword` is configured, secret values are encrypted with
+AES-256-GCM, key derived via PBKDF2 (100k iterations, SHA-256). Stored as `enc:v1:<base64>`.
+Without admin password, secrets are stored in cleartext with a warning log.
+
+**API**: Secrets CRUD at `/api/v1/admin/secrets`. GET responses never include the `value`
+field — values are write-only from the API perspective. Updates with empty `value` preserve
+the existing value.
+
+**Recovery**: If admin password is lost, encrypted secrets are unrecoverable. Delete them
+and recreate. Non-secret entities remain intact.
+
+**Do not**: Return secret values in GET responses. Do not store secrets in config.yaml.
+Do not use a separate encryption key — derive from admin password.

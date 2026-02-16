@@ -16,15 +16,18 @@ type Store struct {
 	mu       sync.RWMutex
 	data     StoreData
 	filePath string
+	encryptionKey string
 
 	changeMu    sync.Mutex
 	changeSubs  []chan struct{}
 }
 
 // New creates a new Store. If filePath is non-empty and the file exists, it loads from it.
-func New(filePath string) (*Store, error) {
+// The encryptionKey is used to encrypt/decrypt secret values at rest. If empty, secrets are stored in cleartext.
+func New(filePath string, encryptionKey string) (*Store, error) {
 	s := &Store{
-		filePath: filePath,
+		filePath:      filePath,
+		encryptionKey: encryptionKey,
 		data: StoreData{
 			Backends:        []BackendDefinition{},
 			MemoryProviders: []MemoryProvider{},
@@ -33,6 +36,7 @@ func New(filePath string) (*Store, error) {
 			Clients:         []ClientDefinition{},
 			Flows:           []FlowDefinition{},
 			Commands:        []Command{},
+			Secrets:         []Secret{},
 		},
 	}
 
@@ -610,6 +614,91 @@ func (s *Store) DeleteCommand(id string) error {
 
 // --- Persistence ---
 
+// --- Secrets ---
+
+func (s *Store) ListSecrets() []Secret {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Secret, len(s.data.Secrets))
+	copy(result, s.data.Secrets)
+	return result
+}
+
+func (s *Store) GetSecret(id string) (Secret, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, sec := range s.data.Secrets {
+		if sec.ID == id {
+			return sec, true
+		}
+	}
+	return Secret{}, false
+}
+
+func (s *Store) CreateSecret(sec Secret) (Secret, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, existing := range s.data.Secrets {
+		if existing.Key == sec.Key {
+			return Secret{}, fmt.Errorf("secret with key %q already exists", sec.Key)
+		}
+	}
+
+	sec.ID = generateID()
+	if s.encryptionKey != "" && sec.Value != "" && !isEncrypted(sec.Value) {
+		enc, err := encryptValue(sec.Value, s.encryptionKey)
+		if err != nil {
+			return Secret{}, fmt.Errorf("encrypt: %w", err)
+		}
+		sec.Value = enc
+	}
+	s.data.Secrets = append(s.data.Secrets, sec)
+	return sec, s.persist()
+}
+
+func (s *Store) UpdateSecret(id string, sec Secret) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, existing := range s.data.Secrets {
+		if existing.Key == sec.Key && existing.ID != id {
+			return fmt.Errorf("secret with key %q already exists", sec.Key)
+		}
+	}
+
+	for i, existing := range s.data.Secrets {
+		if existing.ID == id {
+			sec.ID = id
+			if s.encryptionKey != "" && sec.Value != "" && !isEncrypted(sec.Value) {
+				enc, err := encryptValue(sec.Value, s.encryptionKey)
+				if err != nil {
+					return fmt.Errorf("encrypt: %w", err)
+				}
+				sec.Value = enc
+			}
+			s.data.Secrets[i] = sec
+			return s.persist()
+		}
+	}
+	return fmt.Errorf("secret %q not found", id)
+}
+
+func (s *Store) DeleteSecret(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, existing := range s.data.Secrets {
+		if existing.ID == id {
+			s.data.Secrets = append(s.data.Secrets[:i], s.data.Secrets[i+1:]...)
+			return s.persist()
+		}
+	}
+	return fmt.Errorf("secret %q not found", id)
+}
+
+// --- Persistence (internal) ---
+
 // persist writes the current store data to disk as formatted JSON and
 // notifies all change subscribers.
 func (s *Store) persist() error {
@@ -647,12 +736,32 @@ func (s *Store) notifyChange() {
 	}
 }
 
-// loadFromDisk reads the store file, unmarshals it, initializes nil slices
-// to empty, and runs legacy migrations.
+// loadFromDisk reads the store file, extracts secrets and injects them as
+// environment variables, then expands all env vars and unmarshals the final data.
+// This two-pass approach lets secrets reference each other or be used in other fields.
 func (s *Store) loadFromDisk() error {
 	data, err := os.ReadFile(s.filePath)
 	if err != nil {
 		return err
+	}
+
+	var raw StoreData
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	for _, sec := range raw.Secrets {
+		if sec.Key != "" && sec.Value != "" {
+			val := sec.Value
+			if s.encryptionKey != "" && isEncrypted(val) {
+				decrypted, err := decryptValue(val, s.encryptionKey)
+				if err != nil {
+					return fmt.Errorf("failed to decrypt secret %q: %w", sec.Key, err)
+				}
+				val = decrypted
+			}
+			os.Setenv(sec.Key, val)
+		}
 	}
 
 	expanded := os.ExpandEnv(string(data))
@@ -682,6 +791,9 @@ func (s *Store) loadFromDisk() error {
 	}
 	if storeData.Commands == nil {
 		storeData.Commands = []Command{}
+	}
+	if storeData.Secrets == nil {
+		storeData.Secrets = []Secret{}
 	}
 
 	s.data = storeData

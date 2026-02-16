@@ -24,6 +24,7 @@ const colorMap = {
   indigo: 'hover:border-indigo-500/15 hover:shadow-[0_0_15px_-3px_rgba(99,102,241,0.04)]',
   lava: 'hover:border-lava-500/15 hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.04)]',
   teal: 'hover:border-teal-500/15 hover:shadow-[0_0_15px_-3px_rgba(20,184,166,0.04)]',
+  amber: 'hover:border-amber-500/15 hover:shadow-[0_0_15px_-3px_rgba(245,158,11,0.04)]',
 }
 
 const hoverClass = computed(() => {

@@ -1,8 +1,11 @@
+import { getAuthHeaders } from '../auth.js'
+
 const BASE = '/api/v1/admin'
 
 export async function request(path, opts = {}) {
+  const authHeaders = getAuthHeaders()
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...opts.headers },
     ...opts,
   })
   if (res.status === 204) return null

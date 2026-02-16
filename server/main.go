@@ -71,18 +71,26 @@ func main() {
 	// Setup logger
 	logging.Setup(cfg.Log.Level, cfg.Log.Format)
 
+	if cfg.Server.AdminPassword == "" {
+		slog.Warn("Admin API is unprotected — set server.adminPassword in config")
+	}
+
 	// Check runtime dependencies
 	checkDependencies(cfg)
 
 	ctx := context.Background()
 
 	// Initialize store with JSON persistence
-	dataStore, err := store.New("data/store.json")
+	dataStore, err := store.New("data/store.json", cfg.Server.AdminPassword)
 	if err != nil {
 		slog.Error("Failed to initialize store", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("Store initialized", "agents", len(dataStore.Data().Agents), "backends", len(dataStore.Data().Backends))
+
+	if cfg.Server.AdminPassword == "" && len(dataStore.Data().Secrets) > 0 {
+		slog.Warn("Secrets are stored without encryption — set server.adminPassword to enable encryption at rest")
+	}
 
 	// Initialize conversation store for audit logging
 	convoStore, err := store.NewConversationStore("data/conversations.json")
@@ -111,7 +119,7 @@ func main() {
 	adminAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.AdminPort)
 	adminServer := &http.Server{
 		Addr:         adminAddr,
-		Handler:      middleware.AccessLog(middleware.CORS(adminMux)),
+		Handler:      middleware.AccessLog(middleware.CORS(middleware.AdminAuth(adminMux, cfg.Server.AdminPassword))),
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
