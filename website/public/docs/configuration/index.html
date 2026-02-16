@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuration — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link docs-sidebar__link--active">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -161,6 +172,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">8080</span><span class="w">          </span><span class="c"># User API + Voice UI</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">adminPort</span><span class="p">:</span><span class="w"> </span><span class="m">8081</span><span class="w">     </span><span class="c"># Admin API + Admin UI</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># adminPassword: ${MAGEC_ADMIN_PASSWORD}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="nt">voice</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ui</span><span class="p">:</span><span class="w">
@@ -195,6 +207,11 @@
           <td><code>adminPort</code></td>
           <td><code>8081</code></td>
           <td>Admin-facing port. The Admin UI and management API live here. In production, restrict access to this port.</td>
+      </tr>
+      <tr>
+          <td><code>adminPassword</code></td>
+          <td><em>(empty)</em></td>
+          <td>Password for admin API authentication. When set, all <code>/api/</code> requests require <code>Authorization: Bearer &lt;password&gt;</code>. Also used as the encryption key for <a href="/docs/secrets/">Secrets</a>. See <a href="/docs/admin-password/">Admin Password</a>.</td>
       </tr>
   </tbody>
 </table>
@@ -266,37 +283,42 @@
       <tr>
           <td><strong>Backends</strong></td>
           <td>Connections to AI providers (OpenAI, Anthropic, Gemini, Ollama)</td>
-          <td><a href="/magec/docs/backends/">AI Backends</a></td>
+          <td><a href="/docs/backends/">AI Backends</a></td>
       </tr>
       <tr>
           <td><strong>Memory Providers</strong></td>
           <td>Session storage (Redis) and long-term memory (PostgreSQL + pgvector)</td>
-          <td><a href="/magec/docs/memory/">Memory</a></td>
+          <td><a href="/docs/memory/">Memory</a></td>
       </tr>
       <tr>
           <td><strong>MCP Servers</strong></td>
           <td>External tool connections via Model Context Protocol</td>
-          <td><a href="/magec/docs/mcp/">MCP Tools</a></td>
+          <td><a href="/docs/mcp/">MCP Tools</a></td>
       </tr>
       <tr>
           <td><strong>Agents</strong></td>
           <td>AI entities with their own LLM, prompt, memory, voice, and tools</td>
-          <td><a href="/magec/docs/agents/">Agents</a></td>
+          <td><a href="/docs/agents/">Agents</a></td>
       </tr>
       <tr>
           <td><strong>Commands</strong></td>
           <td>Reusable prompts referenced by cron and webhook clients</td>
-          <td><a href="/magec/docs/commands/">Commands</a></td>
+          <td><a href="/docs/commands/">Commands</a></td>
       </tr>
       <tr>
           <td><strong>Clients</strong></td>
           <td>Access points — Voice UI, Telegram, webhooks, cron — each with its own token</td>
-          <td><a href="/magec/docs/clients/">Clients</a></td>
+          <td><a href="/docs/clients/">Clients</a></td>
       </tr>
       <tr>
           <td><strong>Flows</strong></td>
           <td>Multi-agent workflows with sequential, parallel, and loop steps</td>
-          <td><a href="/magec/docs/flows/">Flows</a></td>
+          <td><a href="/docs/flows/">Flows</a></td>
+      </tr>
+      <tr>
+          <td><strong>Secrets</strong></td>
+          <td>Encrypted key-value pairs for API keys, tokens, and passwords</td>
+          <td><a href="/docs/secrets/">Secrets</a></td>
       </tr>
   </tbody>
 </table>
@@ -308,6 +330,7 @@
 </span></span><span class="line"><span class="cl">  <span class="nt">&#34;apiKey&#34;</span><span class="p">:</span> <span class="s2">&#34;${OPENAI_API_KEY}&#34;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>The installer uses this for cloud deployments, so your API keys come from environment variables rather than being stored in plain text.</p>
+<p>For a more convenient way to manage sensitive values, see <a href="/docs/secrets/">Secrets</a> — they let you store API keys through the Admin UI and reference them with the same <code>${VAR}</code> syntax.</p>
 <h3 id="backup-and-restore">Backup and restore</h3>
 <p>To back up your entire Magec configuration, copy <code>data/store.json</code>. To restore it, put it back and restart the server. That single file contains every resource you&rsquo;ve configured.</p>
 

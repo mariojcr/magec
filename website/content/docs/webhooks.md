@@ -8,7 +8,7 @@ Each webhook gets a unique URL and its own authentication token. There are two m
 
 ## Command mode
 
-The webhook runs a preconfigured [command](/magec/docs/commands/) — a reusable prompt that you define once and trigger as many times as you want. The request body is ignored; the prompt is always the same command.
+The webhook runs a preconfigured [command](/docs/commands/) — a reusable prompt that you define once and trigger as many times as you want. The request body is ignored; the prompt is always the same command.
 
 This is useful for recurring tasks that always do the same thing:
 

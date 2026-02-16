@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Reference — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -162,8 +173,8 @@
 </span></span></code></pre></div><h3 id="other-endpoints">Other endpoints</h3>
 <p>Beyond ADK, the User API also serves:</p>
 <ul>
-<li><strong>Voice</strong> — STT and TTS proxies per agent, plus a WebSocket for real-time wake word and VAD events. See <a href="/magec/docs/voice-system/">Voice System</a>.</li>
-<li><strong>Webhooks</strong> — Trigger endpoint for webhook clients. See <a href="/magec/docs/webhooks/">Webhooks</a>.</li>
+<li><strong>Voice</strong> — STT and TTS proxies per agent, plus a WebSocket for real-time wake word and VAD events. See <a href="/docs/voice-system/">Voice System</a>.</li>
+<li><strong>Webhooks</strong> — Trigger endpoint for webhook clients. See <a href="/docs/webhooks/">Webhooks</a>.</li>
 <li><strong>Client info</strong> — Pairing info, allowed agents and flows, response agent markers.</li>
 <li><strong>Health</strong> — Simple health check at <code>/api/v1/health</code>.</li>
 </ul>

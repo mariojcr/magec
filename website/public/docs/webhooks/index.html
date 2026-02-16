@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Webhooks — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -73,6 +73,17 @@
       
       
       <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
         <div class="docs-sidebar__label">Core Concepts</div>
         
         <a href="/docs/agents/" class="docs-sidebar__link">Agents</a>
@@ -130,7 +141,7 @@
       <p>Webhook clients expose an HTTP endpoint that triggers agent invocations. External systems make an HTTP request, Magec processes it through an agent, and the response comes back in the HTTP response body. This is how you integrate Magec with CI/CD pipelines, form handlers, monitoring systems, or any tool that can make HTTP requests.</p>
 <p>Each webhook gets a unique URL and its own authentication token. There are two modes depending on where the prompt comes from.</p>
 <h2 id="command-mode">Command mode</h2>
-<p>The webhook runs a preconfigured <a href="/magec/docs/commands/">command</a> — a reusable prompt that you define once and trigger as many times as you want. The request body is ignored; the prompt is always the same command.</p>
+<p>The webhook runs a preconfigured <a href="/docs/commands/">command</a> — a reusable prompt that you define once and trigger as many times as you want. The request body is ignored; the prompt is always the same command.</p>
 <p>This is useful for recurring tasks that always do the same thing:</p>
 <ul>
 <li><strong>Daily reports</strong> — A monitoring system hits the webhook every morning, the agent queries data and generates a summary</li>

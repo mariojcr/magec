@@ -235,8 +235,8 @@ docker compose up -d      # fresh start
 
 ## Next steps
 
-- **[Configuration](/magec/docs/configuration/)** — understand `config.yaml` vs. Admin UI resources
-- **[Agents](/magec/docs/agents/)** — customize agent behavior, prompts, and voice
-- **[MCP Tools](/magec/docs/mcp/)** — connect external tools (Home Assistant, GitHub, databases, etc.)
-- **[Flows](/magec/docs/flows/)** — chain agents into multi-step workflows
-- **[Docker Reference](/magec/docs/docker/)** — advanced Docker topics (image architecture, customization, host access)
+- **[Configuration](/docs/configuration/)** — understand `config.yaml` vs. Admin UI resources
+- **[Agents](/docs/agents/)** — customize agent behavior, prompts, and voice
+- **[MCP Tools](/docs/mcp/)** — connect external tools (Home Assistant, GitHub, databases, etc.)
+- **[Flows](/docs/flows/)** — chain agents into multi-step workflows
+- **[Docker Reference](/docs/docker/)** — advanced Docker topics (image architecture, customization, host access)

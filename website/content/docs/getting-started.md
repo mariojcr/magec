@@ -14,7 +14,7 @@ There are three ways to get Magec running depending on your needs:
 
 A single `docker run` command with your OpenAI API key. No local models, no compose files, no GPU required. You get LLM, STT, TTS, and embeddings from OpenAI out of the box.
 
-→ **[Docker Quick Start (OpenAI)](/magec/docs/install-docker/)**
+→ **[Docker Quick Start (OpenAI)](/docs/install-docker/)**
 
 ---
 
@@ -24,7 +24,7 @@ A single `docker run` command with your OpenAI API key. No local models, no comp
 
 Everything runs on your machine: LLM (Ollama), speech-to-text (Parakeet), text-to-speech (OpenAI Edge TTS), embeddings (nomic-embed-text), memory (Redis + PostgreSQL). No API keys, no cloud accounts. You can also swap in cloud providers later by just changing backends in the Admin UI.
 
-→ **[Docker Compose](/magec/docs/install-compose-local/)**
+→ **[Docker Compose](/docs/install-compose-local/)**
 
 ---
 
@@ -34,7 +34,7 @@ Everything runs on your machine: LLM (Ollama), speech-to-text (Parakeet), text-t
 
 Download the binary for your platform, create a `config.yaml`, and run it. You manage the dependencies (LLM, ffmpeg, ONNX Runtime) yourself.
 
-→ **[Binary Installation](/magec/docs/install-binary/)**
+→ **[Binary Installation](/docs/install-binary/)**
 
 ---
 
@@ -59,8 +59,8 @@ Once Magec is running, the first thing you need to do is **create a client** in 
 
 The recommended path through the docs after installation:
 
-1. **[Configuration](/magec/docs/configuration/)** — Understand `config.yaml` (infrastructure) vs the Admin UI (resources)
-2. **[Agents](/magec/docs/agents/)** — Create your first custom agent
-3. **[AI Backends](/magec/docs/backends/)** — Add and mix AI providers
-4. **[MCP Tools](/magec/docs/mcp/)** — Connect external tools (this is where it gets powerful)
-5. **[Flows](/magec/docs/flows/)** — Chain agents into multi-step workflows
+1. **[Configuration](/docs/configuration/)** — Understand `config.yaml` (infrastructure) vs the Admin UI (resources)
+2. **[Agents](/docs/agents/)** — Create your first custom agent
+3. **[AI Backends](/docs/backends/)** — Add and mix AI providers
+4. **[MCP Tools](/docs/mcp/)** — Connect external tools (this is where it gets powerful)
+5. **[Flows](/docs/flows/)** — Chain agents into multi-step workflows

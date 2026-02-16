@@ -54,7 +54,7 @@ The VAD tracks the speech pattern over time rather than making frame-by-frame de
 
 Once the VAD determines you've finished speaking, the captured audio needs to be converted to text (STT). After the agent processes your message, its response needs to be converted back to audio (TTS). These two steps are where **you choose** whether to stay local or use a cloud service.
 
-Both STT and TTS are configured per-agent in the [agent settings](/magec/docs/agents/). This means different agents can use different providers — one agent might use a local STT for privacy, while another uses cloud TTS for higher voice quality.
+Both STT and TTS are configured per-agent in the [agent settings](/docs/agents/). This means different agents can use different providers — one agent might use a local STT for privacy, while another uses cloud TTS for higher voice quality.
 
 | | Local option | Cloud option |
 |---|---|---|

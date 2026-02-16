@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voice UI — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -243,7 +254,7 @@
 <li><strong>WebSocket</strong> — For real-time audio streaming, wake word detection, and voice activity detection (VAD)</li>
 </ol>
 <p>When you speak, the browser captures audio and streams it to the server over WebSocket. The server runs wake word detection and VAD using ONNX models, then signals the UI when speech starts and stops. The captured audio is sent for transcription via the agent&rsquo;s STT backend, and the text response is sent back for TTS synthesis via the agent&rsquo;s (or spokesperson&rsquo;s) voice configuration.</p>
-<p>All audio processing (wake word, VAD, resampling) happens server-side. The browser just captures and plays audio. See <a href="/magec/docs/voice-system/">Voice System</a> for the technical details.</p>
+<p>All audio processing (wake word, VAD, resampling) happens server-side. The browser just captures and plays audio. See <a href="/docs/voice-system/">Voice System</a> for the technical details.</p>
 
     </div>
   </div>

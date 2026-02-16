@@ -47,8 +47,8 @@ The request format for sending a message:
 
 Beyond ADK, the User API also serves:
 
-- **Voice** — STT and TTS proxies per agent, plus a WebSocket for real-time wake word and VAD events. See [Voice System](/magec/docs/voice-system/).
-- **Webhooks** — Trigger endpoint for webhook clients. See [Webhooks](/magec/docs/webhooks/).
+- **Voice** — STT and TTS proxies per agent, plus a WebSocket for real-time wake word and VAD events. See [Voice System](/docs/voice-system/).
+- **Webhooks** — Trigger endpoint for webhook clients. See [Webhooks](/docs/webhooks/).
 - **Client info** — Pairing info, allowed agents and flows, response agent markers.
 - **Health** — Simple health check at `/api/v1/health`.
 

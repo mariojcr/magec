@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Commands — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -73,6 +73,17 @@
       
       
       <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
         <div class="docs-sidebar__label">Core Concepts</div>
         
         <a href="/docs/agents/" class="docs-sidebar__link">Agents</a>
@@ -127,7 +138,7 @@
         Navigation
       </button>
       <h1>Commands</h1>
-      <p>Commands are reusable prompts — predefined messages that you write once and trigger repeatedly through <a href="/magec/docs/cron/">cron jobs</a> and <a href="/magec/docs/webhooks/">webhooks</a>. Instead of duplicating the same prompt across multiple triggers, you define it as a command and reference it wherever you need it.</p>
+      <p>Commands are reusable prompts — predefined messages that you write once and trigger repeatedly through <a href="/docs/cron/">cron jobs</a> and <a href="/docs/webhooks/">webhooks</a>. Instead of duplicating the same prompt across multiple triggers, you define it as a command and reference it wherever you need it.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
 
@@ -210,9 +221,9 @@
 <h2 id="using-commands">Using commands</h2>
 <p>Commands are used by two client types:</p>
 <h3 id="in-cron-jobs">In cron jobs</h3>
-<p>A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See <a href="/magec/docs/cron/">Cron</a> for details.</p>
+<p>A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See <a href="/docs/cron/">Cron</a> for details.</p>
 <h3 id="in-webhooks-command-mode">In webhooks (command mode)</h3>
-<p>A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See <a href="/magec/docs/webhooks/">Webhooks</a> for details.</p>
+<p>A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See <a href="/docs/webhooks/">Webhooks</a> for details.</p>
 
 
 

@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://achetronic.github.io/magec">Website</a> ·
-  <a href="https://achetronic.github.io/magec/docs/">Docs</a> ·
+  <a href="https://magec.dev">Website</a> ·
+  <a href="https://magec.dev/docs/">Docs</a> ·
   <a href="#quick-start">Quick Start</a>
 </p>
 
@@ -105,28 +105,28 @@ Full docs at **[achetronic.github.io/magec](https://achetronic.github.io/magec/d
 
 ### Make commands
 
-| Command | Description |
-|---------|-------------|
-| `make build` | Build frontend UIs + embed models + compile server binary |
-| `make dev` | Build all and start server |
-| `make dev-admin` | Start Admin UI dev server (Vite, hot-reload) |
-| `make dev-voice` | Start Voice UI dev server (Vite, hot-reload) |
-| `make swagger` | Regenerate Swagger docs |
-| `make infra` | Start PostgreSQL + Redis |
-| `make ollama` | Start Ollama with qwen3:8b + nomic-embed-text |
-| `make docker-build` | Build Docker image (current arch) |
-| `make docker-buildx` | Build multi-arch image (amd64 + arm64) |
-| `make clean` | Remove build artifacts |
+| Command              | Description                                               |
+| -------------------- | --------------------------------------------------------- |
+| `make build`         | Build frontend UIs + embed models + compile server binary |
+| `make dev`           | Build all and start server                                |
+| `make dev-admin`     | Start Admin UI dev server (Vite, hot-reload)              |
+| `make dev-voice`     | Start Voice UI dev server (Vite, hot-reload)              |
+| `make swagger`       | Regenerate Swagger docs                                   |
+| `make infra`         | Start PostgreSQL + Redis                                  |
+| `make ollama`        | Start Ollama with qwen3:8b + nomic-embed-text             |
+| `make docker-build`  | Build Docker image (current arch)                         |
+| `make docker-buildx` | Build multi-arch image (amd64 + arm64)                    |
+| `make clean`         | Remove build artifacts                                    |
 
 ### Key dependencies
 
-| Dependency | Purpose |
-|------------|---------|
-| [google.golang.org/adk](https://pkg.go.dev/google.golang.org/adk) | Google Agent Development Kit |
-| [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) | MCP client |
-| [yalue/onnxruntime_go](https://github.com/yalue/onnxruntime_go) | ONNX Runtime for wake word / VAD |
-| [mymmrac/telego](https://github.com/mymmrac/telego) | Telegram bot |
-| [achetronic/adk-utils-go](https://github.com/achetronic/adk-utils-go) | ADK providers, session, memory |
+| Dependency                                                                    | Purpose                          |
+| ----------------------------------------------------------------------------- | -------------------------------- |
+| [google.golang.org/adk](https://pkg.go.dev/google.golang.org/adk)             | Google Agent Development Kit     |
+| [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) | MCP client                       |
+| [yalue/onnxruntime_go](https://github.com/yalue/onnxruntime_go)               | ONNX Runtime for wake word / VAD |
+| [mymmrac/telego](https://github.com/mymmrac/telego)                           | Telegram bot                     |
+| [achetronic/adk-utils-go](https://github.com/achetronic/adk-utils-go)         | ADK providers, session, memory   |
 
 ## Contributors
 

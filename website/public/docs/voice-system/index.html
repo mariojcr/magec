@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voice System — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -168,7 +179,7 @@
 <p>The VAD tracks the speech pattern over time rather than making frame-by-frame decisions. This means it won&rsquo;t cut you off mid-sentence just because you took a breath — it waits for 2 seconds of real silence before considering your utterance complete.</p>
 <h2 id="speech-to-text-and-text-to-speech">Speech-to-Text and Text-to-Speech</h2>
 <p>Once the VAD determines you&rsquo;ve finished speaking, the captured audio needs to be converted to text (STT). After the agent processes your message, its response needs to be converted back to audio (TTS). These two steps are where <strong>you choose</strong> whether to stay local or use a cloud service.</p>
-<p>Both STT and TTS are configured per-agent in the <a href="/magec/docs/agents/">agent settings</a>. This means different agents can use different providers — one agent might use a local STT for privacy, while another uses cloud TTS for higher voice quality.</p>
+<p>Both STT and TTS are configured per-agent in the <a href="/docs/agents/">agent settings</a>. This means different agents can use different providers — one agent might use a local STT for privacy, while another uses cloud TTS for higher voice quality.</p>
 <table>
   <thead>
       <tr>

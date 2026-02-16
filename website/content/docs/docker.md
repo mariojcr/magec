@@ -4,9 +4,9 @@ title: "Docker Reference"
 
 This page covers advanced Docker topics: the container architecture, Docker Compose file structure, GPU support, data persistence, customization, and common operations. For getting started with Docker, see the installation guides:
 
-- [Docker Quick Start (OpenAI)](/magec/docs/install-docker/) — single container, minimal setup
-- [Docker Compose — Local](/magec/docs/install-compose-local/) — fully local, all services
-- [Docker Compose — Cloud](/magec/docs/install-compose-cloud/) — cloud AI providers
+- [Docker Quick Start (OpenAI)](/docs/install-docker/) — single container, minimal setup
+- [Docker Compose — Local](/docs/install-compose-local/) — fully local, all services
+- [Docker Compose — Cloud](/docs/install-compose-cloud/) — cloud AI providers
 
 ## Container architecture
 

@@ -121,7 +121,7 @@ Then in the Admin UI, go to **Memory → New Session Provider**:
 On Linux, you need `--add-host=host.docker.internal:host-gateway` in your `docker run` command for the Magec container to reach services on the host. On macOS and Windows, `host.docker.internal` works automatically.
 {{< /callout >}}
 
-For the full memory setup (including long-term memory with PostgreSQL + pgvector), see the [Docker Compose — Local](/magec/docs/install-compose-local/) guide which includes everything pre-configured.
+For the full memory setup (including long-term memory with PostgreSQL + pgvector), see the [Docker Compose — Local](/docs/install-compose-local/) guide which includes everything pre-configured.
 
 ## Data persistence
 
@@ -141,7 +141,7 @@ Your data is safe in the `magec_data` volume.
 
 This setup is great for trying Magec, but for a full deployment with memory, local models, or multiple services, check:
 
-- **[Docker Compose — Local](/magec/docs/install-compose-local/)** — fully local with Ollama, Parakeet, memory, everything pre-wired
-- **[Docker Compose — Cloud](/magec/docs/install-compose-cloud/)** — cloud providers with full infrastructure
-- **[Configuration](/magec/docs/configuration/)** — understand the two configuration layers
-- **[MCP Tools](/magec/docs/mcp/)** — connect external tools to your agents
+- **[Docker Compose — Local](/docs/install-compose-local/)** — fully local with Ollama, Parakeet, memory, everything pre-wired
+- **[Docker Compose — Cloud](/docs/install-compose-cloud/)** — cloud providers with full infrastructure
+- **[Configuration](/docs/configuration/)** — understand the two configuration layers
+- **[MCP Tools](/docs/mcp/)** — connect external tools to your agents

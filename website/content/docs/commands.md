@@ -2,7 +2,7 @@
 title: "Commands"
 ---
 
-Commands are reusable prompts — predefined messages that you write once and trigger repeatedly through [cron jobs](/magec/docs/cron/) and [webhooks](/magec/docs/webhooks/). Instead of duplicating the same prompt across multiple triggers, you define it as a command and reference it wherever you need it.
+Commands are reusable prompts — predefined messages that you write once and trigger repeatedly through [cron jobs](/docs/cron/) and [webhooks](/docs/webhooks/). Instead of duplicating the same prompt across multiple triggers, you define it as a command and reference it wherever you need it.
 
 <div class="screenshots" style="margin-bottom: 2rem;">
 {{< screenshot src="img/screenshots/admin-commands.png" alt="Admin UI — Commands" >}}
@@ -48,11 +48,11 @@ Commands are used by two client types:
 
 ### In cron jobs
 
-A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See [Cron](/magec/docs/cron/) for details.
+A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See [Cron](/docs/cron/) for details.
 
 ### In webhooks (command mode)
 
-A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See [Webhooks](/magec/docs/webhooks/) for details.
+A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See [Webhooks](/docs/webhooks/) for details.
 
 {{< callout type="info" >}}
 Commands are optional — you don't need them if you only use the Voice UI, Telegram, or webhooks in passthrough mode. They become useful when you want to automate tasks that always use the same prompt.

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agentic Flows — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -183,7 +194,7 @@
 <h3 id="how-data-flows-between-agents">How data flows between agents</h3>
 <p>Each step receives the accumulated output of all previous steps as context. The mechanism for structured data passing is <strong>output keys</strong>:</p>
 <ol>
-<li>Give an agent an <code>outputKey</code> in its <a href="/magec/docs/agents/">configuration</a> (e.g., <code>research_results</code>)</li>
+<li>Give an agent an <code>outputKey</code> in its <a href="/docs/agents/">configuration</a> (e.g., <code>research_results</code>)</li>
 <li>The agent&rsquo;s output is saved under that key in the flow&rsquo;s shared state</li>
 <li>Later agents can reference it with <code>{research_results}</code> in their system prompt</li>
 <li>Magec replaces the placeholder with the actual output at runtime</li>
@@ -196,7 +207,7 @@
 <h2 id="spokesperson-voice-ui">Spokesperson (Voice UI)</h2>
 <p>When a flow is selected in the Voice UI, you can choose which agent acts as the <strong>spokesperson</strong> — the voice the user hears. The spokesperson&rsquo;s TTS and STT configuration determines how the flow sounds and how it listens.</p>
 <p>By default, the spokesperson is the first response agent. But you can switch it from the agent switcher in the Voice UI. This lets you, for example, have a flow where the &ldquo;manager&rdquo; agent is the response agent (its text appears in chat) but the &ldquo;presenter&rdquo; agent is the spokesperson (its voice is what you hear).</p>
-<p>See <a href="/magec/docs/voice-ui/">Voice UI — Spokesperson</a> for details.</p>
+<p>See <a href="/docs/voice-ui/">Voice UI — Spokesperson</a> for details.</p>
 <h2 id="example-flows">Example flows</h2>
 <h3 id="research-pipeline-4-agents">Research Pipeline (4 agents)</h3>
 <p>A parallel research stage where two researchers work simultaneously, a critique stage, then synthesis.</p>

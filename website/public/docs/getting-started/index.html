@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Getting Started — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -73,6 +73,17 @@
       
       
       <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
         <div class="docs-sidebar__label">Core Concepts</div>
         
         <a href="/docs/agents/" class="docs-sidebar__link">Agents</a>
@@ -133,17 +144,17 @@
 <h3 id="quick-start--docker-with-openai">Quick start — Docker with OpenAI</h3>
 <p><strong>Best for:</strong> Trying Magec for the first time with minimal setup.</p>
 <p>A single <code>docker run</code> command with your OpenAI API key. No local models, no compose files, no GPU required. You get LLM, STT, TTS, and embeddings from OpenAI out of the box.</p>
-<p>→ <strong><a href="/magec/docs/install-docker/">Docker Quick Start (OpenAI)</a></strong></p>
+<p>→ <strong><a href="/docs/install-docker/">Docker Quick Start (OpenAI)</a></strong></p>
 <hr>
 <h3 id="docker-compose--fully-local">Docker Compose — Fully local</h3>
 <p><strong>Best for:</strong> Privacy-first deployments where nothing leaves your network.</p>
 <p>Everything runs on your machine: LLM (Ollama), speech-to-text (Parakeet), text-to-speech (OpenAI Edge TTS), embeddings (nomic-embed-text), memory (Redis + PostgreSQL). No API keys, no cloud accounts. You can also swap in cloud providers later by just changing backends in the Admin UI.</p>
-<p>→ <strong><a href="/magec/docs/install-compose-local/">Docker Compose</a></strong></p>
+<p>→ <strong><a href="/docs/install-compose-local/">Docker Compose</a></strong></p>
 <hr>
 <h3 id="binary--manual-install">Binary — Manual install</h3>
 <p><strong>Best for:</strong> Running Magec directly on your machine without Docker. Ideal for local MCP tools (filesystem, git, shell), development, or when you want full control over the process.</p>
 <p>Download the binary for your platform, create a <code>config.yaml</code>, and run it. You manage the dependencies (LLM, ffmpeg, ONNX Runtime) yourself.</p>
-<p>→ <strong><a href="/magec/docs/install-binary/">Binary Installation</a></strong></p>
+<p>→ <strong><a href="/docs/install-binary/">Binary Installation</a></strong></p>
 <hr>
 <h2 id="whats-the-same-everywhere">What&rsquo;s the same everywhere</h2>
 <p>Regardless of how you install Magec, you always get:</p>
@@ -164,11 +175,11 @@
 </ol>
 <p>The recommended path through the docs after installation:</p>
 <ol>
-<li><strong><a href="/magec/docs/configuration/">Configuration</a></strong> — Understand <code>config.yaml</code> (infrastructure) vs the Admin UI (resources)</li>
-<li><strong><a href="/magec/docs/agents/">Agents</a></strong> — Create your first custom agent</li>
-<li><strong><a href="/magec/docs/backends/">AI Backends</a></strong> — Add and mix AI providers</li>
-<li><strong><a href="/magec/docs/mcp/">MCP Tools</a></strong> — Connect external tools (this is where it gets powerful)</li>
-<li><strong><a href="/magec/docs/flows/">Flows</a></strong> — Chain agents into multi-step workflows</li>
+<li><strong><a href="/docs/configuration/">Configuration</a></strong> — Understand <code>config.yaml</code> (infrastructure) vs the Admin UI (resources)</li>
+<li><strong><a href="/docs/agents/">Agents</a></strong> — Create your first custom agent</li>
+<li><strong><a href="/docs/backends/">AI Backends</a></strong> — Add and mix AI providers</li>
+<li><strong><a href="/docs/mcp/">MCP Tools</a></strong> — Connect external tools (this is where it gets powerful)</li>
+<li><strong><a href="/docs/flows/">Flows</a></strong> — Chain agents into multi-step workflows</li>
 </ol>
 
     </div>

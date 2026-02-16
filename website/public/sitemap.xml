@@ -2,52 +2,56 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://magec.dev:43161/docs/flows/</loc>
+    <loc>https://magec.dev/docs/admin-password/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/agents/</loc>
+    <loc>https://magec.dev/docs/flows/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/backends/</loc>
+    <loc>https://magec.dev/docs/agents/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/api/</loc>
+    <loc>https://magec.dev/docs/backends/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/install-binary/</loc>
+    <loc>https://magec.dev/docs/api/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/categories/</loc>
+    <loc>https://magec.dev/docs/install-binary/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/clients/</loc>
+    <loc>https://magec.dev/categories/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/commands/</loc>
+    <loc>https://magec.dev/docs/clients/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/configuration/</loc>
+    <loc>https://magec.dev/docs/commands/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/cron/</loc>
+    <loc>https://magec.dev/docs/configuration/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/install-compose-local/</loc>
+    <loc>https://magec.dev/docs/cron/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/install-docker/</loc>
+    <loc>https://magec.dev/docs/install-compose-local/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/docker/</loc>
+    <loc>https://magec.dev/docs/install-docker/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/</loc>
+    <loc>https://magec.dev/docs/docker/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/getting-started/</loc>
+    <loc>https://magec.dev/docs/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/</loc>
+    <loc>https://magec.dev/docs/getting-started/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/mcp/</loc>
+    <loc>https://magec.dev/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/memory/</loc>
+    <loc>https://magec.dev/docs/mcp/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/screenshots/</loc>
+    <loc>https://magec.dev/docs/memory/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/tags/</loc>
+    <loc>https://magec.dev/docs/screenshots/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/telegram/</loc>
+    <loc>https://magec.dev/docs/secrets/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/voice-system/</loc>
+    <loc>https://magec.dev/tags/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/voice-ui/</loc>
+    <loc>https://magec.dev/docs/telegram/</loc>
   </url><url>
-    <loc>https://magec.dev:43161/docs/webhooks/</loc>
+    <loc>https://magec.dev/docs/voice-system/</loc>
+  </url><url>
+    <loc>https://magec.dev/docs/voice-ui/</loc>
+  </url><url>
+    <loc>https://magec.dev/docs/webhooks/</loc>
   </url>
 </urlset>

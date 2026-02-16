@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Docker Quick Start (OpenAI) — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -324,7 +335,7 @@
   On Linux, you need <code>--add-host=host.docker.internal:host-gateway</code> in your <code>docker run</code> command for the Magec container to reach services on the host. On macOS and Windows, <code>host.docker.internal</code> works automatically.
 </div>
 
-<p>For the full memory setup (including long-term memory with PostgreSQL + pgvector), see the <a href="/magec/docs/install-compose-local/">Docker Compose — Local</a> guide which includes everything pre-configured.</p>
+<p>For the full memory setup (including long-term memory with PostgreSQL + pgvector), see the <a href="/docs/install-compose-local/">Docker Compose — Local</a> guide which includes everything pre-configured.</p>
 <h2 id="data-persistence">Data persistence</h2>
 <p>The <code>-v magec_data:/app/data</code> flag creates a Docker volume for Magec&rsquo;s data. Your agents, backends, clients, and conversation history persist across container restarts and updates.</p>
 <p>To update Magec:</p>
@@ -335,10 +346,10 @@
 <h2 id="next-steps">Next steps</h2>
 <p>This setup is great for trying Magec, but for a full deployment with memory, local models, or multiple services, check:</p>
 <ul>
-<li><strong><a href="/magec/docs/install-compose-local/">Docker Compose — Local</a></strong> — fully local with Ollama, Parakeet, memory, everything pre-wired</li>
-<li><strong><a href="/magec/docs/install-compose-cloud/">Docker Compose — Cloud</a></strong> — cloud providers with full infrastructure</li>
-<li><strong><a href="/magec/docs/configuration/">Configuration</a></strong> — understand the two configuration layers</li>
-<li><strong><a href="/magec/docs/mcp/">MCP Tools</a></strong> — connect external tools to your agents</li>
+<li><strong><a href="/docs/install-compose-local/">Docker Compose — Local</a></strong> — fully local with Ollama, Parakeet, memory, everything pre-wired</li>
+<li><strong><a href="/docs/install-compose-cloud/">Docker Compose — Cloud</a></strong> — cloud providers with full infrastructure</li>
+<li><strong><a href="/docs/configuration/">Configuration</a></strong> — understand the two configuration layers</li>
+<li><strong><a href="/docs/mcp/">MCP Tools</a></strong> — connect external tools to your agents</li>
 </ul>
 
     </div>

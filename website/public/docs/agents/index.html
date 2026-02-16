@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agents — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -67,6 +67,17 @@
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
         <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
       </div>
       
@@ -182,7 +193,7 @@
 </ul>
 <p>If you leave the system prompt empty, Magec uses a default prompt that makes the agent a general-purpose assistant.</p>
 <h3 id="output-key">Output Key</h3>
-<p>The <strong>output key</strong> is used when the agent participates in a <a href="/magec/docs/flows/">flow</a>. It saves the agent&rsquo;s output under a named key in the flow&rsquo;s shared state. Other agents in the same flow can then reference that output using <code>{key_name}</code> in their own prompts.</p>
+<p>The <strong>output key</strong> is used when the agent participates in a <a href="/docs/flows/">flow</a>. It saves the agent&rsquo;s output under a named key in the flow&rsquo;s shared state. Other agents in the same flow can then reference that output using <code>{key_name}</code> in their own prompts.</p>
 <p>For example, if a &ldquo;researcher&rdquo; agent has <code>outputKey: research_results</code>, a later &ldquo;writer&rdquo; agent can include <code>{research_results}</code> in its prompt to access what the researcher found.</p>
 <table>
   <thead>
@@ -203,7 +214,7 @@
   </tbody>
 </table>
 <h2 id="llm">LLM</h2>
-<p>Which AI brain powers this agent. You select a <a href="/magec/docs/backends/">backend</a> (the provider connection) and a model (which specific model to use from that provider).</p>
+<p>Which AI brain powers this agent. You select a <a href="/docs/backends/">backend</a> (the provider connection) and a model (which specific model to use from that provider).</p>
 <p>The backend dropdown shows all backends you&rsquo;ve configured. The model is a free-text field — you type the model identifier exactly as the provider expects it.</p>
 <table>
   <thead>
@@ -247,9 +258,9 @@
   A simple FAQ bot and a personal assistant share the same memory infrastructure, but the personal assistant will naturally accumulate more memories because of how it interacts with users. The memory system is self-managing — agents decide what to remember based on their system prompt and the conversation context.
 </div>
 
-<p>For details on setting up memory providers (Redis for sessions, PostgreSQL + pgvector for long-term), see <a href="/magec/docs/memory/">Memory</a>.</p>
+<p>For details on setting up memory providers (Redis for sessions, PostgreSQL + pgvector for long-term), see <a href="/docs/memory/">Memory</a>.</p>
 <h2 id="mcp-servers">MCP Servers</h2>
-<p>This is where agents become truly powerful. <a href="/magec/docs/mcp/">MCP (Model Context Protocol)</a> lets you connect external tools to the agent — file access, web search, database queries, smart home control, GitHub operations, and hundreds more.</p>
+<p>This is where agents become truly powerful. <a href="/docs/mcp/">MCP (Model Context Protocol)</a> lets you connect external tools to the agent — file access, web search, database queries, smart home control, GitHub operations, and hundreds more.</p>
 <p>Each toggle enables a configured MCP server, giving the agent access to its tools. When the agent decides it needs to perform an action (like turning on a light, reading a file, or querying a database), it calls the appropriate tool through MCP.</p>
 <p>An agent with no MCP servers can still chat — it just can&rsquo;t interact with the outside world. Adding MCP tools is what transforms an agent from a chatbot into something genuinely useful. An agent with Home Assistant MCP can control your house. An agent with GitHub MCP can manage your repositories. An agent with a database MCP can query and report on your data.</p>
 <p>The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from &ldquo;another chat interface&rdquo; into a real AI platform.</p>

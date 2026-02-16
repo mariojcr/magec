@@ -69,7 +69,7 @@ The same editor handles much larger workflows. The Software Factory below chains
 
 Each step receives the accumulated output of all previous steps as context. The mechanism for structured data passing is **output keys**:
 
-1. Give an agent an `outputKey` in its [configuration](/magec/docs/agents/) (e.g., `research_results`)
+1. Give an agent an `outputKey` in its [configuration](/docs/agents/) (e.g., `research_results`)
 2. The agent's output is saved under that key in the flow's shared state
 3. Later agents can reference it with `{research_results}` in their system prompt
 4. Magec replaces the placeholder with the actual output at runtime
@@ -90,7 +90,7 @@ When a flow is selected in the Voice UI, you can choose which agent acts as the 
 
 By default, the spokesperson is the first response agent. But you can switch it from the agent switcher in the Voice UI. This lets you, for example, have a flow where the "manager" agent is the response agent (its text appears in chat) but the "presenter" agent is the spokesperson (its voice is what you hear).
 
-See [Voice UI — Spokesperson](/magec/docs/voice-ui/) for details.
+See [Voice UI — Spokesperson](/docs/voice-ui/) for details.
 
 ## Example flows
 

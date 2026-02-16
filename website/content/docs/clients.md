@@ -32,10 +32,10 @@ This design means you control exactly who can access what. A Voice UI client for
 
 Each type is covered in detail on its own page:
 
-- [Voice UI](/magec/docs/voice-ui/) — Browser-based voice interface with wake word, push-to-talk, agent switching, conversation history, and PWA support
-- [Telegram](/magec/docs/telegram/) — Bot with text and voice messages, response modes, per-chat agent switching, and user restrictions
-- [Webhooks](/magec/docs/webhooks/) — HTTP endpoint for external system integrations with command and passthrough modes
-- [Cron](/magec/docs/cron/) — Scheduled tasks that run commands against agents on a configurable schedule
+- [Voice UI](/docs/voice-ui/) — Browser-based voice interface with wake word, push-to-talk, agent switching, conversation history, and PWA support
+- [Telegram](/docs/telegram/) — Bot with text and voice messages, response modes, per-chat agent switching, and user restrictions
+- [Webhooks](/docs/webhooks/) — HTTP endpoint for external system integrations with command and passthrough modes
+- [Cron](/docs/cron/) — Scheduled tasks that run commands against agents on a configurable schedule
 
 ## Creating a client
 

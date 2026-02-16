@@ -294,8 +294,8 @@ Back up `store.json` to preserve your entire configuration. To restore, copy it 
 
 ## Next steps
 
-- **[Configuration](/magec/docs/configuration/)** — understand `config.yaml` vs. Admin UI resources
-- **[Agents](/magec/docs/agents/)** — create agents with custom prompts and tools
-- **[MCP Tools](/magec/docs/mcp/)** — connect local and remote tools to your agents
-- **[Flows](/magec/docs/flows/)** — chain agents into multi-step workflows
-- **[Voice UI](/magec/docs/voice-ui/)** — wake word, push-to-talk, PWA installation
+- **[Configuration](/docs/configuration/)** — understand `config.yaml` vs. Admin UI resources
+- **[Agents](/docs/agents/)** — create agents with custom prompts and tools
+- **[MCP Tools](/docs/mcp/)** — connect local and remote tools to your agents
+- **[Flows](/docs/flows/)** — chain agents into multi-step workflows
+- **[Voice UI](/docs/voice-ui/)** — wake word, push-to-talk, PWA installation

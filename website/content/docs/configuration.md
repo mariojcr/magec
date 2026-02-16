@@ -24,6 +24,7 @@ server:
   host: 0.0.0.0
   port: 8080          # User API + Voice UI
   adminPort: 8081     # Admin API + Admin UI
+  # adminPassword: ${MAGEC_ADMIN_PASSWORD}
 
 voice:
   ui:
@@ -44,6 +45,7 @@ Controls where the server listens. Magec runs two HTTP servers on separate ports
 | `host` | `0.0.0.0` | Bind address. Use `127.0.0.1` to restrict to localhost only. |
 | `port` | `8080` | User-facing port. The Voice UI, user API, webhook endpoints, and voice WebSocket all live here. |
 | `adminPort` | `8081` | Admin-facing port. The Admin UI and management API live here. In production, restrict access to this port. |
+| `adminPassword` | *(empty)* | Password for admin API authentication. When set, all `/api/` requests require `Authorization: Bearer <password>`. Also used as the encryption key for [Secrets](/docs/secrets/). See [Admin Password](/docs/admin-password/). |
 
 ### Voice
 
@@ -83,13 +85,14 @@ This is Magec's internal database. Every agent, backend, memory provider, MCP se
 
 | Resource | What it is | More info |
 |----------|-----------|-----------|
-| **Backends** | Connections to AI providers (OpenAI, Anthropic, Gemini, Ollama) | [AI Backends](/magec/docs/backends/) |
-| **Memory Providers** | Session storage (Redis) and long-term memory (PostgreSQL + pgvector) | [Memory](/magec/docs/memory/) |
-| **MCP Servers** | External tool connections via Model Context Protocol | [MCP Tools](/magec/docs/mcp/) |
-| **Agents** | AI entities with their own LLM, prompt, memory, voice, and tools | [Agents](/magec/docs/agents/) |
-| **Commands** | Reusable prompts referenced by cron and webhook clients | [Commands](/magec/docs/commands/) |
-| **Clients** | Access points — Voice UI, Telegram, webhooks, cron — each with its own token | [Clients](/magec/docs/clients/) |
-| **Flows** | Multi-agent workflows with sequential, parallel, and loop steps | [Flows](/magec/docs/flows/) |
+| **Backends** | Connections to AI providers (OpenAI, Anthropic, Gemini, Ollama) | [AI Backends](/docs/backends/) |
+| **Memory Providers** | Session storage (Redis) and long-term memory (PostgreSQL + pgvector) | [Memory](/docs/memory/) |
+| **MCP Servers** | External tool connections via Model Context Protocol | [MCP Tools](/docs/mcp/) |
+| **Agents** | AI entities with their own LLM, prompt, memory, voice, and tools | [Agents](/docs/agents/) |
+| **Commands** | Reusable prompts referenced by cron and webhook clients | [Commands](/docs/commands/) |
+| **Clients** | Access points — Voice UI, Telegram, webhooks, cron — each with its own token | [Clients](/docs/clients/) |
+| **Flows** | Multi-agent workflows with sequential, parallel, and loop steps | [Flows](/docs/flows/) |
+| **Secrets** | Encrypted key-value pairs for API keys, tokens, and passwords | [Secrets](/docs/secrets/) |
 
 ### Hot-reload
 
@@ -106,6 +109,8 @@ Like `config.yaml`, the store also supports `${VAR}` substitution. This is parti
 ```
 
 The installer uses this for cloud deployments, so your API keys come from environment variables rather than being stored in plain text.
+
+For a more convenient way to manage sensitive values, see [Secrets](/docs/secrets/) — they let you store API keys through the Admin UI and reference them with the same `${VAR}` syntax.
 
 ### Backup and restore
 

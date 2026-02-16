@@ -48,7 +48,7 @@ If you leave the system prompt empty, Magec uses a default prompt that makes the
 
 ### Output Key
 
-The **output key** is used when the agent participates in a [flow](/magec/docs/flows/). It saves the agent's output under a named key in the flow's shared state. Other agents in the same flow can then reference that output using `{key_name}` in their own prompts.
+The **output key** is used when the agent participates in a [flow](/docs/flows/). It saves the agent's output under a named key in the flow's shared state. Other agents in the same flow can then reference that output using `{key_name}` in their own prompts.
 
 For example, if a "researcher" agent has `outputKey: research_results`, a later "writer" agent can include `{research_results}` in its prompt to access what the researcher found.
 
@@ -59,7 +59,7 @@ For example, if a "researcher" agent has `outputKey: research_results`, a later 
 
 ## LLM
 
-Which AI brain powers this agent. You select a [backend](/magec/docs/backends/) (the provider connection) and a model (which specific model to use from that provider).
+Which AI brain powers this agent. You select a [backend](/docs/backends/) (the provider connection) and a model (which specific model to use from that provider).
 
 The backend dropdown shows all backends you've configured. The model is a free-text field — you type the model identifier exactly as the provider expects it.
 
@@ -91,11 +91,11 @@ You don't need to configure anything on the agent itself. If a session memory pr
 A simple FAQ bot and a personal assistant share the same memory infrastructure, but the personal assistant will naturally accumulate more memories because of how it interacts with users. The memory system is self-managing — agents decide what to remember based on their system prompt and the conversation context.
 {{< /callout >}}
 
-For details on setting up memory providers (Redis for sessions, PostgreSQL + pgvector for long-term), see [Memory](/magec/docs/memory/).
+For details on setting up memory providers (Redis for sessions, PostgreSQL + pgvector for long-term), see [Memory](/docs/memory/).
 
 ## MCP Servers
 
-This is where agents become truly powerful. [MCP (Model Context Protocol)](/magec/docs/mcp/) lets you connect external tools to the agent — file access, web search, database queries, smart home control, GitHub operations, and hundreds more.
+This is where agents become truly powerful. [MCP (Model Context Protocol)](/docs/mcp/) lets you connect external tools to the agent — file access, web search, database queries, smart home control, GitHub operations, and hundreds more.
 
 Each toggle enables a configured MCP server, giving the agent access to its tools. When the agent decides it needs to perform an action (like turning on a light, reading a file, or querying a database), it calls the appropriate tool through MCP.
 

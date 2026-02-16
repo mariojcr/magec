@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=43161&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cron — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -73,6 +73,17 @@
       
       
       <div class="docs-sidebar__group">
+        <div class="docs-sidebar__label">Security</div>
+        
+        <a href="/docs/admin-password/" class="docs-sidebar__link">Admin Password</a>
+        
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
+        
+      </div>
+      
+      
+      
+      <div class="docs-sidebar__group">
         <div class="docs-sidebar__label">Core Concepts</div>
         
         <a href="/docs/agents/" class="docs-sidebar__link">Agents</a>
@@ -127,11 +138,11 @@
         Navigation
       </button>
       <h1>Cron</h1>
-      <p>Cron clients run <a href="/magec/docs/commands/">commands</a> on a schedule. Define when and what, and Magec handles the rest — no external scheduler, no extra infrastructure. The command fires at the specified time, the agent processes it, and the result is logged.</p>
+      <p>Cron clients run <a href="/docs/commands/">commands</a> on a schedule. Define when and what, and Magec handles the rest — no external scheduler, no extra infrastructure. The command fires at the specified time, the agent processes it, and the result is logged.</p>
 <p>This is how you automate tasks that need to happen regularly without anyone pressing a button.</p>
 <h2 id="how-it-works">How it works</h2>
 <ol>
-<li>You create a <a href="/magec/docs/commands/">command</a> — a reusable prompt paired with an agent</li>
+<li>You create a <a href="/docs/commands/">command</a> — a reusable prompt paired with an agent</li>
 <li>You create a cron client and select that command</li>
 <li>You set the schedule (when it should fire)</li>
 <li>Magec&rsquo;s built-in scheduler triggers the command at the specified times</li>

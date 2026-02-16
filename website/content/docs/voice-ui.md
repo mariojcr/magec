@@ -115,4 +115,4 @@ The Voice UI communicates with the server through two channels:
 
 When you speak, the browser captures audio and streams it to the server over WebSocket. The server runs wake word detection and VAD using ONNX models, then signals the UI when speech starts and stops. The captured audio is sent for transcription via the agent's STT backend, and the text response is sent back for TTS synthesis via the agent's (or spokesperson's) voice configuration.
 
-All audio processing (wake word, VAD, resampling) happens server-side. The browser just captures and plays audio. See [Voice System](/magec/docs/voice-system/) for the technical details.
+All audio processing (wake word, VAD, resampling) happens server-side. The browser just captures and plays audio. See [Voice System](/docs/voice-system/) for the technical details.
