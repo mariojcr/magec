@@ -86,7 +86,7 @@ See all screenshots in the [documentation](https://achetronic.github.io/magec/do
 - [x] Webhook and cron clients
 - [x] Admin UI with hot-reload
 - [ ] Context window management (automatic summarization / truncation when approaching token limits)
-- [ ] Secrets management (encrypted storage for API keys and sensitive credentials)
+- [x] Secrets management (encrypted storage for API keys and sensitive credentials)
 - [ ] Discord client
 - [ ] Slack client
 - [ ] Agent-to-agent communication (direct messaging between agents outside of flows)
