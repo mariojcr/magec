@@ -103,6 +103,14 @@ if ! docker info &>/dev/null; then
   die "Docker daemon is not running. Start it and try again."
 fi
 
+if $GPU; then
+  if ! docker info 2>/dev/null | grep -q 'Runtimes:.*nvidia'; then
+    err "NVIDIA Container Toolkit is not installed or not configured for Docker."
+    err "Install it from https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html"
+    die "Then restart Docker and re-run this script with --gpu."
+  fi
+fi
+
 ok "All dependencies met"
 
 # ── Resolve compose command ─────────────────────────────────────────────────
