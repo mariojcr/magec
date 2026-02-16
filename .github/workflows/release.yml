@@ -7,16 +7,54 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Image tag (e.g., latest, dev)"
+        description: "Target release tag (e.g., v0.2.2). Binaries and Docker image are published to this release."
         required: true
-        default: "latest"
+      from_master:
+        description: "Build from master instead of the tag's code"
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      build_ref: ${{ steps.refs.outputs.build_ref }}
+      release_tag: ${{ steps.refs.outputs.release_tag }}
+      docker_tags: ${{ steps.refs.outputs.docker_tags }}
+    steps:
+      - name: Resolve refs
+        id: refs
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            if [ "${{ inputs.from_master }}" = "true" ]; then
+              echo "build_ref=master" >> "$GITHUB_OUTPUT"
+            else
+              echo "build_ref=${TAG}" >> "$GITHUB_OUTPUT"
+            fi
+            echo "release_tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+            VERSION="${TAG#v}"
+            MAJOR="${VERSION%%.*}"
+            MINOR="${VERSION#*.}"; MINOR="${MINOR%%.*}"
+            echo "docker_tags<<EOF" >> "$GITHUB_OUTPUT"
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}" >> "$GITHUB_OUTPUT"
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${MAJOR}.${MINOR}" >> "$GITHUB_OUTPUT"
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${MAJOR}" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "build_ref=${GITHUB_REF}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=${TAG}" >> "$GITHUB_OUTPUT"
+            echo "docker_tags=" >> "$GITHUB_OUTPUT"
+          fi
+
   binaries:
+    needs: resolve
     strategy:
       fail-fast: false
       matrix:
@@ -43,6 +81,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.build_ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -123,6 +163,7 @@ jobs:
           path: magec-${{ matrix.goos }}-${{ matrix.goarch }}.*
 
   docker:
+    needs: resolve
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -130,6 +171,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.build_ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -144,17 +187,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      - name: Extract metadata (tag push)
+        if: github.event_name == 'push'
+        id: meta_push
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern=v{{version}},enable=${{ github.event_name == 'push' }}
-            type=semver,pattern=v{{major}}.{{minor}},enable=${{ github.event_name == 'push' }}
-            type=semver,pattern=v{{major}},enable=${{ github.event_name == 'push' }}
-            type=sha,enable=${{ github.event_name == 'push' }}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
+            type=sha
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -163,21 +206,17 @@ jobs:
           file: docker/build/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ github.event_name == 'push' && steps.meta_push.outputs.tags || needs.resolve.outputs.docker_tags }}
+          labels: ${{ steps.meta_push.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    needs: [binaries, docker]
+    needs: [resolve, binaries, docker]
     permissions:
       contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -188,5 +227,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
-          gh release upload "$tag" artifacts/*.tar.gz artifacts/*.zip --clobber
+          gh release upload --repo "${{ github.repository }}" \
+            "${{ needs.resolve.outputs.release_tag }}" \
+            artifacts/*.tar.gz artifacts/*.zip --clobber
