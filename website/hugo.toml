@@ -78,11 +78,6 @@ theme = 'magec'
     parent = 'security'
     url = '/docs/admin-password/'
     weight = 1
-  [[menu.docs]]
-    name = 'Secrets'
-    parent = 'security'
-    url = '/docs/secrets/'
-    weight = 2
 
   [[menu.docs]]
     identifier = 'core'
@@ -114,10 +109,15 @@ theme = 'magec'
     url = '/docs/mcp/'
     weight = 5
   [[menu.docs]]
+    name = 'Secrets'
+    parent = 'core'
+    url = '/docs/secrets/'
+    weight = 6
+  [[menu.docs]]
     name = 'Commands'
     parent = 'core'
     url = '/docs/commands/'
-    weight = 6
+    weight = 7
 
   [[menu.docs]]
     identifier = 'clients'
@@ -164,10 +164,15 @@ theme = 'magec'
     url = '/docs/voice-system/'
     weight = 2
   [[menu.docs]]
+    name = 'Advanced Secrets'
+    parent = 'reference'
+    url = '/docs/secrets-advanced/'
+    weight = 3
+  [[menu.docs]]
     name = 'Screenshots'
     parent = 'reference'
     url = '/docs/screenshots/'
-    weight = 3
+    weight = 4
 
 [outputs]
   home = ['HTML']

@@ -3,12 +3,12 @@
 <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Secrets — Magec — Self-hosted Multi-Agent AI Platform</title>
+  <title>Advanced Secrets — Magec — Self-hosted Multi-Agent AI Platform</title>
   <meta name="description" content="Define multiple AI agents, chain them into workflows, connect tools. Voice, Telegram, webhooks, cron. Your server, your rules.">
   <meta name="theme-color" content="#1c1917">
   <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
   <link rel="stylesheet" href="/css/style.css">
-  <meta property="og:title" content="Secrets">
+  <meta property="og:title" content="Advanced Secrets">
   <meta property="og:description" content="Define multiple AI agents, chain them into workflows, connect tools. Voice, Telegram, webhooks, cron. Your server, your rules.">
   <meta property="og:type" content="website">
 </head>
@@ -94,7 +94,7 @@
         
         <a href="/docs/mcp/" class="docs-sidebar__link">MCP Tools</a>
         
-        <a href="/docs/secrets/" class="docs-sidebar__link docs-sidebar__link--active">Secrets</a>
+        <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
         <a href="/docs/commands/" class="docs-sidebar__link">Commands</a>
         
@@ -126,7 +126,7 @@
         
         <a href="/docs/voice-system/" class="docs-sidebar__link">Voice System</a>
         
-        <a href="/docs/secrets-advanced/" class="docs-sidebar__link">Advanced Secrets</a>
+        <a href="/docs/secrets-advanced/" class="docs-sidebar__link docs-sidebar__link--active">Advanced Secrets</a>
         
         <a href="/docs/screenshots/" class="docs-sidebar__link">Screenshots</a>
         
@@ -139,113 +139,130 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         Navigation
       </button>
-      <h1>Secrets</h1>
-      <p>Secrets let you store sensitive values — API keys, tokens, passwords — in the Admin UI and reference them anywhere in your configuration with <code>${KEY}</code> syntax. No more hardcoding credentials or juggling environment variables across deployments.</p>
-<h2 id="creating-a-secret">Creating a secret</h2>
-<p>Open the Admin UI, click <strong>Secrets</strong> in the sidebar, then <strong>+ New Secret</strong>.</p>
-
-
-
-<img src="/img/screenshots/admin-secrets.png" alt="Secrets list showing one existing secret" class="screenshot screenshot--desktop">
-
-<p>Fill in the form:</p>
-
-
-
-<img src="/img/screenshots/admin-secret-dialog.png" alt="New Secret dialog with fields for name, key, value, and description" class="screenshot screenshot--desktop">
-
+      <h1>Advanced Secrets</h1>
+      <p>This page covers the internal details of how Magec handles secrets — the expansion pipeline, encryption at rest, compatibility with external environment variables, and recovery procedures. For a practical guide on creating and using secrets, see <a href="/docs/secrets/">Secrets</a>.</p>
+<p>Secrets are named values — API keys, tokens, passwords — that you manage through the Admin UI and reference anywhere in your configuration using <code>${KEY}</code> syntax. They provide a single place to store sensitive data instead of scattering environment variables across your deployment.</p>
+<h2 id="how-secrets-work">How secrets work</h2>
+<p>Each secret has a <strong>key</strong> (like <code>OPENAI_API_KEY</code>) and a <strong>value</strong> (the actual API key). When Magec starts, it loads all secrets and injects them as environment variables. Any <code>${VAR}</code> reference in <code>config.yaml</code> or <code>store.json</code> that matches a secret key gets expanded to its value.</p>
+<p>This means a backend configured with:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">  <span class="nt">&#34;apiKey&#34;</span><span class="p">:</span> <span class="s2">&#34;${OPENAI_API_KEY}&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></div><p>…will resolve to the actual API key if you&rsquo;ve created a secret with key <code>OPENAI_API_KEY</code>.</p>
+<h3 id="the-expansion-pipeline">The expansion pipeline</h3>
+<p>On startup, Magec processes secrets before anything else:</p>
+<ol>
+<li>Load <code>store.json</code> from disk (raw, unexpanded)</li>
+<li>Decrypt any encrypted secret values (if <a href="/docs/admin-password/">admin password</a> is set)</li>
+<li>Inject all secret key-value pairs into the process environment via <code>os.Setenv()</code></li>
+<li>Expand all <code>${VAR}</code> references across the entire store using <code>os.ExpandEnv()</code></li>
+<li>Continue with the fully resolved configuration</li>
+</ol>
+<p>This two-pass approach means secrets can reference other environment variables, and the rest of the store can reference secrets — everything resolves in a single consistent pass.</p>
+<h2 id="encryption-at-rest">Encryption at rest</h2>
+<p>When an <a href="/docs/admin-password/">admin password</a> is set, secret values are encrypted before writing to <code>store.json</code>:</p>
 <table>
   <thead>
       <tr>
-          <th>Field</th>
-          <th>What to enter</th>
-          <th>Example</th>
+          <th>Aspect</th>
+          <th>Detail</th>
       </tr>
   </thead>
   <tbody>
       <tr>
-          <td><strong>Name</strong></td>
-          <td>A human-readable label</td>
-          <td><code>OpenAI API Key</code></td>
+          <td><strong>Algorithm</strong></td>
+          <td>AES-256-GCM (authenticated encryption)</td>
       </tr>
       <tr>
-          <td><strong>Environment Variable Key</strong></td>
-          <td>The key you&rsquo;ll reference with <code>${...}</code>. Must be <code>UPPER_SNAKE_CASE</code>.</td>
-          <td><code>OPENAI_API_KEY</code></td>
+          <td><strong>Key derivation</strong></td>
+          <td>PBKDF2 with 100,000 iterations, SHA-256</td>
       </tr>
       <tr>
-          <td><strong>Value</strong></td>
-          <td>The actual sensitive value. Once saved, it&rsquo;s never shown again.</td>
-          <td><code>sk-...</code></td>
+          <td><strong>Source key</strong></td>
+          <td>The admin password from <code>config.yaml</code></td>
       </tr>
       <tr>
-          <td><strong>Description</strong></td>
-          <td>Optional note for yourself</td>
-          <td><code>Production key for GPT-4o</code></td>
+          <td><strong>Format</strong></td>
+          <td>Encrypted values are stored as <code>enc:v1:&lt;base64&gt;</code> — clearly distinguishable from plain text</td>
       </tr>
   </tbody>
 </table>
-<p>Click <strong>Save</strong>. The secret is ready to use immediately.</p>
+<p>Without an admin password, secrets are stored as plain text in <code>store.json</code> and a warning is logged:</p>
+<pre tabindex="0"><code>WARN  Secrets stored without encryption — set adminPassword to enable encryption
+</code></pre><h2 id="compatibility-with-external-environment-variables">Compatibility with external environment variables</h2>
+<p>Secrets don&rsquo;t replace environment variables — they complement them. The expansion pipeline merges both sources:</p>
+<ul>
+<li><strong>Secrets</strong> are injected via <code>os.Setenv()</code> before expansion</li>
+<li><strong>External env vars</strong> (from Docker, Kubernetes, systemd, shell) are already in the environment</li>
+<li><code>os.ExpandEnv()</code> resolves all <code>${VAR}</code> references from the combined environment</li>
+</ul>
+<p>This means you can use both approaches interchangeably:</p>
+<table>
+  <thead>
+      <tr>
+          <th>Source</th>
+          <th>How to set</th>
+          <th>Available as <code>${VAR}</code></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Magec secret</td>
+          <td>Admin UI → Secrets</td>
+          <td>Yes</td>
+      </tr>
+      <tr>
+          <td>Docker env</td>
+          <td><code>docker run -e KEY=value</code></td>
+          <td>Yes</td>
+      </tr>
+      <tr>
+          <td>Docker Compose env</td>
+          <td><code>environment:</code> in <code>compose.yaml</code></td>
+          <td>Yes</td>
+      </tr>
+      <tr>
+          <td>Kubernetes env</td>
+          <td><code>env:</code> in Pod spec</td>
+          <td>Yes</td>
+      </tr>
+      <tr>
+          <td>Kubernetes secret</td>
+          <td><code>secretKeyRef</code> in Pod spec</td>
+          <td>Yes</td>
+      </tr>
+      <tr>
+          <td>Shell export</td>
+          <td><code>export KEY=value</code></td>
+          <td>Yes</td>
+      </tr>
+  </tbody>
+</table>
+<p>If a secret and an external env var have the same key, the <strong>secret takes precedence</strong> — <code>os.Setenv()</code> overwrites the existing value.</p>
 
 
 
-<div class="docs-callout">
-  Secret values are <strong>write-only</strong>. After saving, the value is never displayed again — not in the UI, not in the API. When editing a secret, leave the value field empty to keep the current value, or enter a new one to replace it.
+<div class="docs-callout docs-callout--info">
+  The main advantage of Magec secrets over external environment variables is that you can manage them through the Admin UI without restarting the server or redeploying. Add an API key, and it&rsquo;s available immediately on the next store reload.
 </div>
 
-<h2 id="using-secrets-in-your-configuration">Using secrets in your configuration</h2>
-<p>Once created, reference a secret anywhere by wrapping its key in <code>${...}</code>. For example, when configuring a backend:</p>
-
-
-
-<img src="/img/screenshots/admin-secret-usage.png" alt="Memory provider using ${POSTGRES_PASSWORD} in the connection string" class="screenshot screenshot--desktop">
-
-<p>Here the connection string uses <code>${POSTGRES_PASSWORD}</code> — Magec replaces it with the actual secret value at runtime.</p>
-<h3 id="where-you-can-use-key">Where you can use <code>${KEY}</code></h3>
-<p>Secrets work in every resource field:</p>
-<table>
-  <thead>
-      <tr>
-          <th>Resource</th>
-          <th>Example field</th>
-          <th>Example value</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td><strong>Backends</strong></td>
-          <td>API Key</td>
-          <td><code>${OPENAI_API_KEY}</code></td>
-      </tr>
-      <tr>
-          <td><strong>Backends</strong></td>
-          <td>Base URL</td>
-          <td><code>${OPENAI_BASE_URL:-https://api.openai.com/v1}</code></td>
-      </tr>
-      <tr>
-          <td><strong>Memory</strong></td>
-          <td>Connection String</td>
-          <td><code>redis://${REDIS_PASSWORD}@redis:6379</code></td>
-      </tr>
-      <tr>
-          <td><strong>MCP Servers</strong></td>
-          <td>Environment</td>
-          <td><code>GITHUB_TOKEN: ${GITHUB_TOKEN}</code></td>
-      </tr>
-      <tr>
-          <td><strong>Clients</strong></td>
-          <td>Token</td>
-          <td><code>${TELEGRAM_BOT_TOKEN}</code></td>
-      </tr>
-  </tbody>
-</table>
-<p>The <code>${VAR:-default}</code> syntax is also supported — if the variable is unset or empty, the default value after <code>:-</code> is used instead.</p>
-<h2 id="how-it-works-under-the-hood">How it works under the hood</h2>
-<p>When Magec starts, all secrets are injected as environment variables. Then every <code>${VAR}</code> reference in the store is expanded. This means secrets and regular environment variables (from Docker, Kubernetes, systemd) all work the same way.</p>
-<p>If you need to understand the expansion pipeline, encryption details, external env var compatibility, or recovery procedures, see <a href="/docs/secrets-advanced/">Advanced Secrets</a>.</p>
-<h2 id="encryption">Encryption</h2>
-<p>When an <a href="/docs/admin-password/">admin password</a> is configured, all secret values are encrypted on disk using AES-256-GCM. Without an admin password, secrets are stored in plain text — a warning is logged to remind you to enable it.</p>
-<p>See <a href="/docs/secrets-advanced/#encryption-at-rest">Advanced Secrets — Encryption at rest</a> for the full technical details.</p>
+<h2 id="recovery">Recovery</h2>
+<h3 id="changing-the-admin-password">Changing the admin password</h3>
+<p>If you change the admin password, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing the password:</p>
+<ol>
+<li>Note down all secret values (they&rsquo;re write-only, so you&rsquo;ll need them from their original source)</li>
+<li>Change the password in <code>config.yaml</code></li>
+<li>Restart Magec — encrypted values will fail to decrypt and remain as <code>enc:v1:...</code> strings</li>
+<li>Re-create or update each secret with its plain-text value — they&rsquo;ll be re-encrypted with the new password</li>
+</ol>
+<h3 id="losing-the-admin-password">Losing the admin password</h3>
+<p>If you lose the admin password entirely, the same applies — encrypted values are unrecoverable without the original password. You&rsquo;ll need to re-enter all secret values from their original sources.</p>
+<h3 id="removing-the-admin-password">Removing the admin password</h3>
+<p>If you remove <code>adminPassword</code> from <code>config.yaml</code>, two things happen:</p>
+<ol>
+<li>The Admin API becomes unprotected (no authentication required)</li>
+<li>Existing encrypted secrets cannot be decrypted — you&rsquo;ll need to re-create them (they&rsquo;ll be stored as plain text)</li>
+</ol>
 
     </div>
   </div>

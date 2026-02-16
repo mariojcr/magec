@@ -66,6 +66,14 @@ title: "Screenshots"
     <span class="gallery-desktop__label">Command configuration</span>
   </div>
   <div class="gallery-desktop__item">
+    {{< screenshot src="img/screenshots/admin-secrets.png" alt="Secrets list" >}}
+    <span class="gallery-desktop__label">Secrets</span>
+  </div>
+  <div class="gallery-desktop__item">
+    {{< screenshot src="img/screenshots/admin-secret-dialog.png" alt="New Secret dialog" >}}
+    <span class="gallery-desktop__label">Secret configuration</span>
+  </div>
+  <div class="gallery-desktop__item">
     {{< screenshot src="img/screenshots/admin-conversations.png" alt="Conversations list" >}}
     <span class="gallery-desktop__label">Conversations</span>
   </div>
