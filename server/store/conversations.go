@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -331,13 +333,23 @@ func (cs *ConversationStore) loadFromDisk() error {
 	return nil
 }
 
+var magecCommentRegex = regexp.MustCompile(`<!--MAGEC_[A-Z_]+:.*?:MAGEC_[A-Z_]+-->\n?`)
+
+func stripMagecComments(s string) string {
+	return strings.TrimSpace(magecCommentRegex.ReplaceAllString(s, ""))
+}
+
 func conversationPreview(msgs []ConversationMessage) string {
 	for _, m := range msgs {
 		if m.Role == "user" && m.Content != "" {
-			if len(m.Content) > 120 {
-				return m.Content[:120] + "…"
+			clean := stripMagecComments(m.Content)
+			if clean == "" {
+				continue
 			}
-			return m.Content
+			if len(clean) > 120 {
+				return clean[:120] + "…"
+			}
+			return clean
 		}
 	}
 	return ""
