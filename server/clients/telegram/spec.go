@@ -25,12 +25,14 @@ func (p *Provider) ConfigSchema() clients.Schema {
 				"x-placeholder": "123456:ABC-DEF...",
 			},
 			"allowedUsers": clients.Schema{
-				"type":          "string",
+				"type":          "array",
+				"items":         clients.Schema{"type": "integer"},
 				"title":         "Allowed Users",
 				"x-placeholder": "Comma-separated Telegram user IDs",
 			},
 			"allowedChats": clients.Schema{
-				"type":          "string",
+				"type":          "array",
+				"items":         clients.Schema{"type": "integer"},
 				"title":         "Allowed Chats",
 				"x-placeholder": "Comma-separated Telegram chat IDs",
 			},

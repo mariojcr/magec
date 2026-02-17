@@ -120,7 +120,7 @@
                 </span>
                 <Badge v-if="c.summary" variant="green">summarized</Badge>
               </div>
-              <p v-if="c.preview" class="text-[11px] text-arena-500 italic truncate">"{{ c.preview }}"</p>
+              <p v-if="c.preview" class="text-[11px] text-arena-500 italic truncate">"{{ stripMetadata(c.preview) }}"</p>
               <div class="flex items-center gap-1.5">
                 <Badge variant="muted" class="!py-0">{{ formatSource(c.source) }}</Badge>
                 <Badge v-if="c.flowId" variant="muted" class="!py-0">Flow</Badge>
@@ -153,6 +153,7 @@
 import { ref, computed, watch, inject, onMounted, onBeforeUnmount } from 'vue'
 import { useDataStore } from '../../lib/stores/data.js'
 import { conversationsApi } from '../../lib/api/index.js'
+import { stripMetadata } from '../../lib/metadata.js'
 import Card from '../../components/Card.vue'
 import Badge from '../../components/Badge.vue'
 import Icon from '../../components/Icon.vue'

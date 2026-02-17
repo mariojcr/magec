@@ -96,6 +96,17 @@
           </FormSelect>
         </div>
 
+        <!-- Array → text input rendered as comma-separated values -->
+        <div v-else-if="propSchema.type === 'array'">
+          <FormLabel :label="propSchema.title || key" :required="isFieldRequired(key)" />
+          <FormInput
+            :modelValue="arrayToCSV(form.config[key])"
+            @update:modelValue="form.config[key] = csvToArray(propSchema, $event)"
+            :placeholder="propSchema['x-placeholder'] || ''"
+          />
+          <p v-if="propSchema.description" class="text-[10px] text-arena-500 mt-1">{{ propSchema.description }}</p>
+        </div>
+
         <!-- String → text/password input -->
         <div v-else>
           <FormLabel :label="propSchema.title || key" :required="isFieldRequired(key)" />
@@ -262,6 +273,20 @@ function jsonEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+function arrayToCSV(val) {
+  if (Array.isArray(val)) return val.join(', ')
+  return val ?? ''
+}
+
+function csvToArray(propSchema, val) {
+  const itemType = propSchema.items?.type
+  const parts = val.toString().split(',').map(s => s.trim()).filter(Boolean)
+  if (itemType === 'integer' || itemType === 'number') {
+    return parts.map(Number).filter(n => !isNaN(n))
+  }
+  return parts
+}
+
 function onTypeChange() {
   form.config = {}
   const props = allProperties.value
@@ -313,12 +338,12 @@ async function save() {
       const val = form.config[key]
       if (propSchema.type === 'boolean') {
         typeCfg[key] = !!val
-      } else if (val?.toString().trim()) {
-        if (key === 'allowedUsers' || key === 'allowedChats') {
-          typeCfg[key] = val.toString().split(',').map(s => s.trim()).filter(Boolean).map(Number).filter(n => !isNaN(n))
-        } else {
-          typeCfg[key] = val.toString().trim()
+      } else if (propSchema.type === 'array') {
+        if (Array.isArray(val) && val.length) {
+          typeCfg[key] = val
         }
+      } else if (val?.toString().trim()) {
+        typeCfg[key] = val.toString().trim()
       }
     }
     config[form.type] = typeCfg
