@@ -693,6 +693,14 @@ test_postgres() {
   fi
 }
 
+test_ollama() {
+  if check_cmd ollama; then
+    ollama list &>/dev/null
+  else
+    curl -sf http://localhost:11434/api/tags &>/dev/null
+  fi
+}
+
 setup_redis() {
   local has_docker=false
   check_cmd docker && docker info &>/dev/null 2>&1 && has_docker=true
@@ -910,6 +918,128 @@ setup_postgres() {
   done
 }
 
+setup_ollama() {
+  local has_docker=false
+  check_cmd docker && docker info &>/dev/null 2>&1 && has_docker=true
+
+  local need_llm=false
+  [[ "$LLM_CHOICE" == "1" || "$LLM_CHOICE" == "3" ]] && need_llm=true
+
+  local retry=false
+  while true; do
+    cls
+    echo
+    printf "  $(badge " SETUP " "$BG_YELLOW" "$FG_BLACK")  ${BOLD}Local AI engine (Ollama)${NC}\n"
+    printf "  ${DIM}$(hline '─' "$BOX_W")${NC}\n"
+    echo
+
+    box_top
+    box_empty
+    if $need_llm; then
+      box_line "  Magec uses Ollama to run AI models locally."
+    else
+      box_line "  Long-term memory needs Ollama for embeddings."
+    fi
+    box_line "  Ollama must be running on this machine."
+    box_empty
+    box_sep
+    box_empty
+    box_line "  ${BOLD}Connection:${NC}  ${CYAN}http://localhost:11434${NC}"
+    box_empty
+    box_sep
+    box_empty
+
+    if $has_docker; then
+      box_line "  ${BOLD}Option A — run with Docker:${NC}"
+      box_empty
+      box_line "  ${CYAN}docker run -d -p 11434:11434 --name magec-ollama \\${NC}"
+      box_line "  ${CYAN}  -v ollama_data:/root/.ollama \\${NC}"
+      box_line "  ${CYAN}  ollama/ollama:latest${NC}"
+      box_empty
+      box_sep
+      box_empty
+      box_line "  ${BOLD}Option B — install natively:${NC}"
+      box_empty
+      box_line "  ${CYAN}https://ollama.com${NC}"
+    else
+      box_line "  ${BOLD}Install Ollama:${NC}"
+      box_empty
+      box_line "  ${CYAN}https://ollama.com${NC}"
+      box_empty
+      box_sep
+      box_empty
+      box_line "  ${DIM}Or install Docker and run:${NC}"
+      box_empty
+      box_line "  ${DIM}docker run -d -p 11434:11434 --name magec-ollama \\${NC}"
+      box_line "  ${DIM}  -v ollama_data:/root/.ollama ollama/ollama:latest${NC}"
+    fi
+    box_empty
+    box_bottom
+    echo
+
+    info "Open another terminal, install/start Ollama,"
+    info "then come back here."
+    echo
+
+    if $retry; then
+      local msg="Could not connect to Ollama on localhost:11434"
+      local msg2="Make sure Ollama is running and try again."
+      printf "  ${BG_YELLOW}${FG_BLACK}${BOLD}  %-$(( BOX_W - 2 ))s  ${NC}\n" ""
+      printf "  ${BG_YELLOW}${FG_BLACK}${BOLD}  %-$(( BOX_W - 2 ))s  ${NC}\n" "$msg"
+      printf "  ${BG_YELLOW}${FG_BLACK}${BOLD}  %-$(( BOX_W - 2 ))s  ${NC}\n" "$msg2"
+      printf "  ${BG_YELLOW}${FG_BLACK}${BOLD}  %-$(( BOX_W - 2 ))s  ${NC}\n" ""
+      echo
+    fi
+
+    echo
+    choose \
+      "Test connection" \
+      "Skip — I'll set it up later"
+
+    if [[ "$REPLY" == "2" ]]; then
+      info "Skipped — remember to start Ollama before running Magec"
+      return 0
+    fi
+
+    echo
+    info "Testing Ollama on localhost:11434..."
+    if test_ollama; then
+      ok "Ollama is reachable"
+      sleep 1
+
+      echo
+      info "Pulling required models (this may take a while)..."
+      echo
+
+      if $need_llm; then
+        info "Downloading qwen3:8b (LLM)..."
+        if check_cmd ollama; then
+          ollama pull qwen3:8b
+        else
+          curl -fsSL http://localhost:11434/api/pull -d '{"name":"qwen3:8b"}' -o /dev/null
+        fi
+        ok "qwen3:8b ready"
+      fi
+
+      if $WANT_POSTGRES; then
+        info "Downloading nomic-embed-text (embeddings)..."
+        if check_cmd ollama; then
+          ollama pull nomic-embed-text
+        else
+          curl -fsSL http://localhost:11434/api/pull -d '{"name":"nomic-embed-text"}' -o /dev/null
+        fi
+        ok "nomic-embed-text ready"
+      fi
+
+      echo
+      ok "All models ready"
+      sleep 1
+      return 0
+    fi
+    retry=true
+  done
+}
+
 # ── Create install directory ────────────────────────────────────────────────
 
 mkdir -p "$INSTALL_DIR"
@@ -920,6 +1050,80 @@ cd "$INSTALL_DIR"
 # ═══════════════════════════════════════════════════════════════════════════
 
 install_binary() {
+
+  # ── Services setup ──────────────────────────────────────────────────
+
+  local has_docker=false
+  check_cmd docker && docker info &>/dev/null 2>&1 && has_docker=true
+
+  if $WANT_REDIS; then
+    setup_redis
+  fi
+
+  if $WANT_POSTGRES; then
+    setup_postgres
+  fi
+
+  local need_ollama=false
+  [[ "$LLM_CHOICE" == "1" || "$LLM_CHOICE" == "3" ]] && need_ollama=true
+  $WANT_POSTGRES && need_ollama=true
+
+  if $need_ollama; then
+    setup_ollama
+  fi
+
+  if [[ "$WANT_VOICE" == true ]]; then
+    cls
+    echo
+    printf "  $(badge " SETUP " "$BG_YELLOW" "$FG_BLACK")  ${BOLD}Voice services${NC}\n"
+    printf "  ${DIM}$(hline '─' "$BOX_W")${NC}\n"
+    echo
+
+    box_top
+    box_empty
+    box_line "  Voice needs two services: speech-to-text (STT)"
+    box_line "  and text-to-speech (TTS). Both are available as"
+    box_line "  Docker containers."
+    box_empty
+
+    if $has_docker; then
+      box_sep
+      box_empty
+      box_line "  Run these commands:"
+      box_empty
+      box_line "  ${CYAN}docker run -d -p 8888:8888 --name magec-stt \\${NC}"
+      box_line "  ${CYAN}  ghcr.io/achetronic/parakeet:latest${NC}"
+      box_empty
+      box_line "  ${CYAN}docker run -d -p 5050:5050 --name magec-tts \\${NC}"
+      box_line "  ${CYAN}  -e REQUIRE_API_KEY=False \\${NC}"
+      box_line "  ${CYAN}  travisvn/openai-edge-tts:latest${NC}"
+    else
+      box_sep
+      box_empty
+      box_line "  ${YELLOW}Docker is not installed.${NC} Install it first:"
+      box_empty
+      case "$OS" in
+        linux)  box_line "  ${CYAN}https://docs.docker.com/engine/install/${NC}" ;;
+        darwin) box_line "  ${CYAN}https://docs.docker.com/desktop/install/mac-install/${NC}" ;;
+        windows) box_line "  ${CYAN}https://docs.docker.com/desktop/install/windows-install/${NC}" ;;
+      esac
+      box_empty
+      box_line "  Then run:"
+      box_empty
+      box_line "  ${CYAN}docker run -d -p 8888:8888 ghcr.io/achetronic/parakeet:latest${NC}"
+      box_line "  ${CYAN}docker run -d -p 5050:5050 -e REQUIRE_API_KEY=False \\${NC}"
+      box_line "  ${CYAN}  travisvn/openai-edge-tts:latest${NC}"
+    fi
+    box_empty
+    box_bottom
+    echo
+
+    printf "  ${DIM}Press Enter to continue...${NC}"
+    read -r < /dev/tty
+  fi
+
+  # ── Download binary ────────────────────────────────────────────────
+
   cls
   echo
   printf "  $(badge " INSTALLING " "$BG_CYAN" "$FG_BLACK")\n"
@@ -1000,100 +1204,6 @@ install_binary() {
   info "Creating configuration files..."
   generate_config_yaml
   generate_store_json
-
-  # ── Services setup ──────────────────────────────────────────────────
-
-  local has_docker=false
-  check_cmd docker && docker info &>/dev/null 2>&1 && has_docker=true
-
-  local need_ollama=false
-  [[ "$LLM_CHOICE" == "1" || "$LLM_CHOICE" == "3" ]] && need_ollama=true
-  $WANT_POSTGRES && need_ollama=true
-
-  if $need_ollama; then
-    cls
-    echo
-    printf "  $(badge " SETUP " "$BG_YELLOW" "$FG_BLACK")  ${BOLD}Local AI engine${NC}\n"
-    printf "  ${DIM}$(hline '─' "$BOX_W")${NC}\n"
-    echo
-
-    box_top
-    box_empty
-    if [[ "$LLM_CHOICE" == "1" || "$LLM_CHOICE" == "3" ]]; then
-      box_line "  Magec uses Ollama to run AI models locally."
-    else
-      box_line "  Long-term memory needs Ollama for embeddings."
-    fi
-    box_line "  Install it from ${CYAN}https://ollama.com${NC}, then run:"
-    box_empty
-    box_line "  ${CYAN}ollama serve${NC}"
-    [[ "$LLM_CHOICE" == "1" || "$LLM_CHOICE" == "3" ]] && box_line "  ${CYAN}ollama pull qwen3:8b${NC}"
-    $WANT_POSTGRES && box_line "  ${CYAN}ollama pull nomic-embed-text${NC}"
-    box_empty
-    box_bottom
-    echo
-
-    printf "  ${DIM}Press Enter to continue...${NC}"
-    read -r < /dev/tty
-  fi
-
-  if $WANT_REDIS; then
-    setup_redis
-  fi
-
-  if $WANT_POSTGRES; then
-    setup_postgres
-  fi
-
-  if [[ "$WANT_VOICE" == true ]]; then
-    cls
-    echo
-    printf "  $(badge " SETUP " "$BG_YELLOW" "$FG_BLACK")  ${BOLD}Voice services${NC}\n"
-    printf "  ${DIM}$(hline '─' "$BOX_W")${NC}\n"
-    echo
-
-    box_top
-    box_empty
-    box_line "  Voice needs two services: speech-to-text (STT)"
-    box_line "  and text-to-speech (TTS). Both are available as"
-    box_line "  Docker containers."
-    box_empty
-
-    if $has_docker; then
-      box_sep
-      box_empty
-      box_line "  Run these commands:"
-      box_empty
-      box_line "  ${CYAN}docker run -d -p 8888:8888 --name magec-stt \\${NC}"
-      box_line "  ${CYAN}  ghcr.io/achetronic/parakeet:latest${NC}"
-      box_empty
-      box_line "  ${CYAN}docker run -d -p 5050:5050 --name magec-tts \\${NC}"
-      box_line "  ${CYAN}  -e REQUIRE_API_KEY=False \\${NC}"
-      box_line "  ${CYAN}  travisvn/openai-edge-tts:latest${NC}"
-    else
-      box_sep
-      box_empty
-      box_line "  ${YELLOW}Docker is not installed.${NC} Install it first:"
-      box_empty
-      case "$OS" in
-        linux)  box_line "  ${CYAN}https://docs.docker.com/engine/install/${NC}" ;;
-        darwin) box_line "  ${CYAN}https://docs.docker.com/desktop/install/mac-install/${NC}" ;;
-        windows) box_line "  ${CYAN}https://docs.docker.com/desktop/install/windows-install/${NC}" ;;
-      esac
-      box_empty
-      box_line "  Then run:"
-      box_empty
-      box_line "  ${CYAN}docker run -d -p 8888:8888 ghcr.io/achetronic/parakeet:latest${NC}"
-      box_line "  ${CYAN}docker run -d -p 5050:5050 -e REQUIRE_API_KEY=False \\${NC}"
-      box_line "  ${CYAN}  travisvn/openai-edge-tts:latest${NC}"
-    fi
-    box_empty
-    box_bottom
-    echo
-
-    printf "  ${DIM}Press Enter to continue...${NC}"
-    read -r < /dev/tty
-  fi
 
   print_success
 }
