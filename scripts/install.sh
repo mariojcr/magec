@@ -572,16 +572,18 @@ box_line "  API keys, and everything else in Magec."
 box_empty
 box_sep
 box_empty
-box_line "  Setting a password will:"
+box_line "  Setting a password will protect the Admin API"
+box_line "  and the web panel — no one can access them"
+box_line "  without logging in first."
 box_empty
-box_line "  •  Require login to access the Admin Panel"
-box_line "  •  Encrypt secrets (API keys) stored on disk"
+box_line "  ${DIM}Without a password, anyone on the network can${NC}"
+box_line "  ${DIM}change your configuration.${NC}"
 box_empty
 box_sep
 box_empty
 box_line "  ${DIM}Leave blank to skip (not recommended for servers).${NC}"
-box_line "  ${DIM}You can also set it later via the environment${NC}"
-box_line "  ${DIM}variable ${NC}${CYAN}MAGEC_ADMIN_PASSWORD${NC}"
+box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
+box_line "  ${CYAN}MAGEC_ADMIN_PASSWORD${NC}"
 box_empty
 box_bottom
 echo
@@ -595,6 +597,50 @@ if [[ -n "$ADMIN_PASSWORD" ]]; then
   ok "Password set"
 else
   info "No password — Admin Panel will be open"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  STEP — ENCRYPTION KEY
+# ═══════════════════════════════════════════════════════════════════════════
+
+ENCRYPTION_KEY=""
+
+(( local_step++ ))
+cls
+step_header "$local_step" "Encrypt your secrets"
+
+box_top
+box_empty
+box_line "  Magec can store sensitive data like API keys"
+box_line "  for cloud providers (OpenAI, Anthropic, etc.)."
+box_empty
+box_sep
+box_empty
+box_line "  An encryption key protects these secrets on disk."
+box_line "  Without it, they are stored as plain text in"
+box_line "  ${CYAN}data/store.json${NC}."
+box_empty
+box_line "  ${DIM}This key is independent from the admin password,${NC}"
+box_line "  ${DIM}so you can rotate one without affecting the other.${NC}"
+box_empty
+box_sep
+box_empty
+box_line "  ${DIM}Leave blank to skip (secrets stored unencrypted).${NC}"
+box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
+box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY${NC}"
+box_empty
+box_bottom
+echo
+
+printf "  ${CYAN}▸${NC} Encryption key (input hidden): "
+read -rs REPLY < /dev/tty
+echo
+ENCRYPTION_KEY="$REPLY"
+
+if [[ -n "$ENCRYPTION_KEY" ]]; then
+  ok "Encryption key set"
+else
+  info "No encryption — secrets will be stored in plain text"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -635,6 +681,9 @@ box_line "  ${BOLD}Folder:${NC}            $INSTALL_DIR/"
 pass_label="${GREEN}Set${NC}"
 [[ -z "$ADMIN_PASSWORD" ]] && pass_label="${YELLOW}None (open)${NC}"
 box_line "  ${BOLD}Admin password:${NC}    $pass_label"
+enc_label="${GREEN}Set${NC}"
+[[ -z "$ENCRYPTION_KEY" ]] && enc_label="${YELLOW}None (plain text)${NC}"
+box_line "  ${BOLD}Encryption key:${NC}    $enc_label"
 box_empty
 box_bottom
 echo
@@ -1365,12 +1414,16 @@ generate_config_yaml() {
   local admin_pass_value='${MAGEC_ADMIN_PASSWORD}'
   [[ -n "$ADMIN_PASSWORD" ]] && admin_pass_value="$ADMIN_PASSWORD"
 
+  local enc_key_value='${MAGEC_ENCRYPTION_KEY}'
+  [[ -n "$ENCRYPTION_KEY" ]] && enc_key_value="$ENCRYPTION_KEY"
+
   cat > config.yaml <<YAML
 server:
   host: 0.0.0.0
   port: 8080
   adminPort: 8081
   adminPassword: ${admin_pass_value}
+  encryptionKey: ${enc_key_value}
 
 voice:
   ui:
@@ -1545,6 +1598,7 @@ generate_docker_compose() {
   services+="      - \"8081:8081\"\n"
   services+="    environment:\n"
   services+="      MAGEC_ADMIN_PASSWORD: \${MAGEC_ADMIN_PASSWORD:-}\n"
+  services+="      MAGEC_ENCRYPTION_KEY: \${MAGEC_ENCRYPTION_KEY:-}\n"
   services+="    volumes:\n"
   services+="      - ./config.yaml:/app/config.yaml\n"
   services+="      - ./data:/app/data\n"
@@ -1705,7 +1759,7 @@ EOF
     box_line "  ${BOLD}Admin password:${NC}  ${CYAN}${ADMIN_PASSWORD}${NC}"
     box_empty
     box_line "  ${DIM}You'll need this to log into the Admin Panel.${NC}"
-    box_line "  ${DIM}It's saved in config.yaml → server.adminPassword${NC}"
+    box_line "  ${DIM}Saved in config.yaml → server.adminPassword${NC}"
     box_empty
   else
     box_sep
@@ -1713,6 +1767,23 @@ EOF
     box_line "  ${YELLOW}No admin password set.${NC} The panel is open."
     box_line "  ${DIM}Set one later in config.yaml or via env var:${NC}"
     box_line "  ${CYAN}MAGEC_ADMIN_PASSWORD=yourpassword${NC}"
+    box_empty
+  fi
+
+  if [[ -n "$ENCRYPTION_KEY" ]]; then
+    box_sep
+    box_empty
+    box_line "  ${BOLD}Encryption key:${NC}  ${CYAN}${ENCRYPTION_KEY}${NC}"
+    box_empty
+    box_line "  ${DIM}Used to encrypt API keys and secrets on disk.${NC}"
+    box_line "  ${DIM}Saved in config.yaml → server.encryptionKey${NC}"
+    box_empty
+  else
+    box_sep
+    box_empty
+    box_line "  ${YELLOW}No encryption key set.${NC} Secrets stored in plain text."
+    box_line "  ${DIM}Set one later in config.yaml or via env var:${NC}"
+    box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY=yourkey${NC}"
     box_empty
   fi
 
