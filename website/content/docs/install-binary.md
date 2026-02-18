@@ -2,11 +2,25 @@
 title: "Binary Installation"
 ---
 
-Run Magec directly on your machine without Docker. This is the best option when you want to use **local MCP tools** (filesystem access, git, shell commands), need full control over the process, or are developing on Magec itself.
+Run Magec as a native binary on your machine. This is the best option when you want to use **local MCP tools** (filesystem access, git, shell commands), need full control over the process, or are developing on Magec itself.
+
+Dependencies like Redis, PostgreSQL, or Ollama can be installed natively or run as Docker containers — the installer guides you through both options. Docker is the recommended way to manage dependencies: spinning up a database or an Ollama instance takes seconds and keeps your system clean.
 
 The Magec binary is self-contained — it includes the Admin UI, Voice UI, wake word models, and all auxiliary ONNX models baked in. You just need the binary, a `config.yaml`, and the external services you want to use.
 
-## Download
+## One-line install
+
+The interactive installer can also set up Magec as a binary — select **binary** mode when prompted and it will download the right binary for your platform, set up external dependencies, and generate the configuration:
+
+```bash
+curl -fsSL https://magec.dev/install | bash
+```
+
+## Manual setup
+
+If you prefer to set things up yourself:
+
+### Download
 
 Download the latest release for your platform from the [GitHub Releases](https://github.com/achetronic/magec/releases) page:
 

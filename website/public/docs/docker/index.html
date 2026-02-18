@@ -197,7 +197,7 @@
 <p>In cloud modes (OpenAI, Anthropic, Gemini), some containers are replaced by cloud API calls. Redis and PostgreSQL always run locally because they store your data.</p>
 <h2 id="docker-compose-files">Docker Compose files</h2>
 <h2 id="docker-compose-file">Docker Compose file</h2>
-<p>The install script downloads a single <code>docker-compose.yaml</code> with all services pre-configured for a fully local deployment. GPU acceleration for Ollama is included but commented out — the installer enables it when you pass <code>--gpu</code>.</p>
+<p>The install script generates a <code>docker-compose.yaml</code> with all services pre-configured for your deployment. GPU acceleration for Ollama is included when you enable NVIDIA support during the interactive setup.</p>
 <h2 id="docker-image">Docker image</h2>
 <p>The Magec Docker image (<code>ghcr.io/achetronic/magec</code>) is built with a multi-stage Dockerfile:</p>
 <table>
@@ -243,15 +243,13 @@
 </table>
 <p>The runtime image uses <strong>distroless</strong> — no shell, no package manager, minimal attack surface. The image is available for <code>linux/amd64</code> and <code>linux/arm64</code>.</p>
 <h2 id="gpu-support">GPU support</h2>
-<p>For local deployments, you can enable NVIDIA GPU acceleration for Ollama:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -fsSL .../install.sh <span class="p">|</span> bash -s -- --gpu
-</span></span></code></pre></div><p>This uncomments the GPU configuration in the Ollama service. You need:</p>
+<p>The interactive installer detects NVIDIA GPUs and offers to enable GPU acceleration for Ollama automatically. You can also enable it manually by editing <code>docker-compose.override.yaml</code>:</p>
+<p>Requirements:</p>
 <ul>
 <li>An NVIDIA GPU</li>
 <li><a href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html">nvidia-container-toolkit</a> installed</li>
 <li>Docker configured to use the NVIDIA runtime</li>
 </ul>
-<p>To enable manually, edit <code>docker-compose.override.yaml</code>:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ollama</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span><span class="w">

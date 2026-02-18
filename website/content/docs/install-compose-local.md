@@ -11,23 +11,15 @@ The fully local deployment. Everything runs on your machine: LLM, speech-to-text
 
 ## One-line install
 
-The installer downloads the Docker Compose file, pulls images, and starts everything:
+The interactive installer walks you through the full setup — LLM provider, voice, memory, NVIDIA GPU support — and generates a ready-to-run Docker Compose deployment:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/scripts/install.sh | bash
+curl -fsSL https://magec.dev/install | bash
 ```
 
 {{< callout type="info" >}}
 The first start downloads approximately 5 GB of AI models (Qwen 3 8B for LLM, nomic-embed-text for embeddings). This only happens once. Track progress with `docker compose logs -f ollama-setup`.
 {{< /callout >}}
-
-### With NVIDIA GPU
-
-If you have an NVIDIA GPU and [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed, enable GPU acceleration for significantly faster LLM inference:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/scripts/install.sh | bash -s -- --gpu
-```
 
 ## Manual setup
 

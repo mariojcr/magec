@@ -28,7 +28,7 @@ In cloud modes (OpenAI, Anthropic, Gemini), some containers are replaced by clou
 
 ## Docker Compose file
 
-The install script downloads a single `docker-compose.yaml` with all services pre-configured for a fully local deployment. GPU acceleration for Ollama is included but commented out — the installer enables it when you pass `--gpu`.
+The install script generates a `docker-compose.yaml` with all services pre-configured for your deployment. GPU acceleration for Ollama is included when you enable NVIDIA support during the interactive setup.
 
 ## Docker image
 
@@ -47,19 +47,13 @@ The runtime image uses **distroless** — no shell, no package manager, minimal 
 
 ## GPU support
 
-For local deployments, you can enable NVIDIA GPU acceleration for Ollama:
+The interactive installer detects NVIDIA GPUs and offers to enable GPU acceleration for Ollama automatically. You can also enable it manually by editing `docker-compose.override.yaml`:
 
-```bash
-curl -fsSL .../install.sh | bash -s -- --gpu
-```
-
-This uncomments the GPU configuration in the Ollama service. You need:
+Requirements:
 
 - An NVIDIA GPU
 - [nvidia-container-toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed
 - Docker configured to use the NVIDIA runtime
-
-To enable manually, edit `docker-compose.override.yaml`:
 
 ```yaml
 services:

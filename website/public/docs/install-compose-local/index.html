@@ -148,8 +148,8 @@
 <li>~6 GB disk space for AI models (downloaded on first start)</li>
 </ul>
 <h2 id="one-line-install">One-line install</h2>
-<p>The installer downloads the Docker Compose file, pulls images, and starts everything:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/scripts/install.sh <span class="p">|</span> bash
+<p>The interactive installer walks you through the full setup — LLM provider, voice, memory, NVIDIA GPU support — and generates a ready-to-run Docker Compose deployment:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -fsSL https://magec.dev/install <span class="p">|</span> bash
 </span></span></code></pre></div>
 
 
@@ -157,10 +157,7 @@
   The first start downloads approximately 5 GB of AI models (Qwen 3 8B for LLM, nomic-embed-text for embeddings). This only happens once. Track progress with <code>docker compose logs -f ollama-setup</code>.
 </div>
 
-<h3 id="with-nvidia-gpu">With NVIDIA GPU</h3>
-<p>If you have an NVIDIA GPU and <a href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html">nvidia-container-toolkit</a> installed, enable GPU acceleration for significantly faster LLM inference:</p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/scripts/install.sh <span class="p">|</span> bash -s -- --gpu
-</span></span></code></pre></div><h2 id="manual-setup">Manual setup</h2>
+<h2 id="manual-setup">Manual setup</h2>
 <p>If you prefer to set things up yourself, or want to customize the configuration before starting:</p>
 <h3 id="1-download-the-files">1. Download the files</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mkdir magec <span class="o">&amp;&amp;</span> <span class="nb">cd</span> magec
