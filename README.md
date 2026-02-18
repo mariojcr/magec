@@ -68,7 +68,7 @@ Ideal for local MCP tools (filesystem, git, shell). See the [Binary Installation
 - **MCP tools** — Home Assistant, GitHub, databases, and hundreds more via Model Context Protocol.
 - **Memory** — Session (Redis) + long-term semantic (PostgreSQL/pgvector).
 - **Voice** — Wake word, VAD, STT, TTS. All server-side via ONNX Runtime. Privacy-first.
-- **Clients** — Voice UI (PWA), Admin UI, Telegram, webhooks, cron, REST API.
+- **Clients** — Voice UI (PWA), Admin UI, Telegram, webhooks, cron, REST API, Slack.
 
 ## Screenshots
 
