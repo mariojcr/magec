@@ -93,7 +93,7 @@ See all screenshots in the [documentation](https://achetronic.github.io/magec/do
 
 ## Documentation
 
-Full docs at **[achetronic.github.io/magec](https://achetronic.github.io/magec/docs/)** — installation, configuration, agents, flows, backends, memory, MCP tools, clients, voice system, and API reference.
+Full docs at **[magec.dev/docs](https://magec.dev/docs/)** — installation, configuration, agents, flows, backends, memory, MCP tools, clients, voice system, and API reference.
 
 ## Development
 
