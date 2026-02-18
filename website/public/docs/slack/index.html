@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slack — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -144,8 +144,15 @@
         Navigation
       </button>
       <h1>Slack</h1>
-      <p>Magec can connect to Slack through a bot using Socket Mode. Users send text or audio clip messages to the bot in DMs or @mention it in channels, and the bot responds using your configured agents. It supports multiple response modes, per-channel agent switching, and voice messages via Slack&rsquo;s audio clips. No public URL or webhooks needed — the bot connects outward via WebSocket.</p>
+      <p>Magec can connect to Slack through a bot. Users send text or voice messages to the bot in DMs or @mention it in channels, and the bot responds using your configured agents. It supports multiple response modes, per-channel agent switching, and voice messages via audio clips. No public URL needed — the bot connects outward using Slack&rsquo;s Socket Mode.</p>
 <p>This is ideal for teams already on Slack who want to interact with their agents without leaving their workspace.</p>
+<div class="screenshots" style="margin-bottom: 2rem;">
+
+
+
+<img src="/img/screenshots/admin-clients-slack.png" alt="Admin UI — Slack client" class="screenshot screenshot--desktop">
+
+</div>
 <h2 id="setup">Setup</h2>
 <h3 id="1-create-a-slack-app">1. Create a Slack App</h3>
 <p>Go to <a href="https://api.slack.com/apps">api.slack.com/apps</a> and create a new app:</p>
@@ -153,16 +160,16 @@
 <li>Click <strong>Create New App</strong> → <strong>From scratch</strong></li>
 <li>Name it (e.g., &ldquo;Magec Assistant&rdquo;) and select your workspace</li>
 <li>Under <strong>Socket Mode</strong>, enable it — Slack generates an <strong>App Token</strong> (<code>xapp-...</code>). Copy it.</li>
-<li>Under <strong>OAuth &amp; Permissions</strong>, add these Bot Token Scopes:
+<li>Under <strong>OAuth &amp; Permissions</strong>, add these <strong>Bot Token Scopes</strong>:
 <ul>
 <li><code>app_mentions:read</code> — receive @mentions in channels</li>
 <li><code>chat:write</code> — send messages</li>
-<li><code>files:read</code> — access audio clips and file attachments</li>
+<li><code>files:read</code> — download audio clips and file attachments</li>
 <li><code>files:write</code> — upload voice response files</li>
 <li><code>im:history</code> — read DM messages</li>
 <li><code>im:read</code> — access DM conversations</li>
 <li><code>im:write</code> — send DMs</li>
-<li><code>users:read</code> — look up user names and display names</li>
+<li><code>users:read</code> — look up user info (name, display name)</li>
 <li><code>users:read.email</code> — access user email addresses</li>
 </ul>
 </li>
@@ -174,8 +181,8 @@
 </li>
 <li>Under <strong>App Home</strong>:
 <ul>
-<li>Enable <strong>&ldquo;Allow users to send Slash commands and messages from the messages tab&rdquo;</strong> — this lets users DM the bot</li>
-<li>Enable <strong>&ldquo;Show My Bot as Online&rdquo;</strong> — shows the bot with a green presence dot when the Magec server is running</li>
+<li>Enable <strong>&ldquo;Allow users to send Slash commands and messages from the messages tab&rdquo;</strong> — required for users to DM the bot</li>
+<li>Enable <strong>&ldquo;Show My Bot as Online&rdquo;</strong> — shows a green presence dot when the Magec server is running</li>
 </ul>
 </li>
 <li>Install the app to your workspace — copy the <strong>Bot Token</strong> (<code>xoxb-...</code>)</li>
@@ -184,11 +191,11 @@
 
 
 <div class="docs-callout">
-  <strong>Changes not taking effect?</strong> If you modify App Home settings (DMs, presence) after the initial install, you may need to reinstall the app under <strong>Install App</strong> → <strong>Reinstall to Workspace</strong>. Some users also need to restart their Slack client for the changes to appear.
+  <strong>Changes not taking effect?</strong> After modifying scopes or App Home settings, you may need to reinstall the app under <strong>Install App</strong> → <strong>Reinstall to Workspace</strong>. Some users also need to restart their Slack client.
 </div>
 
 <h3 id="2-get-your-user-id">2. Get your user ID</h3>
-<p>In Slack, click on your profile → <strong>Copy member ID</strong>. You&rsquo;ll need this if you want to restrict who can use the bot.</p>
+<p>In Slack, click on your profile → <strong>Copy member ID</strong>. You&rsquo;ll need this to restrict who can use the bot.</p>
 <h3 id="3-create-a-slack-client-in-magec">3. Create a Slack client in Magec</h3>
 <p>In the Admin UI, go to <strong>Clients</strong> → <strong>New</strong> → <strong>Slack</strong>:</p>
 <table>
@@ -213,15 +220,15 @@
       </tr>
       <tr>
           <td><code>allowedUsers</code></td>
-          <td>Slack user IDs that can use this bot (empty = everyone)</td>
+          <td>Slack user IDs that can use this bot (empty = everyone in the workspace)</td>
       </tr>
       <tr>
           <td><code>allowedChannels</code></td>
-          <td>Slack channel IDs where the bot can respond (empty = everywhere)</td>
+          <td>Slack channel IDs where the bot can respond (empty = all channels)</td>
       </tr>
       <tr>
           <td><code>responseMode</code></td>
-          <td>How the bot responds — see below</td>
+          <td>How the bot responds — see <a href="#response-modes">Response modes</a></td>
       </tr>
       <tr>
           <td><code>allowedAgents</code></td>
@@ -230,17 +237,16 @@
   </tbody>
 </table>
 <h3 id="4-start-chatting">4. Start chatting</h3>
-<p>DM the bot directly or @mention it in a channel. The bot responds using the first allowed agent.</p>
+<p>Open a DM with the bot or @mention it in a channel. It responds using the first allowed agent.</p>
 <h2 id="how-it-works">How it works</h2>
 <p>Magec uses Slack&rsquo;s <strong>Socket Mode</strong> — the bot opens a WebSocket connection to Slack&rsquo;s servers. This means:</p>
 <ul>
 <li><strong>No public URL needed</strong> — works behind firewalls, NATs, on your local machine</li>
-<li><strong>No webhook configuration</strong> — no need to expose ports or set up SSL certificates</li>
+<li><strong>No webhook setup</strong> — no need to expose ports or configure SSL certificates</li>
 <li><strong>Outbound only</strong> — the bot connects outward, nothing connects inward</li>
 </ul>
-<p>This matches Magec&rsquo;s self-hosted philosophy: everything runs on your infrastructure with no external dependencies.</p>
+<p>This fits Magec&rsquo;s self-hosted approach: everything runs on your infrastructure with no external dependencies.</p>
 <h2 id="interaction-modes">Interaction modes</h2>
-<p>The bot responds to messages in two contexts:</p>
 <table>
   <thead>
       <tr>
@@ -251,10 +257,10 @@
   <tbody>
       <tr>
           <td><strong>Direct Messages</strong></td>
-          <td>Send any message (text or audio clip) to the bot. It responds directly in the DM. Bot commands (<code>!help</code>, <code>!agent</code>, <code>!responsemode</code>) are available here.</td>
+          <td>Send any message (text or audio clip) to the bot. It responds in the DM. Bot commands like <code>!help</code> and <code>!agent</code> work here.</td>
       </tr>
       <tr>
-          <td><strong>Channel mentions</strong></td>
+          <td><strong>Channel @mentions</strong></td>
           <td>@mention the bot in a channel. It responds in a thread under your message.</td>
       </tr>
   </tbody>
@@ -271,47 +277,47 @@
   <tbody>
       <tr>
           <td><code>text</code></td>
-          <td>Always respond with text (default). Simple and reliable.</td>
+          <td>Always respond with text (default)</td>
       </tr>
       <tr>
           <td><code>voice</code></td>
-          <td>Always respond with a voice file. Requires the agent to have TTS configured.</td>
+          <td>Always respond with a voice file (requires TTS configured on the agent)</td>
       </tr>
       <tr>
           <td><code>mirror</code></td>
-          <td>Mirror the user&rsquo;s format — text replies to text, voice replies to audio clips.</td>
+          <td>Match the user&rsquo;s format — text replies to text, voice replies to audio clips</td>
       </tr>
       <tr>
           <td><code>both</code></td>
-          <td>Respond with both a text message and a voice file.</td>
+          <td>Respond with both text and a voice file</td>
       </tr>
   </tbody>
 </table>
-<p>Users can change the response mode at runtime with the <code>!responsemode</code> command.</p>
+<p>Users can override the default at runtime with the <code>!responsemode</code> command.</p>
 <h2 id="voice-messages">Voice messages</h2>
-<p>Slack audio clips (voice messages) work in both directions:</p>
-<p><strong>Incoming voice:</strong> When a user sends an audio clip in a DM, Magec:</p>
+<p>Audio clips work in both directions:</p>
+<p><strong>Incoming:</strong> When a user sends an audio clip, Magec:</p>
 <ol>
 <li>Downloads the audio file from Slack (M4A format)</li>
-<li>Converts it from M4A to WAV using ffmpeg</li>
+<li>Converts it to WAV using ffmpeg</li>
 <li>Sends it to the agent&rsquo;s STT backend for transcription</li>
-<li>The agent processes the transcribed text and responds</li>
+<li>Passes the transcribed text to the agent and returns the response</li>
 </ol>
-<p><strong>Outgoing voice:</strong> When the response mode requires voice (<code>voice</code>, <code>mirror</code>, <code>both</code>), Magec:</p>
+<p><strong>Outgoing:</strong> When the response mode includes voice (<code>voice</code>, <code>mirror</code>, <code>both</code>), Magec:</p>
 <ol>
 <li>Sends the agent&rsquo;s text response to the TTS backend</li>
-<li>Gets the audio back (Opus format)</li>
-<li>Uploads it as a file in the Slack conversation</li>
+<li>Receives the generated audio</li>
+<li>Uploads it as a file in the conversation</li>
 </ol>
 
 
 
 <div class="docs-callout">
-  <strong>Docker users:</strong> Voice processing requires ffmpeg inside the container. The official Magec Docker image includes it. If using a custom image, ensure ffmpeg is available.
+  <strong>Requires ffmpeg.</strong> Voice processing needs ffmpeg available in the system. The official Magec Docker image includes it. If you&rsquo;re using a custom image, make sure ffmpeg is installed.
 </div>
 
 <h2 id="bot-commands">Bot commands</h2>
-<p>Bot commands use an <code>!</code> prefix (IRC-style) and work in DMs only (not in channel mentions):</p>
+<p>Commands use the <code>!</code> prefix and work in DMs only:</p>
 <table>
   <thead>
       <tr>
@@ -326,11 +332,11 @@
       </tr>
       <tr>
           <td><code>!agent</code></td>
-          <td>Show the active agent and list all available agents</td>
+          <td>Show the current agent and list all available ones</td>
       </tr>
       <tr>
           <td><code>!agent &lt;id&gt;</code></td>
-          <td>Switch to a specific agent</td>
+          <td>Switch to a different agent</td>
       </tr>
       <tr>
           <td><code>!responsemode</code></td>
@@ -338,14 +344,14 @@
       </tr>
       <tr>
           <td><code>!responsemode &lt;mode&gt;</code></td>
-          <td>Change the response mode (<code>text</code>, <code>voice</code>, <code>mirror</code>, <code>both</code>, <code>reset</code>)</td>
+          <td>Change response mode (<code>text</code>, <code>voice</code>, <code>mirror</code>, <code>both</code>, <code>reset</code>)</td>
       </tr>
   </tbody>
 </table>
-<p>The <code>!agent</code> command shows all agents and flows the bot has access to. Select one and all subsequent messages in that conversation go to the selected agent. Different channels/DMs can use different agents simultaneously.</p>
-<p>The <code>!responsemode</code> command lets users override the default response mode configured in the Admin UI. Using <code>!responsemode reset</code> reverts to the configured default.</p>
+<p>The <code>!agent</code> command lists all agents and flows the bot has access to. Each channel or DM can use a different agent independently.</p>
+<p>Using <code>!responsemode reset</code> reverts to the default configured in the Admin UI.</p>
 <h2 id="context-metadata">Context metadata</h2>
-<p>When a message arrives from Slack, Magec injects metadata about the source. This information is available to the agent as part of the message context (via <code>MAGEC_META</code>):</p>
+<p>Magec injects metadata about each incoming Slack message into the agent context via <code>MAGEC_META</code>. You can reference these fields in system prompts to personalize responses:</p>
 <table>
   <thead>
       <tr>
@@ -364,11 +370,11 @@
       </tr>
       <tr>
           <td><code>slack_username</code></td>
-          <td>Slack username (handle)</td>
+          <td>Slack handle</td>
       </tr>
       <tr>
           <td><code>slack_name</code></td>
-          <td>Display name (real name)</td>
+          <td>Display name</td>
       </tr>
       <tr>
           <td><code>slack_email</code></td>
@@ -380,33 +386,32 @@
       </tr>
       <tr>
           <td><code>slack_channel_type</code></td>
-          <td><code>&quot;im&quot;</code> for DMs, <code>&quot;channel&quot;</code> for channel mentions</td>
+          <td><code>&quot;im&quot;</code> for DMs, <code>&quot;channel&quot;</code> for mentions</td>
       </tr>
       <tr>
           <td><code>slack_team_id</code></td>
-          <td>Slack workspace ID</td>
+          <td>Workspace ID</td>
       </tr>
       <tr>
           <td><code>slack_thread_ts</code></td>
-          <td>Thread timestamp (for channel mentions)</td>
+          <td>Thread timestamp (channel mentions only)</td>
       </tr>
   </tbody>
 </table>
-<p>You can use this in system prompts to personalize responses (e.g., <em>&ldquo;Address the user by their first name when available&rdquo;</em>).</p>
 <h2 id="security">Security</h2>
 
 
 
 <div class="docs-callout">
-  <strong>Always restrict access.</strong> Set <code>allowedUsers</code> and/or <code>allowedChannels</code> to control who can use your bot. Without restrictions, anyone in your Slack workspace who can DM the bot or invite it to a channel can interact with your agents — and through them, any MCP tools those agents have access to.
+  <strong>Always restrict access.</strong> Set <code>allowedUsers</code> and/or <code>allowedChannels</code> to control who can interact with the bot. Without restrictions, anyone in your workspace who can DM the bot or invite it to a channel can talk to your agents — and use any MCP tools those agents have access to.
 </div>
 
-<p>If a user not in the allowed list sends a message, it is silently ignored. The same applies for channels not in the allowed list.</p>
+<p>Messages from users or channels not in the allowed lists are silently ignored.</p>
 <h2 id="multiple-bots">Multiple bots</h2>
-<p>You can create multiple Slack clients, each with its own bot, its own set of allowed users, and its own agent access. For example:</p>
+<p>You can create multiple Slack clients, each with its own bot, allowed users, and agent access. For example:</p>
 <ul>
 <li>A <strong>personal bot</strong> with full access to all agents, restricted to your user ID</li>
-<li>A <strong>team bot</strong> with access to specific work agents, restricted to a team channel</li>
+<li>A <strong>team bot</strong> with access to work agents, restricted to a team channel</li>
 <li>An <strong>ops bot</strong> with access to infrastructure agents, restricted to the ops channel</li>
 </ul>
 <h2 id="differences-from-telegram">Differences from Telegram</h2>
@@ -425,29 +430,29 @@
           <td>Long polling</td>
       </tr>
       <tr>
-          <td>Voice messages</td>
+          <td>Voice format</td>
           <td>Audio clips (M4A → WAV)</td>
           <td>Native voice (OGG → WAV)</td>
       </tr>
       <tr>
-          <td>Response modes</td>
-          <td>Text, voice, mirror, both</td>
-          <td>Text, voice, mirror, both</td>
-      </tr>
-      <tr>
           <td>Commands</td>
-          <td><code>!</code> prefix (<code>!help</code>, <code>!agent</code>, <code>!responsemode</code>)</td>
-          <td>Slash commands (<code>/help</code>, <code>/agent</code>, <code>/responsemode</code>)</td>
+          <td><code>!</code> prefix (<code>!help</code>, <code>!agent</code>)</td>
+          <td>Slash commands (<code>/help</code>, <code>/agent</code>)</td>
       </tr>
       <tr>
-          <td>Channel interaction</td>
+          <td>Channel replies</td>
           <td>@mention → thread reply</td>
-          <td>Works in groups with bot commands</td>
+          <td>Group messages with bot commands</td>
       </tr>
       <tr>
-          <td>Voice response format</td>
-          <td>Uploaded file (Opus)</td>
-          <td>Native voice message (OGG/Opus)</td>
+          <td>Voice responses</td>
+          <td>Uploaded audio file</td>
+          <td>Native voice message</td>
+      </tr>
+      <tr>
+          <td>Response modes</td>
+          <td>text, voice, mirror, both</td>
+          <td>text, voice, mirror, both</td>
       </tr>
   </tbody>
 </table>
