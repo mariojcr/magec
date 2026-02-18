@@ -95,7 +95,7 @@ ADK supports agents as tools — orchestrator decides at runtime which specialis
 
 ### ~~Credential Management from Admin UI~~ (v0.2.0 ✅)
 
-~~Credentials are in plain text in `data/store.json`.~~ **Implemented**: Secrets entity with CRUD API, AES-256-GCM encryption at rest (derived from admin password), env var injection before `ExpandEnv()`, Admin UI section for managing secrets.
+~~Credentials are in plain text in `data/store.json`.~~ **Implemented**: Secrets entity with CRUD API, AES-256-GCM encryption at rest (derived from `server.encryptionKey`, independent from `adminPassword`), env var injection before `ExpandEnv()`, Admin UI section for managing secrets.
 
 ---
 

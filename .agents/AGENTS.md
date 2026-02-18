@@ -171,6 +171,8 @@ server:
   host: 0.0.0.0
   port: 8080
   adminPort: 8081
+  # adminPassword: ""  # Admin API auth (Bearer token)
+  # encryptionKey: ""  # Encrypt secrets at rest (AES-256-GCM, independent from adminPassword)
 
 voice:
   ui:
@@ -193,12 +195,13 @@ log:
 - **Client type registry**: JSON Schema based. Each provider declares `ConfigSchema()`. Validation via `ValidateConfig()` with recursive `oneOf`/`required`/`properties`
 - **Memory provider registry**: Same pattern as clients — `init()` + blank imports in `main.go`
 - **Hot-reload**: Store `OnChange()` channel → `agentRouterHandler` rebuilds with 500ms debounce
-- **MCP transports**: HTTP (`StreamableClientTransport` with optional headers + TLS skip) and stdio (`CommandTransport`)
+- **MCP transports**: HTTP (`StreamableClientTransport` with optional headers + TLS skip) and stdio (`CommandTransport`). Stdio spawns subprocesses — works best with binary installs, not Docker
 - **Migration chain** (on load): `devices→clients` → `cronJobs→triggers` → `triggers→clients` → `device→direct` → `migrateIDs`. All idempotent
 - **Webhook auth**: Separate from `clientAuthMiddleware`. Webhook handler validates Bearer token against client's `cl.Token`
 - **Flow execution**: `FlowDefinition` recursive tree maps 1:1 to ADK workflow agents. `responseAgent` flag on `FlowStep` filters output
 - **Voice endpoints**: `/api/v1/voice/{agentId}/speech` and `/transcription` resolve backends dynamically per agent
 - **MCP headers/TLS**: `MCPServer` struct has `Headers map[string]string` and `Insecure bool`. `httpClientForMCP()` creates transport with optional `InsecureSkipVerify`
+- **Encryption key**: `server.encryptionKey` in config.yaml. Independent from `adminPassword`. Used to encrypt secrets at rest (AES-256-GCM, PBKDF2-derived)
 
 ### Frontend Conventions (admin-ui)
 

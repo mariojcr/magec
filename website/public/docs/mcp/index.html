@@ -30,9 +30,11 @@
     </button>
     <ul class="nav__links">
       
-      <li><a href="/" class="nav__link">Quick Start</a></li>
+      <li><a href="/#how-it-works" class="nav__link">How it works</a></li>
       
-      <li><a href="/#features" class="nav__link">Features</a></li>
+      <li><a href="/#what" class="nav__link">Platform</a></li>
+      
+      <li><a href="/#use-cases" class="nav__link">Use cases</a></li>
       
       <li><a href="/#screenshots" class="nav__link">Screenshots</a></li>
       
@@ -218,6 +220,15 @@ Prompt:   &#34;Use these tools to control smart home devices.
            Always confirm destructive actions before executing them.&#34;
 </code></pre><h3 id="stdio-transport">Stdio transport</h3>
 <p>For MCP servers that are command-line tools. Magec launches them as subprocesses and communicates over stdin/stdout. This is perfect for tools distributed as <code>npx</code>, <code>uvx</code>, or local binaries.</p>
+
+
+
+<div class="docs-callout">
+  <p><strong>Running inside Docker?</strong> Stdio transport needs to launch programs like <code>npx</code> or <code>uvx</code> directly on the machine. Inside a container, those tools usually aren&rsquo;t available.</p>
+<p>If you plan to use stdio-based MCP servers, running Magec as a <a href="/docs/install-binary/">binary</a> is the simplest path. For Docker deployments, prefer MCP servers that support <strong>HTTP transport</strong> instead.</p>
+
+</div>
+
 <table>
   <thead>
       <tr>

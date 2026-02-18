@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Advanced Secrets — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -30,9 +30,11 @@
     </button>
     <ul class="nav__links">
       
-      <li><a href="/" class="nav__link">Quick Start</a></li>
+      <li><a href="/#how-it-works" class="nav__link">How it works</a></li>
       
-      <li><a href="/#features" class="nav__link">Features</a></li>
+      <li><a href="/#what" class="nav__link">Platform</a></li>
+      
+      <li><a href="/#use-cases" class="nav__link">Use cases</a></li>
       
       <li><a href="/#screenshots" class="nav__link">Screenshots</a></li>
       
@@ -153,14 +155,14 @@
 <p>On startup, Magec processes secrets before anything else:</p>
 <ol>
 <li>Load <code>store.json</code> from disk (raw, unexpanded)</li>
-<li>Decrypt any encrypted secret values (if <a href="/docs/admin-password/">admin password</a> is set)</li>
+<li>Decrypt any encrypted secret values (if <code>encryptionKey</code> is set)</li>
 <li>Inject all secret key-value pairs into the process environment via <code>os.Setenv()</code></li>
 <li>Expand all <code>${VAR}</code> references across the entire store using <code>os.ExpandEnv()</code></li>
 <li>Continue with the fully resolved configuration</li>
 </ol>
 <p>This two-pass approach means secrets can reference other environment variables, and the rest of the store can reference secrets — everything resolves in a single consistent pass.</p>
 <h2 id="encryption-at-rest">Encryption at rest</h2>
-<p>When an <a href="/docs/admin-password/">admin password</a> is set, secret values are encrypted before writing to <code>store.json</code>:</p>
+<p>When <code>server.encryptionKey</code> is set in <code>config.yaml</code>, secret values are encrypted before writing to <code>store.json</code>:</p>
 <table>
   <thead>
       <tr>
@@ -179,7 +181,7 @@
       </tr>
       <tr>
           <td><strong>Source key</strong></td>
-          <td>The admin password from <code>config.yaml</code></td>
+          <td>The <code>encryptionKey</code> from <code>config.yaml</code></td>
       </tr>
       <tr>
           <td><strong>Format</strong></td>
@@ -187,8 +189,8 @@
       </tr>
   </tbody>
 </table>
-<p>Without an admin password, secrets are stored as plain text in <code>store.json</code> and a warning is logged:</p>
-<pre tabindex="0"><code>WARN  Secrets stored without encryption — set adminPassword to enable encryption
+<p>Without an encryption key, secrets are stored as plain text in <code>store.json</code> and a warning is logged:</p>
+<pre tabindex="0"><code>WARN  Secrets are stored without encryption — set server.encryptionKey in config
 </code></pre><h2 id="compatibility-with-external-environment-variables">Compatibility with external environment variables</h2>
 <p>Secrets don&rsquo;t replace environment variables — they complement them. The expansion pipeline merges both sources:</p>
 <ul>
@@ -247,22 +249,29 @@
 </div>
 
 <h2 id="recovery">Recovery</h2>
-<h3 id="changing-the-admin-password">Changing the admin password</h3>
-<p>If you change the admin password, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing the password:</p>
+<h3 id="changing-the-encryption-key">Changing the encryption key</h3>
+<p>If you change the encryption key, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing it:</p>
 <ol>
 <li>Note down all secret values (they&rsquo;re write-only, so you&rsquo;ll need them from their original source)</li>
-<li>Change the password in <code>config.yaml</code></li>
+<li>Change <code>encryptionKey</code> in <code>config.yaml</code></li>
 <li>Restart Magec — encrypted values will fail to decrypt and remain as <code>enc:v1:...</code> strings</li>
-<li>Re-create or update each secret with its plain-text value — they&rsquo;ll be re-encrypted with the new password</li>
+<li>Re-create or update each secret with its plain-text value — they&rsquo;ll be re-encrypted with the new key</li>
 </ol>
-<h3 id="losing-the-admin-password">Losing the admin password</h3>
-<p>If you lose the admin password entirely, the same applies — encrypted values are unrecoverable without the original password. You&rsquo;ll need to re-enter all secret values from their original sources.</p>
-<h3 id="removing-the-admin-password">Removing the admin password</h3>
-<p>If you remove <code>adminPassword</code> from <code>config.yaml</code>, two things happen:</p>
+<h3 id="losing-the-encryption-key">Losing the encryption key</h3>
+<p>If you lose the encryption key entirely, the same applies — encrypted values are unrecoverable without the original key. You&rsquo;ll need to re-enter all secret values from their original sources.</p>
+<h3 id="removing-the-encryption-key">Removing the encryption key</h3>
+<p>If you remove <code>encryptionKey</code> from <code>config.yaml</code>:</p>
 <ol>
-<li>The Admin API becomes unprotected (no authentication required)</li>
 <li>Existing encrypted secrets cannot be decrypted — you&rsquo;ll need to re-create them (they&rsquo;ll be stored as plain text)</li>
+<li>New secrets will be stored without encryption and a warning will be logged</li>
 </ol>
+
+
+
+<div class="docs-callout docs-callout--info">
+  The <code>encryptionKey</code> is independent from <code>adminPassword</code>. You can have admin authentication without encryption, or encryption without authentication — though using both together is recommended for production.
+</div>
+
 
     </div>
   </div>

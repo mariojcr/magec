@@ -61,6 +61,12 @@ Prompt:   "Use these tools to control smart home devices.
 
 For MCP servers that are command-line tools. Magec launches them as subprocesses and communicates over stdin/stdout. This is perfect for tools distributed as `npx`, `uvx`, or local binaries.
 
+{{< callout type="warning" >}}
+**Running inside Docker?** Stdio transport needs to launch programs like `npx` or `uvx` directly on the machine. Inside a container, those tools usually aren't available.
+
+If you plan to use stdio-based MCP servers, running Magec as a [binary](/docs/install-binary/) is the simplest path. For Docker deployments, prefer MCP servers that support **HTTP transport** instead.
+{{< /callout >}}
+
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Display name |

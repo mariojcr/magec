@@ -25,7 +25,7 @@ This means a backend configured with:
 On startup, Magec processes secrets before anything else:
 
 1. Load `store.json` from disk (raw, unexpanded)
-2. Decrypt any encrypted secret values (if [admin password](/docs/admin-password/) is set)
+2. Decrypt any encrypted secret values (if `encryptionKey` is set)
 3. Inject all secret key-value pairs into the process environment via `os.Setenv()`
 4. Expand all `${VAR}` references across the entire store using `os.ExpandEnv()`
 5. Continue with the fully resolved configuration
@@ -34,19 +34,19 @@ This two-pass approach means secrets can reference other environment variables, 
 
 ## Encryption at rest
 
-When an [admin password](/docs/admin-password/) is set, secret values are encrypted before writing to `store.json`:
+When `server.encryptionKey` is set in `config.yaml`, secret values are encrypted before writing to `store.json`:
 
 | Aspect | Detail |
 |--------|--------|
 | **Algorithm** | AES-256-GCM (authenticated encryption) |
 | **Key derivation** | PBKDF2 with 100,000 iterations, SHA-256 |
-| **Source key** | The admin password from `config.yaml` |
+| **Source key** | The `encryptionKey` from `config.yaml` |
 | **Format** | Encrypted values are stored as `enc:v1:<base64>` — clearly distinguishable from plain text |
 
-Without an admin password, secrets are stored as plain text in `store.json` and a warning is logged:
+Without an encryption key, secrets are stored as plain text in `store.json` and a warning is logged:
 
 ```
-WARN  Secrets stored without encryption — set adminPassword to enable encryption
+WARN  Secrets are stored without encryption — set server.encryptionKey in config
 ```
 
 ## Compatibility with external environment variables
@@ -76,22 +76,26 @@ The main advantage of Magec secrets over external environment variables is that 
 
 ## Recovery
 
-### Changing the admin password
+### Changing the encryption key
 
-If you change the admin password, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing the password:
+If you change the encryption key, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing it:
 
 1. Note down all secret values (they're write-only, so you'll need them from their original source)
-2. Change the password in `config.yaml`
+2. Change `encryptionKey` in `config.yaml`
 3. Restart Magec — encrypted values will fail to decrypt and remain as `enc:v1:...` strings
-4. Re-create or update each secret with its plain-text value — they'll be re-encrypted with the new password
+4. Re-create or update each secret with its plain-text value — they'll be re-encrypted with the new key
 
-### Losing the admin password
+### Losing the encryption key
 
-If you lose the admin password entirely, the same applies — encrypted values are unrecoverable without the original password. You'll need to re-enter all secret values from their original sources.
+If you lose the encryption key entirely, the same applies — encrypted values are unrecoverable without the original key. You'll need to re-enter all secret values from their original sources.
 
-### Removing the admin password
+### Removing the encryption key
 
-If you remove `adminPassword` from `config.yaml`, two things happen:
+If you remove `encryptionKey` from `config.yaml`:
 
-1. The Admin API becomes unprotected (no authentication required)
-2. Existing encrypted secrets cannot be decrypted — you'll need to re-create them (they'll be stored as plain text)
+1. Existing encrypted secrets cannot be decrypted — you'll need to re-create them (they'll be stored as plain text)
+2. New secrets will be stored without encryption and a warning will be logged
+
+{{< callout type="info" >}}
+The `encryptionKey` is independent from `adminPassword`. You can have admin authentication without encryption, or encryption without authentication — though using both together is recommended for production.
+{{< /callout >}}

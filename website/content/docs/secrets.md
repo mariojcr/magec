@@ -57,6 +57,6 @@ If you need to understand the expansion pipeline, encryption details, external e
 
 ## Encryption
 
-When an [admin password](/docs/admin-password/) is configured, all secret values are encrypted on disk using AES-256-GCM. Without an admin password, secrets are stored in plain text — a warning is logged to remind you to enable it.
+When `server.encryptionKey` is set in `config.yaml`, all secret values are encrypted on disk using AES-256-GCM. Without an encryption key, secrets are stored in plain text — a warning is logged to remind you to set one.
 
 See [Advanced Secrets — Encryption at rest](/docs/secrets-advanced/#encryption-at-rest) for the full technical details.

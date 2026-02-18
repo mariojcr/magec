@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuration — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -30,9 +30,11 @@
     </button>
     <ul class="nav__links">
       
-      <li><a href="/" class="nav__link">Quick Start</a></li>
+      <li><a href="/#how-it-works" class="nav__link">How it works</a></li>
       
-      <li><a href="/#features" class="nav__link">Features</a></li>
+      <li><a href="/#what" class="nav__link">Platform</a></li>
+      
+      <li><a href="/#use-cases" class="nav__link">Use cases</a></li>
       
       <li><a href="/#screenshots" class="nav__link">Screenshots</a></li>
       
@@ -175,6 +177,7 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="m">8080</span><span class="w">          </span><span class="c"># User API + Voice UI</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">adminPort</span><span class="p">:</span><span class="w"> </span><span class="m">8081</span><span class="w">     </span><span class="c"># Admin API + Admin UI</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># adminPassword: ${MAGEC_ADMIN_PASSWORD}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="c"># encryptionKey: ${MAGEC_ENCRYPTION_KEY}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="nt">voice</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ui</span><span class="p">:</span><span class="w">
@@ -213,7 +216,12 @@
       <tr>
           <td><code>adminPassword</code></td>
           <td><em>(empty)</em></td>
-          <td>Password for admin API authentication. When set, all <code>/api/</code> requests require <code>Authorization: Bearer &lt;password&gt;</code>. Also used as the encryption key for <a href="/docs/secrets/">Secrets</a>. See <a href="/docs/admin-password/">Admin Password</a>.</td>
+          <td>Password for admin API authentication. When set, all <code>/api/</code> requests require <code>Authorization: Bearer &lt;password&gt;</code>. See <a href="/docs/admin-password/">Admin Password</a>.</td>
+      </tr>
+      <tr>
+          <td><code>encryptionKey</code></td>
+          <td><em>(empty)</em></td>
+          <td>Key used to encrypt <a href="/docs/secrets/">Secrets</a> at rest (AES-256-GCM, PBKDF2-derived). When not set, secrets are stored in plain text with a warning. Independent from <code>adminPassword</code>.</td>
       </tr>
   </tbody>
 </table>

@@ -25,6 +25,7 @@ server:
   port: 8080          # User API + Voice UI
   adminPort: 8081     # Admin API + Admin UI
   # adminPassword: ${MAGEC_ADMIN_PASSWORD}
+  # encryptionKey: ${MAGEC_ENCRYPTION_KEY}
 
 voice:
   ui:
@@ -45,7 +46,8 @@ Controls where the server listens. Magec runs two HTTP servers on separate ports
 | `host` | `0.0.0.0` | Bind address. Use `127.0.0.1` to restrict to localhost only. |
 | `port` | `8080` | User-facing port. The Voice UI, user API, webhook endpoints, and voice WebSocket all live here. |
 | `adminPort` | `8081` | Admin-facing port. The Admin UI and management API live here. In production, restrict access to this port. |
-| `adminPassword` | *(empty)* | Password for admin API authentication. When set, all `/api/` requests require `Authorization: Bearer <password>`. Also used as the encryption key for [Secrets](/docs/secrets/). See [Admin Password](/docs/admin-password/). |
+| `adminPassword` | *(empty)* | Password for admin API authentication. When set, all `/api/` requests require `Authorization: Bearer <password>`. See [Admin Password](/docs/admin-password/). |
+| `encryptionKey` | *(empty)* | Key used to encrypt [Secrets](/docs/secrets/) at rest (AES-256-GCM, PBKDF2-derived). When not set, secrets are stored in plain text with a warning. Independent from `adminPassword`. |
 
 ### Voice
 
