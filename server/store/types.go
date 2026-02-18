@@ -108,11 +108,13 @@ type DiscordClientConfig struct {
 }
 
 // SlackClientConfig holds Slack bot settings for a client.
+// Uses Socket Mode (WebSocket) — no public URL needed.
 type SlackClientConfig struct {
 	BotToken        string   `json:"botToken,omitempty" yaml:"botToken,omitempty"`
-	SigningSecret   string   `json:"signingSecret,omitempty" yaml:"signingSecret,omitempty"`
+	AppToken        string   `json:"appToken,omitempty" yaml:"appToken,omitempty"`
 	AllowedUsers    []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
 	AllowedChannels []string `json:"allowedChannels,omitempty" yaml:"allowedChannels,omitempty"`
+	ResponseMode    string   `json:"responseMode,omitempty" yaml:"responseMode,omitempty"`
 }
 
 // CronClientConfig holds settings for a cron-type client.

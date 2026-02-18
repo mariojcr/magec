@@ -12,6 +12,7 @@ The `Client` entity unifies authentication/authorization for all access points: 
 |------|--------------|----------|
 | `direct` | `{}` (empty) | Voice-UI tablets, apps — token-only auth |
 | `telegram` | `botToken`, `allowedUsers`, `allowedChats`, `responseMode` | Telegram bot |
+| `slack` | `botToken`, `appToken`, `allowedUsers`, `allowedChannels`, `responseMode` | Slack bot (Socket Mode) |
 | `cron` | `schedule`, `commandId` | Scheduled automation |
 | `webhook` | `passthrough` XOR `commandId` (via `oneOf`) | HTTP endpoint for integrations |
 
@@ -41,6 +42,14 @@ type TelegramClientConfig struct {
     AllowedUsers []int64 `json:"allowedUsers"`
     AllowedChats []int64 `json:"allowedChats"`
     ResponseMode string  `json:"responseMode"`
+}
+
+type SlackClientConfig struct {
+    BotToken        string   `json:"botToken"`
+    AppToken        string   `json:"appToken"`
+    AllowedUsers    []string `json:"allowedUsers"`
+    AllowedChannels []string `json:"allowedChannels"`
+    ResponseMode    string   `json:"responseMode"`
 }
 
 type CronClientConfig struct {
@@ -84,6 +93,27 @@ type WebhookClientConfig struct {
       "allowedUsers": [111111, 222222],
       "allowedChats": [],
       "responseMode": "both"
+    }
+  }
+}
+```
+
+**Slack bot:**
+```json
+{
+  "id": "uuid-v4",
+  "name": "team-slack",
+  "type": "slack",
+  "token": "mgc_ddd...",
+  "allowedAgents": ["agent-uuid-1"],
+  "enabled": true,
+  "config": {
+    "slack": {
+      "botToken": "xoxb-...",
+      "appToken": "xapp-...",
+      "allowedUsers": ["U01ABCDEF"],
+      "allowedChannels": [],
+      "responseMode": "mirror"
     }
   }
 }
@@ -152,6 +182,8 @@ server/client/
 ├── registry.go         — Global registry: Register(), ValidateConfig() with oneOf
 ├── direct/direct.go    — Direct provider (empty schema)
 ├── telegram/telegram.go — Telegram provider (JSON Schema with x-format, enum)
+├── slack/spec.go       — Slack provider (JSON Schema with x-format, enum, array)
+├── slack/bot.go        — Slack bot (Socket Mode, audio clips, ! commands)
 ├── cron/cron.go        — Cron provider (JSON Schema with x-entity)
 └── webhook/webhook.go  — Webhook provider (JSON Schema with oneOf branches)
 ```
@@ -200,6 +232,21 @@ type Provider interface {
         "botToken": {"type": "string", "x-format": "password", "x-placeholder": "123456:ABC-DEF..."},
         "allowedUsers": {"type": "string", "x-placeholder": "Comma-separated user IDs"},
         "allowedChats": {"type": "string", "x-placeholder": "Comma-separated chat IDs"},
+        "responseMode": {"type": "string", "enum": ["text", "voice", "mirror", "both"], "default": "text"}
+      }
+    }
+  },
+  {
+    "type": "slack",
+    "displayName": "Slack",
+    "configSchema": {
+      "type": "object",
+      "required": ["botToken", "appToken"],
+      "properties": {
+        "botToken": {"type": "string", "x-format": "password", "x-placeholder": "xoxb-..."},
+        "appToken": {"type": "string", "x-format": "password", "x-placeholder": "xapp-..."},
+        "allowedUsers": {"type": "array", "items": {"type": "string"}, "x-placeholder": "Comma-separated Slack user IDs"},
+        "allowedChannels": {"type": "array", "items": {"type": "string"}, "x-placeholder": "Comma-separated Slack channel IDs"},
         "responseMode": {"type": "string", "enum": ["text", "voice", "mirror", "both"], "default": "text"}
       }
     }
@@ -292,6 +339,9 @@ Base path: `/api/v1/admin`
 - **Cron/webhook execute against ALL allowedAgents** — not a single agentId
 - **Config is typed Go structs** — each platform has its own struct in `ClientConfig`
 - **Telegram config lives in Client, not Agent** — auth/access belongs in Client entity
+- **Slack uses Socket Mode** — WebSocket, no public URL needed. Two tokens: `xoxb-` (Bot) + `xapp-` (App)
+- **Slack commands use `!` prefix** — no slash commands (would need HTTP endpoint). IRC-style: `!help`, `!agent`, `!responsemode`
+- **Voice API routes always registered** — STT/TTS proxy endpoints (`/api/v1/voice/`) are available regardless of Voice UI toggle, since Slack/Telegram clients need them
 
 ## Migration Chain
 
@@ -305,7 +355,7 @@ On `loadFromDisk()`, these migrations run in order (all idempotent):
 
 ## Future (out of scope)
 
-- **Discord provider** — `server/client/discord/`
-- **Slack provider** — `server/client/slack/`
+- **Discord provider** — `server/clients/discord/`
+- **WhatsApp provider** — `server/clients/whatsapp/`
 - **Memory provider migration to JSON Schema** — `server/memory/` still uses FieldSpec
 - **Enrollment** — `open` / `closed` / `approval` modes for user self-registration

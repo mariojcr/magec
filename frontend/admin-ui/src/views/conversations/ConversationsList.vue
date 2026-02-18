@@ -60,6 +60,7 @@
         <option value="">All sources</option>
         <option value="voice-ui">Voice UI</option>
         <option value="telegram">Telegram</option>
+        <option value="slack">Slack</option>
         <option value="executor">Executor</option>
         <option value="flow">Flow</option>
         <option value="direct">Direct</option>

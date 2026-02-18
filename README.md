@@ -85,11 +85,11 @@ See all screenshots in the [documentation](https://achetronic.github.io/magec/do
 - [x] Session memory (Redis)
 - [x] Webhook and cron clients
 - [x] Admin UI with hot-reload
-- [ ] Context window management (automatic summarization / truncation when approaching token limits)
 - [x] Secrets management (encrypted storage for API keys and sensitive credentials)
+- [x] Slack client
 - [ ] Discord client
-- [ ] Slack client
-- [ ] Agent-to-agent communication (direct messaging between agents outside of flows)
+- [ ] Expose agents and flows with A2a (Agent-to-agent) protocol
+- [ ] Context window management (automatic summarization / truncation when approaching token limits)
 
 ## Documentation
 
@@ -130,8 +130,8 @@ Full docs at **[achetronic.github.io/magec](https://achetronic.github.io/magec/d
 
 ## Special Mentions
 
-| Who | What |
-| --- | ---- |
+| Who                                      | What                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [@travisvn](https://github.com/travisvn) | Built the ARM64 Docker image for [OpenAI Edge TTS](https://github.com/travisvn/openai-edge-tts) in record time. This is the local TTS service we recommend — it exposes an OpenAI-compatible API (`/v1/audio/speech`) that uses Microsoft Edge's free neural voices under the hood, so Magec can use it as a drop-in replacement for OpenAI TTS. |
 
 ## Contributors

@@ -20,6 +20,7 @@ Self-hosted multi-agent AI platform with voice, visual workflows, and tool integ
 |--------|------|-------------|
 | **Voice UI** | `direct` | Vue 3 PWA with voice/text chat, wake word detection, audio visualizer |
 | **Telegram** | `telegram` | Text and voice messages |
+| **Slack** | `slack` | Socket Mode (WebSocket, no public URL). DMs and @mentions. See `.agents/SLACK_CLIENT.md` |
 | **Webhook** | `webhook` | HTTP endpoint for external integrations (fixed command or passthrough prompt) |
 | **Cron** | `cron` | Scheduled task that fires a command against agents on a schedule |
 
@@ -58,6 +59,7 @@ magec/
 │   │   ├── executor.go         # RunClient() — executes commands against all allowedAgents
 │   │   ├── direct/spec.go      # Direct provider (empty schema)
 │   │   ├── telegram/           # Telegram bot (spec.go + bot.go)
+│   │   ├── slack/              # Slack Socket Mode bot (spec.go + bot.go)
 │   │   ├── webhook/            # Webhook handler (spec.go + handler.go)
 │   │   └── cron/               # Cron scheduler (spec.go + cron.go + scheduler.go)
 │   ├── memory/                 # Extensible memory provider registry

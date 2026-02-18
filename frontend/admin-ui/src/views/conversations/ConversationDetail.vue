@@ -456,6 +456,7 @@ function formatSource(source) {
   const map = {
     'voice-ui': 'Voice UI',
     telegram: 'Telegram',
+    slack: 'Slack',
     executor: 'Executor',
     flow: 'Flow',
     direct: 'Direct',

@@ -26,8 +26,8 @@
 
   <!-- ═══════════════ CLIENTS (Left) ═══════════════ -->
   <g transform="translate(30, 45)">
-    <rect x="0" y="0" width="150" height="410" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
-    <rect x="0" y="0" width="150" height="410" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
+    <rect x="0" y="0" width="150" height="450" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="150" height="450" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
     <text x="75" y="28" text-anchor="middle" fill="#38bcd8" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Clients</text>
 
     <g transform="translate(15, 42)">
@@ -63,18 +63,20 @@
 
     <g transform="translate(15, 302)">
       <rect x="0" y="0" width="120" height="42" rx="10" fill="#2a2a2f"/>
+      <circle cx="20" cy="21" r="8" fill="#e01e5a" opacity="0.3"/>
+      <text x="70" y="25" text-anchor="middle" fill="#d6d3d1" font-family="system-ui, sans-serif" font-size="11" font-weight="500">Slack</text>
+    </g>
+
+    <g transform="translate(15, 354)">
+      <rect x="0" y="0" width="120" height="42" rx="10" fill="#2a2a2f"/>
       <rect x="12" y="12" width="16" height="16" rx="3" fill="#38bcd8" opacity="0.2"/>
       <text x="70" y="25" text-anchor="middle" fill="#d6d3d1" font-family="system-ui, sans-serif" font-size="11" font-weight="500">REST API</text>
     </g>
 
     <!-- Coming soon -->
-    <g transform="translate(15, 358)">
-      <rect x="0" y="0" width="56" height="32" rx="8" fill="#2a2a2f" stroke="#3d3d44" stroke-dasharray="3,2"/>
-      <text x="28" y="20" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="9">Discord</text>
-    </g>
-    <g transform="translate(79, 358)">
-      <rect x="0" y="0" width="56" height="32" rx="8" fill="#2a2a2f" stroke="#3d3d44" stroke-dasharray="3,2"/>
-      <text x="28" y="20" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="9">Slack</text>
+    <g transform="translate(15, 408)">
+      <rect x="0" y="0" width="120" height="32" rx="8" fill="#2a2a2f" stroke="#3d3d44" stroke-dasharray="3,2"/>
+      <text x="60" y="20" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="9">Discord</text>
     </g>
   </g>
 

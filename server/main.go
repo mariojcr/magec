@@ -38,6 +38,7 @@ import (
 	"github.com/achetronic/magec/server/frontend"
 	"github.com/achetronic/magec/server/models"
 	"github.com/achetronic/magec/server/clients/cron"
+	slackclient "github.com/achetronic/magec/server/clients/slack"
 	"github.com/achetronic/magec/server/clients/telegram"
 	"github.com/achetronic/magec/server/clients/webhook"
 	"github.com/achetronic/magec/server/config"
@@ -53,6 +54,7 @@ import (
 
 	_ "github.com/achetronic/magec/server/api/admin/docs"
 	_ "github.com/achetronic/magec/server/clients/direct"
+	_ "github.com/achetronic/magec/server/clients/slack"
 	_ "github.com/achetronic/magec/server/memory/postgres"
 	_ "github.com/achetronic/magec/server/memory/redis"
 )
@@ -154,9 +156,7 @@ func main() {
 		executor, dataStore, "user",
 	)
 	httpMux.Handle("/api/v1/agent/", userRecorded)
-	if *cfg.Voice.UI.Enabled {
-		httpMux.Handle("/api/v1/voice/", newVoiceHandler(dataStore, agentRouter))
-	}
+	httpMux.Handle("/api/v1/voice/", newVoiceHandler(dataStore, agentRouter))
 
 	userAPI := user.New(dataStore)
 	httpMux.HandleFunc("/api/v1/health", userAPI.Health)
@@ -312,6 +312,58 @@ func main() {
 		}(cl.Name)
 	}
 
+	// Start Slack clients from store
+	var slackClients []*slackclient.Client
+	for _, cl := range dataStore.ListClients() {
+		if cl.Type != "slack" || !cl.Enabled || cl.Config.Slack == nil {
+			continue
+		}
+		if len(cl.AllowedAgents) == 0 {
+			slog.Warn("Slack client has no allowed agents, skipping", "client", cl.Name)
+			continue
+		}
+
+		agentURL := fmt.Sprintf("http://127.0.0.1:%d/api/v1/agent", cfg.Server.Port)
+
+		var allowedAgents []slackclient.AgentInfo
+		for _, agentID := range cl.AllowedAgents {
+			agentDef, ok := dataStore.GetAgent(agentID)
+			if !ok {
+				if flowDef, ok := dataStore.GetFlow(agentID); ok {
+					allowedAgents = append(allowedAgents, slackclient.AgentInfo{
+						ID:   agentID,
+						Name: flowDef.Name,
+					})
+					continue
+				}
+				slog.Warn("Slack client references unknown agent, skipping agent", "client", cl.Name, "agent", agentID)
+				continue
+			}
+			allowedAgents = append(allowedAgents, slackclient.AgentInfo{
+				ID:   agentID,
+				Name: agentDef.Name,
+			})
+		}
+
+		if len(allowedAgents) == 0 {
+			slog.Warn("Slack client has no valid agents after resolution, skipping", "client", cl.Name)
+			continue
+		}
+
+		skClient, err := slackclient.New(cl, agentURL, allowedAgents, slog.Default())
+		if err != nil {
+			slog.Error("Failed to create Slack client", "client", cl.Name, "error", err)
+			continue
+		}
+		slackClients = append(slackClients, skClient)
+		go func(name string) {
+			time.Sleep(500 * time.Millisecond)
+			if err := skClient.Start(ctx); err != nil {
+				slog.Error("Slack client error", "client", name, "error", err)
+			}
+		}(cl.Name)
+	}
+
 	// Graceful shutdown
 	go func() {
 		sigChan := make(chan os.Signal, 1)
@@ -322,6 +374,9 @@ func main() {
 		cronScheduler.Stop()
 		for _, tc := range telegramClients {
 			tc.Stop()
+		}
+		for _, sc := range slackClients {
+			sc.Stop()
 		}
 		if voiceDetector != nil {
 			voiceDetector.Close()
