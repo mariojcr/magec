@@ -100,7 +100,7 @@ ask() {
   else
     printf "  ${CYAN}▸${NC} %s: " "$prompt"
   fi
-  read -r REPLY
+  read -r REPLY < /dev/tty
   REPLY="${REPLY:-$default}"
 }
 
@@ -109,7 +109,7 @@ ask_yn() {
   local hint="Y/n"
   [[ "$default" == "n" ]] && hint="y/N"
   printf "  ${CYAN}▸${NC} %s ${DIM}[%s]${NC}: " "$prompt" "$hint"
-  read -r REPLY
+  read -r REPLY < /dev/tty
   REPLY="${REPLY:-$default}"
   [[ "$REPLY" =~ ^[Yy]$ ]]
 }
@@ -122,10 +122,10 @@ choose() {
   done
   echo
   printf "  ${DIM}Your choice${NC}: "
-  read -r REPLY
+  read -r REPLY < /dev/tty
   while [[ ! "$REPLY" =~ ^[0-9]+$ ]] || (( REPLY < 1 || REPLY > $# )); do
     printf "  ${RED}Pick a number between 1 and %d${NC}: " "$#"
-    read -r REPLY
+    read -r REPLY < /dev/tty
   done
 }
 
@@ -200,7 +200,7 @@ box_bottom
 
 echo
 printf "  ${DIM}Press Enter to begin...${NC}"
-read -r
+read -r < /dev/tty
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  DETECT PLATFORM
@@ -587,7 +587,7 @@ box_bottom
 echo
 
 printf "  ${CYAN}▸${NC} Admin password (input hidden): "
-read -rs REPLY
+read -rs REPLY < /dev/tty
 echo
 ADMIN_PASSWORD="$REPLY"
 
@@ -1034,7 +1034,7 @@ install_binary() {
     echo
 
     printf "  ${DIM}Press Enter to continue...${NC}"
-    read -r
+    read -r < /dev/tty
   fi
 
   if $WANT_REDIS; then
@@ -1092,7 +1092,7 @@ install_binary() {
     echo
 
     printf "  ${DIM}Press Enter to continue...${NC}"
-    read -r
+    read -r < /dev/tty
   fi
 
   print_success
