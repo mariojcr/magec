@@ -128,6 +128,12 @@ Full docs at **[achetronic.github.io/magec](https://achetronic.github.io/magec/d
 | [mymmrac/telego](https://github.com/mymmrac/telego)                           | Telegram bot                     |
 | [achetronic/adk-utils-go](https://github.com/achetronic/adk-utils-go)         | ADK providers, session, memory   |
 
+## Special Mentions
+
+| Who | What |
+| --- | ---- |
+| [@travisvn](https://github.com/travisvn) | Built the ARM64 Docker image for [OpenAI Edge TTS](https://github.com/travisvn/openai-edge-tts) in record time. This is the local TTS service we recommend — it exposes an OpenAI-compatible API (`/v1/audio/speech`) that uses Microsoft Edge's free neural voices under the hood, so Magec can use it as a drop-in replacement for OpenAI TTS. |
+
 ## Contributors
 
 <a href="https://github.com/achetronic/magec/graphs/contributors">
