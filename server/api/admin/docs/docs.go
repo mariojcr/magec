@@ -2456,9 +2456,6 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "memory": {
-                    "$ref": "#/definitions/store.MemoryRef"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -2810,17 +2807,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "store.MemoryRef": {
-            "type": "object",
-            "properties": {
-                "longTerm": {
-                    "type": "string"
-                },
-                "session": {
                     "type": "string"
                 }
             }

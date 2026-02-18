@@ -17,7 +17,6 @@ type AgentDefinition struct {
 	LLM          BackendRef `json:"llm" yaml:"llm"`
 	Transcription BackendRef `json:"transcription,omitempty" yaml:"transcription,omitempty"`
 	TTS          TTSRef     `json:"tts,omitempty" yaml:"tts,omitempty"`
-	Memory       MemoryRef  `json:"memory,omitempty" yaml:"memory,omitempty"`
 	MCPServers   []string   `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"`
 	Tags         []string   `json:"tags,omitempty" yaml:"tags,omitempty"`
 }
@@ -43,12 +42,6 @@ type TTSRef struct {
 	Model   string  `json:"model,omitempty" yaml:"model,omitempty"`
 	Voice   string  `json:"voice,omitempty" yaml:"voice,omitempty"`
 	Speed   float64 `json:"speed,omitempty" yaml:"speed,omitempty"`
-}
-
-// MemoryRef holds references to memory providers by ID.
-type MemoryRef struct {
-	Session  string `json:"session,omitempty" yaml:"session,omitempty"`
-	LongTerm string `json:"longTerm,omitempty" yaml:"longTerm,omitempty"`
 }
 
 // MemoryProvider represents a reusable memory backend (Redis, Postgres, etc.).

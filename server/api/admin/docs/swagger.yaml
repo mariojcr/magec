@@ -104,8 +104,6 @@ definitions:
         items:
           type: string
         type: array
-      memory:
-        $ref: '#/definitions/store.MemoryRef'
       name:
         type: string
       outputKey:
@@ -337,13 +335,6 @@ definitions:
       name:
         type: string
       type:
-        type: string
-    type: object
-  store.MemoryRef:
-    properties:
-      longTerm:
-        type: string
-      session:
         type: string
     type: object
   store.PaginatedResult-store_Conversation:

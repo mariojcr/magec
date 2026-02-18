@@ -2453,9 +2453,6 @@
                         "type": "string"
                     }
                 },
-                "memory": {
-                    "$ref": "#/definitions/store.MemoryRef"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -2807,17 +2804,6 @@
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "store.MemoryRef": {
-            "type": "object",
-            "properties": {
-                "longTerm": {
-                    "type": "string"
-                },
-                "session": {
                     "type": "string"
                 }
             }

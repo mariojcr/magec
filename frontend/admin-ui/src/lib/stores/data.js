@@ -68,12 +68,6 @@ export const useDataStore = defineStore('data', () => {
     return b?.name || id
   }
 
-  function memoryLabel(id) {
-    if (!id) return ''
-    const m = memory.value.find((m) => m.id === id)
-    return m?.name || id
-  }
-
   function agentLabel(id) {
     if (!id) return ''
     const a = agents.value.find((a) => a.id === id)
@@ -107,7 +101,6 @@ export const useDataStore = defineStore('data', () => {
     refresh,
     saveSettings,
     backendLabel,
-    memoryLabel,
     agentLabel,
     commandLabel,
   }
