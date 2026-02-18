@@ -45,6 +45,7 @@ type Server struct {
 	Port          int    `yaml:"port"`
 	AdminPort     int    `yaml:"adminPort"`
 	AdminPassword string `yaml:"adminPassword"`
+	EncryptionKey string `yaml:"encryptionKey"`
 }
 
 // Voice holds voice-related configuration (UI, ONNX runtime, etc.).

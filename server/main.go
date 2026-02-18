@@ -81,15 +81,15 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize store with JSON persistence
-	dataStore, err := store.New("data/store.json", cfg.Server.AdminPassword)
+	dataStore, err := store.New("data/store.json", cfg.Server.EncryptionKey)
 	if err != nil {
 		slog.Error("Failed to initialize store", "error", err)
 		os.Exit(1)
 	}
 	slog.Info("Store initialized", "agents", len(dataStore.Data().Agents), "backends", len(dataStore.Data().Backends))
 
-	if cfg.Server.AdminPassword == "" && len(dataStore.Data().Secrets) > 0 {
-		slog.Warn("Secrets are stored without encryption — set server.adminPassword to enable encryption at rest")
+	if cfg.Server.EncryptionKey == "" && len(dataStore.Data().Secrets) > 0 {
+		slog.Warn("Secrets are stored without encryption — set server.encryptionKey in config")
 	}
 
 	// Initialize conversation store for audit logging
