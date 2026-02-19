@@ -19,6 +19,7 @@ type AgentDefinition struct {
 	TTS          TTSRef     `json:"tts,omitempty" yaml:"tts,omitempty"`
 	MCPServers   []string   `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"`
 	Tags         []string   `json:"tags,omitempty" yaml:"tags,omitempty"`
+	ContextGuard *ContextGuardConfig `json:"contextGuard,omitempty" yaml:"contextGuard,omitempty"`
 }
 
 // BackendDefinition represents a reusable AI backend.
@@ -42,6 +43,16 @@ type TTSRef struct {
 	Model   string  `json:"model,omitempty" yaml:"model,omitempty"`
 	Voice   string  `json:"voice,omitempty" yaml:"voice,omitempty"`
 	Speed   float64 `json:"speed,omitempty" yaml:"speed,omitempty"`
+}
+
+// ContextGuardConfig holds per-agent context guard settings.
+// When Enabled is true the plugin compacts conversation history using
+// the selected Strategy. When Enabled is false (or the struct is nil)
+// the plugin does nothing for this agent.
+type ContextGuardConfig struct {
+	Enabled  bool   `json:"enabled" yaml:"enabled"`
+	Strategy string `json:"strategy,omitempty" yaml:"strategy,omitempty"`
+	MaxTurns int    `json:"maxTurns,omitempty" yaml:"maxTurns,omitempty"`
 }
 
 // MemoryProvider represents a reusable memory backend (Redis, Postgres, etc.).

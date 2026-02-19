@@ -270,6 +270,44 @@
 <p>Each toggle enables a configured MCP server, giving the agent access to its tools. When the agent decides it needs to perform an action (like turning on a light, reading a file, or querying a database), it calls the appropriate tool through MCP.</p>
 <p>An agent with no MCP servers can still chat — it just can&rsquo;t interact with the outside world. Adding MCP tools is what transforms an agent from a chatbot into something genuinely useful. An agent with Home Assistant MCP can control your house. An agent with GitHub MCP can manage your repositories. An agent with a database MCP can query and report on your data.</p>
 <p>The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from &ldquo;another chat interface&rdquo; into a real AI platform.</p>
+<h2 id="context-guard-hahahugoshortcode38s4hbhb">Context Guard 
+<span class="docs-badge">Experimental</span>
+</h2>
+<p>Long conversations eventually hit the model&rsquo;s token limit and fail. Context Guard watches the conversation size and automatically summarizes older messages before that happens. Recent messages stay untouched.</p>
+<p>You set it up per-agent inside the <strong>LLM</strong> section. Two strategies:</p>
+<ul>
+<li><strong>Token threshold</strong> (recommended) — Only compresses when the conversation is actually running out of room. Best for agents with tools or complex tasks.</li>
+<li><strong>Sliding window</strong> — Compresses after a fixed number of messages. Simpler and more predictable. Best for basic chatbots.</li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Setting</th>
+          <th>What it does</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Enabled</td>
+          <td>Turns Context Guard on or off</td>
+      </tr>
+      <tr>
+          <td>Strategy</td>
+          <td><code>Token threshold</code> (default) or <code>Sliding window</code></td>
+      </tr>
+      <tr>
+          <td>Max turns</td>
+          <td>Sliding window only — how many messages to keep. Default: <code>20</code></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+<div class="docs-callout">
+  Context Guard is experimental. It works, but there are known edge cases around large tool responses. See the full <a href="/docs/context-guard/">Context Guard</a> page for details.
+</div>
+
 <h2 id="voice-stt--tts">Voice (STT / TTS)</h2>
 <p>Voice settings are optional. You only need them if the agent will be used through the Voice UI or if you want voice responses in Telegram.</p>
 <p>Each agent can have its own voice configuration, which means different agents can sound different. A customer service agent could use a warm, friendly voice while a technical assistant uses a more neutral one.</p>

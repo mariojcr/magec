@@ -476,6 +476,14 @@ section { padding: 6rem 0; }
 .docs-callout strong { color: var(--sol-400); }
 .docs-callout--info strong { color: var(--atlantico-400); }
 
+.docs-badge {
+  display: inline-block; font-size: .625rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: .15rem .5rem; border-radius: 999px;
+  background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.2);
+  color: var(--sol-400); vertical-align: middle; position: relative; top: -1px;
+}
+
 .docs-sidebar-toggle { display: none; margin-bottom: 1.5rem; }
 
 @media (max-width: 768px) {

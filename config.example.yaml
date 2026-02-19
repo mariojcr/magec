@@ -15,7 +15,7 @@ server:
 
 voice:
   ui:
-    enabled: true # Enable/disable Voice UI, voice routes and static files (default: true)
+    enabled: true # Enable/disable Voice UI (default: true)
   # onnxLibraryPath: /usr/lib/libonnxruntime.so  # Custom ONNX Runtime library path
 
 log:

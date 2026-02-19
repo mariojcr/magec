@@ -11,6 +11,7 @@
         <h4 class="text-[9px] font-medium text-arena-600 uppercase tracking-widest mb-2">LLM</h4>
         <DetailRow label="Backend" :value="store.backendLabel(agent.llm?.backend)" />
         <DetailRow label="Model" :value="agent.llm?.model" />
+        <DetailRow label="Context Guard" :value="contextGuardSummary" />
       </div>
 
       <div class="space-y-1.5 lg:border-l lg:border-piedra-700/20 lg:pl-6">
@@ -60,6 +61,15 @@ const store = useDataStore()
 const mcpIds = computed(() => props.agent.mcpServers || [])
 const promptExpanded = ref(false)
 const isPromptLong = computed(() => (props.agent.systemPrompt || '').length > 200)
+
+const contextGuardSummary = computed(() => {
+  const cg = props.agent.contextGuard
+  if (!cg?.enabled) return 'Disabled'
+  const labels = { threshold: 'Token threshold', sliding_window: 'Sliding window' }
+  const strategy = labels[cg.strategy] || cg.strategy || 'Token threshold'
+  const detail = cg.strategy === 'sliding_window' && cg.maxTurns ? `${strategy} (${cg.maxTurns} turns)` : strategy
+  return `${detail} (experimental)`
+})
 
 const sttSummary = computed(() => {
   const t = props.agent.transcription

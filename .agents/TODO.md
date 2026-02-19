@@ -2,22 +2,12 @@
 
 ## High Priority
 
-### Infinite Conversation (ContextGuard Middleware)
+### ~~Infinite Conversation (ContextGuard)~~ (Implemented ✅)
 
-**Problem**: LLM context windows are finite. Long conversations silently degrade or fail when the context fills up.
+Implemented as an ADK `plugin.Plugin` with `BeforeModelCallback`. Each agent uses its own LLM for summarization (matching user expectations on quality). Context window data fetched from Crush provider.json, refreshed every 6h, 128k default fallback. Threshold at 75%, recent window 20%. Summary persisted in `session.State`. LLM map rebuilt on every hot-reload.
 
-**Solution**: A new `ContextGuard` middleware that monitors context usage and automatically rotates sessions when nearing the limit.
-
-**How it works**:
-1. Before each `/run`, estimate token count of session history (~4 chars ≈ 1 token), compare against model's `context_window`.
-2. Below 80% → pass-through. At 80%+ → summarize current session, create new session with summary, re-send user message.
-3. Return response with hidden HTML metadata: `<!--MAGEC_SESSION_CONTINUED:{...}:MAGEC_SESSION_CONTINUED-->`
-4. ConversationStore links via `ParentID` (field already exists, unused).
-
-**Context window lookup**: `server/contextwindow/` with embedded `models.json`. Source: [Charm Crush provider.json](https://github.com/charmbracelet/crush/blob/main/internal/agent/hyper/provider.json). Fallback: 128k.
-
-**New files**: `server/contextwindow/`, `server/middleware/contextguard.go`
-**Modify**: `server/main.go`, `server/clients/executor.go`
+**New files**: `server/contextwindow/contextwindow.go`, `server/plugin/contextguard/contextguard.go`
+**Modified**: `server/main.go`, `server/agent/agent.go`
 
 ---
 

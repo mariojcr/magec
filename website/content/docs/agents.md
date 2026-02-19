@@ -103,6 +103,25 @@ An agent with no MCP servers can still chat — it just can't interact with the 
 
 The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from "another chat interface" into a real AI platform.
 
+## Context Guard {{< badge text="Experimental" />}}
+
+Long conversations eventually hit the model's token limit and fail. Context Guard watches the conversation size and automatically summarizes older messages before that happens. Recent messages stay untouched.
+
+You set it up per-agent inside the **LLM** section. Two strategies:
+
+- **Token threshold** (recommended) — Only compresses when the conversation is actually running out of room. Best for agents with tools or complex tasks.
+- **Sliding window** — Compresses after a fixed number of messages. Simpler and more predictable. Best for basic chatbots.
+
+| Setting | What it does |
+|---------|-------------|
+| Enabled | Turns Context Guard on or off |
+| Strategy | `Token threshold` (default) or `Sliding window` |
+| Max turns | Sliding window only — how many messages to keep. Default: `20` |
+
+{{< callout type="warning" >}}
+Context Guard is experimental. It works, but there are known edge cases around large tool responses. See the full [Context Guard](/docs/context-guard/) page for details.
+{{< /callout >}}
+
 ## Voice (STT / TTS)
 
 Voice settings are optional. You only need them if the agent will be used through the Voice UI or if you want voice responses in Telegram.

@@ -35,6 +35,7 @@ import (
 	"github.com/achetronic/magec/server/api/admin"
 	"github.com/achetronic/magec/server/agent"
 	"github.com/achetronic/magec/server/clients"
+	"github.com/achetronic/magec/server/contextwindow"
 	"github.com/achetronic/magec/server/frontend"
 	"github.com/achetronic/magec/server/models"
 	"github.com/achetronic/magec/server/clients/cron"
@@ -134,8 +135,13 @@ func main() {
 		}
 	}()
 
+	// cwRegistry caches LLM context window sizes fetched from Crush.
+	// It starts a background goroutine that refreshes every 6 hours.
+	cwRegistry := contextwindow.NewRegistry()
+	cwRegistry.Start(ctx)
+
 	// Swappable handler for agent-related routes (hot-reloaded on store changes)
-	agentRouter := &agentRouterHandler{adminHandler: adminHandler}
+	agentRouter := &agentRouterHandler{adminHandler: adminHandler, cwRegistry: cwRegistry}
 	agentRouter.rebuild(ctx, dataStore)
 
 	// Executor for running commands against agents (cron, webhooks, etc.)
@@ -378,6 +384,7 @@ func main() {
 		for _, sc := range slackClients {
 			sc.Stop()
 		}
+		cwRegistry.Stop()
 		if voiceDetector != nil {
 			voiceDetector.Close()
 		}
@@ -624,6 +631,9 @@ type agentRouterHandler struct {
 	mu           sync.RWMutex
 	agentHandler http.Handler
 	adminHandler *admin.Handler
+	// cwRegistry is passed through to agent.New so the ContextGuard plugin
+	// can look up each model's context window at runtime.
+	cwRegistry   *contextwindow.Registry
 }
 
 // ServeHTTP delegates to the current agent handler, or returns 503 if no
@@ -647,7 +657,7 @@ func (h *agentRouterHandler) rebuild(ctx context.Context, dataStore *store.Store
 
 	var agentHandler http.Handler
 	if len(storeData.Agents) > 0 {
-		svc, err := agent.New(ctx, storeData.Agents, storeData.Backends, storeData.MemoryProviders, storeData.MCPServers, storeData.Flows, storeData.Settings)
+		svc, err := agent.New(ctx, storeData.Agents, storeData.Backends, storeData.MemoryProviders, storeData.MCPServers, storeData.Flows, storeData.Settings, h.cwRegistry)
 		if err != nil {
 			slog.Warn("Failed to initialize agents", "error", err)
 		} else {

@@ -44,16 +44,46 @@
           <span>LLM</span>
           <Icon name="chevronDown" size="md" class="text-arena-500 transition-transform group-open:rotate-180" />
         </summary>
-        <div class="px-4 pb-4 grid grid-cols-2 gap-3">
-          <div>
-            <FormLabel label="Backend" />
-            <FormSelect v-model="form.llmBackend">
-              <option v-for="b in store.backends" :key="b.id" :value="b.id">{{ b.name }} ({{ b.type }})</option>
-            </FormSelect>
+        <div class="px-4 pb-4 space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <FormLabel label="Backend" />
+              <FormSelect v-model="form.llmBackend">
+                <option v-for="b in store.backends" :key="b.id" :value="b.id">{{ b.name }} ({{ b.type }})</option>
+              </FormSelect>
+            </div>
+            <div>
+              <FormLabel label="Model" />
+              <FormInput v-model="form.llmModel" placeholder="qwen3:8b" />
+            </div>
           </div>
-          <div>
-            <FormLabel label="Model" />
-            <FormInput v-model="form.llmModel" placeholder="qwen3:8b" />
+
+          <!-- Context Guard -->
+          <div class="border-t border-piedra-700/30 pt-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-xs font-medium text-arena-400">Context Guard <span class="ml-1 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded bg-sol-500/15 text-sol-400 border border-sol-500/20">Experimental</span></span>
+                <p class="text-[10px] text-arena-500 mt-0.5">Automatically summarize history to prevent context overflow</p>
+              </div>
+              <FormToggle v-model="form.contextGuardEnabled" />
+            </div>
+
+            <div v-if="form.contextGuardEnabled" class="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Strategy" />
+                <FormSelect v-model="form.contextGuardStrategy">
+                  <option value="threshold">Token threshold</option>
+                  <option value="sliding_window">Sliding window</option>
+                </FormSelect>
+                <p class="text-[10px] text-arena-500 mt-1" v-if="form.contextGuardStrategy === 'threshold'">Summarizes when token usage approaches the model's context window limit</p>
+                <p class="text-[10px] text-arena-500 mt-1" v-else>Summarizes when conversation exceeds a fixed number of messages</p>
+              </div>
+              <div v-if="form.contextGuardStrategy === 'sliding_window'">
+                <FormLabel label="Max turns" />
+                <FormInput v-model="form.contextGuardMaxTurns" type="number" placeholder="20" />
+                <p class="text-[10px] text-arena-500 mt-1">Number of messages to keep before summarizing older ones</p>
+              </div>
+            </div>
           </div>
         </div>
       </details>
@@ -146,6 +176,7 @@ import AppDialog from '../../components/AppDialog.vue'
 import FormInput from '../../components/FormInput.vue'
 import FormSelect from '../../components/FormSelect.vue'
 import FormLabel from '../../components/FormLabel.vue'
+import FormToggle from '../../components/FormToggle.vue'
 import Icon from '../../components/Icon.vue'
 
 const emit = defineEmits(['saved'])
@@ -171,6 +202,9 @@ const form = reactive({
   ttsModel: '',
   ttsVoice: '',
   ttsSpeed: '',
+  contextGuardEnabled: false,
+  contextGuardStrategy: 'threshold',
+  contextGuardMaxTurns: '',
 })
 
 function toggleMcp(id) {
@@ -208,6 +242,9 @@ function open(agent = null) {
   form.ttsModel = agent?.tts?.model || ''
   form.ttsVoice = agent?.tts?.voice || ''
   form.ttsSpeed = agent?.tts?.speed || ''
+  form.contextGuardEnabled = agent?.contextGuard?.enabled || false
+  form.contextGuardStrategy = agent?.contextGuard?.strategy || 'threshold'
+  form.contextGuardMaxTurns = agent?.contextGuard?.maxTurns || ''
   dialogRef.value?.open()
 }
 
@@ -227,6 +264,11 @@ async function save() {
     },
     mcpServers: form.mcpServers,
     tags: form.tags.length ? form.tags : undefined,
+    contextGuard: form.contextGuardEnabled ? {
+      enabled: true,
+      strategy: form.contextGuardStrategy,
+      maxTurns: parseInt(form.contextGuardMaxTurns) || 0,
+    } : undefined,
   }
   try {
     if (isEdit.value) {

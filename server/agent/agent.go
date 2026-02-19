@@ -47,6 +47,8 @@ import (
 	toolsmemory "github.com/achetronic/adk-utils-go/tools/memory"
 
 	"github.com/achetronic/magec/server/config"
+	"github.com/achetronic/magec/server/contextwindow"
+	"github.com/achetronic/magec/server/plugin/contextguard"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -80,7 +82,7 @@ type Service struct {
 // routes requests to the right agent based on the appName in the request body.
 // Any FlowDefinitions are translated into ADK workflow agents and registered
 // alongside the regular agents.
-func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, flows []store.FlowDefinition, settings store.Settings) (*Service, error) {
+func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, flows []store.FlowDefinition, settings store.Settings, cwRegistry *contextwindow.Registry) (*Service, error) {
 	if len(agents) == 0 {
 		return nil, fmt.Errorf("no agents defined")
 	}
@@ -113,6 +115,10 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	var rootAgent agent.Agent
 	var otherAgents []agent.Agent
 	adkAgentMap := make(map[string]agent.Agent, len(agents))
+	// llmMap maps agent ID → LLM instance. The ContextGuard plugin uses it
+	// so each agent summarizes with its own model, matching user expectations.
+	// Rebuilt from scratch on every hot-reload (store change).
+	llmMap := make(map[string]model.LLM, len(agents))
 
 	baseTset, err := newBaseToolset()
 	if err != nil {
@@ -129,6 +135,8 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 		if err != nil {
 			return nil, fmt.Errorf("agent %q: failed to create LLM: %w", agentDef.ID, err)
 		}
+		// Register this agent's LLM so ContextGuard can use it for summarization.
+		llmMap[agentDef.ID] = llmModel
 
 		toolsets, err := buildToolsets(agentDef, mcpServerMap, memorySvc)
 		if err != nil {
@@ -183,6 +191,36 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	}
 	if memorySvc != nil {
 		launcherCfg.MemoryService = memorySvc
+	}
+	// Wire the ContextGuard plugin if a context window registry was provided.
+	// The plugin receives the full llmMap so every agent summarizes with its
+	// own model — a user on a powerful model gets a high-quality summary,
+	// a user on a cheap model gets a summary matching those expectations.
+	if cwRegistry != nil {
+		strategies := make(map[string]string)
+		maxTurns := make(map[string]int)
+		guardLLMs := make(map[string]model.LLM)
+		for _, agentDef := range agents {
+			cg := agentDef.ContextGuard
+			if cg == nil || !cg.Enabled {
+				continue
+			}
+			guardLLMs[agentDef.ID] = llmMap[agentDef.ID]
+			if cg.Strategy != "" {
+				strategies[agentDef.ID] = cg.Strategy
+			} else {
+				strategies[agentDef.ID] = contextguard.StrategyThreshold
+			}
+			if cg.MaxTurns > 0 {
+				maxTurns[agentDef.ID] = cg.MaxTurns
+			}
+		}
+		launcherCfg.PluginConfig = contextguard.NewPluginConfig(contextguard.Config{
+			Registry:   cwRegistry,
+			Models:     guardLLMs,
+			Strategies: strategies,
+			MaxTurns:   maxTurns,
+		})
 	}
 
 	return &Service{
