@@ -2,7 +2,7 @@
 //
 // @title           Magec User API
 // @version         1.0
-// @description     User-facing API for Magec multi-agent voice assistant. Includes device pairing, voice proxies, and health checks.
+// @description     User-facing API for Magec. Includes device pairing, voice proxies, and health checks.
 //
 // @host            localhost:8080
 // @BasePath        /api/v1

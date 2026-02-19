@@ -2,7 +2,7 @@
 //
 // @title           Magec Admin API
 // @version         2.0
-// @description     Administration API for managing Magec multi-agent voice assistant resources.
+// @description     Administration API for managing Magec resources.
 // @description     When server.adminPassword is configured, all /api/ endpoints require a Bearer token.
 //
 // @host            localhost:8081

@@ -1155,7 +1155,7 @@ var SwaggerInfouserapi = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http"},
 	Title:            "Magec User API",
-	Description:      "User-facing API for Magec multi-agent voice assistant. Includes device pairing, voice proxies, and health checks.",
+	Description:      "User-facing API for Magec. Includes device pairing, voice proxies, and health checks.",
 	InfoInstanceName: "userapi",
 	SwaggerTemplate:  docTemplateuserapi,
 	LeftDelim:        "{{",

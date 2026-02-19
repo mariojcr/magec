@@ -2441,6 +2441,9 @@ const docTemplate = `{
         "store.AgentDefinition": {
             "type": "object",
             "properties": {
+                "contextGuard": {
+                    "$ref": "#/definitions/store.ContextGuardConfig"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -2572,6 +2575,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "prompt": {
+                    "type": "string"
+                }
+            }
+        },
+        "store.ContextGuardConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "maxTurns": {
+                    "type": "integer"
+                },
+                "strategy": {
                     "type": "string"
                 }
             }
@@ -2851,10 +2868,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "appToken": {
+                    "type": "string"
+                },
                 "botToken": {
                     "type": "string"
                 },
-                "signingSecret": {
+                "responseMode": {
                     "type": "string"
                 }
             }
@@ -2938,7 +2958,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1/admin",
 	Schemes:          []string{"http"},
 	Title:            "Magec Admin API",
-	Description:      "Administration API for managing Magec multi-agent voice assistant resources.\nWhen server.adminPassword is configured, all /api/ endpoints require a Bearer token.",
+	Description:      "Administration API for managing Magec resources.\nWhen server.adminPassword is configured, all /api/ endpoints require a Bearer token.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -94,6 +94,8 @@ definitions:
     type: object
   store.AgentDefinition:
     properties:
+      contextGuard:
+        $ref: '#/definitions/store.ContextGuardConfig'
       description:
         type: string
       id:
@@ -180,6 +182,15 @@ definitions:
       name:
         type: string
       prompt:
+        type: string
+    type: object
+  store.ContextGuardConfig:
+    properties:
+      enabled:
+        type: boolean
+      maxTurns:
+        type: integer
+      strategy:
         type: string
     type: object
   store.Conversation:
@@ -363,9 +374,11 @@ definitions:
         items:
           type: string
         type: array
+      appToken:
+        type: string
       botToken:
         type: string
-      signingSecret:
+      responseMode:
         type: string
     type: object
   store.TTSRef:
@@ -412,7 +425,7 @@ host: localhost:8081
 info:
   contact: {}
   description: |-
-    Administration API for managing Magec multi-agent voice assistant resources.
+    Administration API for managing Magec resources.
     When server.adminPassword is configured, all /api/ endpoints require a Bearer token.
   title: Magec Admin API
   version: "2.0"

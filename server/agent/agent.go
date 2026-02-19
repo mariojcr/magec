@@ -52,8 +52,8 @@ import (
 	"github.com/achetronic/magec/server/store"
 )
 
-const baseInstruction = `You are Magec, a helpful voice assistant that helps users with various tasks.
-Keep responses concise and natural for voice interaction.
+const baseInstruction = `You are Magec, a helpful AI assistant that helps users with various tasks.
+Keep responses concise and natural for interaction.
 Respond in the same language as the user's input.`
 
 const memoryInstruction = `
