@@ -312,7 +312,27 @@ function open(client = null) {
 }
 
 function copyToken() {
-  navigator.clipboard.writeText(form.token)
+  const text = form.token
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => toast.success('Token copied'),
+      () => { fallbackCopy(text); toast.success('Token copied') }
+    )
+  } else {
+    fallbackCopy(text)
+    toast.success('Token copied')
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  document.body.appendChild(ta)
+  ta.select()
+  document.execCommand('copy')
+  document.body.removeChild(ta)
 }
 
 async function regenerateToken() {

@@ -32,21 +32,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/achetronic/magec/server/api/admin"
 	"github.com/achetronic/magec/server/agent"
+	"github.com/achetronic/magec/server/api/admin"
+	user "github.com/achetronic/magec/server/api/user"
 	"github.com/achetronic/magec/server/clients"
-	"github.com/achetronic/magec/server/contextwindow"
-	"github.com/achetronic/magec/server/frontend"
-	"github.com/achetronic/magec/server/models"
 	"github.com/achetronic/magec/server/clients/cron"
 	slackclient "github.com/achetronic/magec/server/clients/slack"
 	"github.com/achetronic/magec/server/clients/telegram"
 	"github.com/achetronic/magec/server/clients/webhook"
 	"github.com/achetronic/magec/server/config"
+	"github.com/achetronic/magec/server/contextwindow"
+	"github.com/achetronic/magec/server/frontend"
 	"github.com/achetronic/magec/server/logging"
 	"github.com/achetronic/magec/server/middleware"
+	"github.com/achetronic/magec/server/models"
 	"github.com/achetronic/magec/server/store"
-	user "github.com/achetronic/magec/server/api/user"
 	"github.com/achetronic/magec/server/voice"
 
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -273,102 +273,9 @@ func main() {
 	cronScheduler := cron.NewScheduler(executor, dataStore, slog.Default())
 	go cronScheduler.Start(ctx)
 
-	// Start Telegram clients from store
-	var telegramClients []*telegram.Client
-	for _, cl := range dataStore.ListClients() {
-		if cl.Type != "telegram" || !cl.Enabled || cl.Config.Telegram == nil {
-			continue
-		}
-		if len(cl.AllowedAgents) == 0 {
-			slog.Warn("Telegram client has no allowed agents, skipping", "client", cl.Name)
-			continue
-		}
-
-		agentURL := fmt.Sprintf("http://127.0.0.1:%d/api/v1/agent", cfg.Server.Port)
-
-		var allowedAgents []telegram.AgentInfo
-		for _, agentID := range cl.AllowedAgents {
-			agentDef, ok := dataStore.GetAgent(agentID)
-			if !ok {
-				slog.Warn("Telegram client references unknown agent, skipping agent", "client", cl.Name, "agent", agentID)
-				continue
-			}
-			allowedAgents = append(allowedAgents, telegram.AgentInfo{
-				ID:   agentID,
-				Name: agentDef.Name,
-			})
-		}
-
-		if len(allowedAgents) == 0 {
-			slog.Warn("Telegram client has no valid agents after resolution, skipping", "client", cl.Name)
-			continue
-		}
-
-		tgClient, err := telegram.New(cl, agentURL, allowedAgents, slog.Default())
-		if err != nil {
-			slog.Error("Failed to create Telegram client", "client", cl.Name, "error", err)
-			continue
-		}
-		telegramClients = append(telegramClients, tgClient)
-		go func(name string) {
-			time.Sleep(500 * time.Millisecond)
-			if err := tgClient.Start(ctx); err != nil {
-				slog.Error("Telegram client error", "client", name, "error", err)
-			}
-		}(cl.Name)
-	}
-
-	// Start Slack clients from store
-	var slackClients []*slackclient.Client
-	for _, cl := range dataStore.ListClients() {
-		if cl.Type != "slack" || !cl.Enabled || cl.Config.Slack == nil {
-			continue
-		}
-		if len(cl.AllowedAgents) == 0 {
-			slog.Warn("Slack client has no allowed agents, skipping", "client", cl.Name)
-			continue
-		}
-
-		agentURL := fmt.Sprintf("http://127.0.0.1:%d/api/v1/agent", cfg.Server.Port)
-
-		var allowedAgents []slackclient.AgentInfo
-		for _, agentID := range cl.AllowedAgents {
-			agentDef, ok := dataStore.GetAgent(agentID)
-			if !ok {
-				if flowDef, ok := dataStore.GetFlow(agentID); ok {
-					allowedAgents = append(allowedAgents, slackclient.AgentInfo{
-						ID:   agentID,
-						Name: flowDef.Name,
-					})
-					continue
-				}
-				slog.Warn("Slack client references unknown agent, skipping agent", "client", cl.Name, "agent", agentID)
-				continue
-			}
-			allowedAgents = append(allowedAgents, slackclient.AgentInfo{
-				ID:   agentID,
-				Name: agentDef.Name,
-			})
-		}
-
-		if len(allowedAgents) == 0 {
-			slog.Warn("Slack client has no valid agents after resolution, skipping", "client", cl.Name)
-			continue
-		}
-
-		skClient, err := slackclient.New(cl, agentURL, allowedAgents, slog.Default())
-		if err != nil {
-			slog.Error("Failed to create Slack client", "client", cl.Name, "error", err)
-			continue
-		}
-		slackClients = append(slackClients, skClient)
-		go func(name string) {
-			time.Sleep(500 * time.Millisecond)
-			if err := skClient.Start(ctx); err != nil {
-				slog.Error("Slack client error", "client", name, "error", err)
-			}
-		}(cl.Name)
-	}
+	// Start Telegram and Slack clients (hot-reloaded on store changes)
+	cm := newClientManager(dataStore, cfg.Server.Port, slog.Default())
+	cm.start(ctx)
 
 	// Graceful shutdown
 	go func() {
@@ -378,12 +285,7 @@ func main() {
 
 		slog.Info("Shutting down...")
 		cronScheduler.Stop()
-		for _, tc := range telegramClients {
-			tc.Stop()
-		}
-		for _, sc := range slackClients {
-			sc.Stop()
-		}
+		cm.stop()
 		cwRegistry.Stop()
 		if voiceDetector != nil {
 			voiceDetector.Close()
@@ -633,7 +535,7 @@ type agentRouterHandler struct {
 	adminHandler *admin.Handler
 	// cwRegistry is passed through to agent.New so the ContextGuard plugin
 	// can look up each model's context window at runtime.
-	cwRegistry   *contextwindow.Registry
+	cwRegistry *contextwindow.Registry
 }
 
 // ServeHTTP delegates to the current agent handler, or returns 503 if no
@@ -657,7 +559,7 @@ func (h *agentRouterHandler) rebuild(ctx context.Context, dataStore *store.Store
 
 	var agentHandler http.Handler
 	if len(storeData.Agents) > 0 {
-		svc, err := agent.New(ctx, storeData.Agents, storeData.Backends, storeData.MemoryProviders, storeData.MCPServers, storeData.Flows, storeData.Settings, h.cwRegistry)
+		svc, err := agent.New(ctx, storeData.Agents, storeData.Backends, storeData.MemoryProviders, storeData.MCPServers, storeData.Skills, storeData.Flows, storeData.Settings, h.cwRegistry)
 		if err != nil {
 			slog.Warn("Failed to initialize agents", "error", err)
 		} else {
@@ -699,4 +601,194 @@ func checkDependencies(cfg *config.Config) {
 	for _, dep := range missing {
 		slog.Warn("Missing dependency", "dependency", dep)
 	}
+}
+
+// clientManager manages the lifecycle of long-running clients (Telegram, Slack).
+// It subscribes to store changes and reconciles running clients: stopping
+// removed/disabled ones and starting new/re-enabled ones automatically.
+type clientManager struct {
+	store    *store.Store
+	agentURL string
+	logger   *slog.Logger
+
+	mu      sync.Mutex
+	running map[string]*managedClient
+}
+
+type managedClient struct {
+	stop   func()
+	cancel context.CancelFunc
+	hash   string
+}
+
+func newClientManager(s *store.Store, port int, logger *slog.Logger) *clientManager {
+	return &clientManager{
+		store:    s,
+		agentURL: fmt.Sprintf("http://127.0.0.1:%d/api/v1/agent", port),
+		logger:   logger,
+		running:  make(map[string]*managedClient),
+	}
+}
+
+func (m *clientManager) start(ctx context.Context) {
+	m.reconcile(ctx)
+
+	changeCh := m.store.OnChange()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-changeCh:
+				time.Sleep(500 * time.Millisecond)
+				m.reconcile(ctx)
+			}
+		}
+	}()
+}
+
+func (m *clientManager) stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for id, mc := range m.running {
+		mc.cancel()
+		mc.stop()
+		delete(m.running, id)
+	}
+}
+
+func (m *clientManager) reconcile(ctx context.Context) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	desired := make(map[string]store.ClientDefinition)
+	for _, cl := range m.store.ListClients() {
+		if (cl.Type == "telegram" || cl.Type == "slack") && cl.Enabled && len(cl.AllowedAgents) > 0 {
+			desired[cl.ID] = cl
+		}
+	}
+
+	for id, mc := range m.running {
+		cl, ok := desired[id]
+		if !ok {
+			m.logger.Info("Stopping removed/disabled client", "id", id)
+			mc.cancel()
+			mc.stop()
+			delete(m.running, id)
+			continue
+		}
+		if h := clientHash(cl); h != mc.hash {
+			m.logger.Info("Restarting changed client", "client", cl.Name)
+			mc.cancel()
+			mc.stop()
+			delete(m.running, id)
+		}
+	}
+
+	for id, cl := range desired {
+		if _, ok := m.running[id]; ok {
+			continue
+		}
+		switch cl.Type {
+		case "telegram":
+			m.startTelegram(ctx, cl)
+		case "slack":
+			m.startSlack(ctx, cl)
+		}
+	}
+}
+
+func clientHash(cl store.ClientDefinition) string {
+	b, _ := json.Marshal(cl)
+	return string(b)
+}
+
+func (m *clientManager) startTelegram(ctx context.Context, cl store.ClientDefinition) {
+	if cl.Config.Telegram == nil {
+		return
+	}
+
+	var agents []telegram.AgentInfo
+	for _, agentID := range cl.AllowedAgents {
+		agentDef, ok := m.store.GetAgent(agentID)
+		if !ok {
+			if flowDef, ok := m.store.GetFlow(agentID); ok {
+				agents = append(agents, telegram.AgentInfo{ID: agentID, Name: flowDef.Name})
+				continue
+			}
+			m.logger.Warn("Telegram client references unknown agent", "client", cl.Name, "agent", agentID)
+			continue
+		}
+		agents = append(agents, telegram.AgentInfo{ID: agentID, Name: agentDef.Name})
+	}
+
+	if len(agents) == 0 {
+		m.logger.Warn("Telegram client has no valid agents", "client", cl.Name)
+		return
+	}
+
+	tgClient, err := telegram.New(cl, m.agentURL, agents, m.logger)
+	if err != nil {
+		m.logger.Error("Failed to create Telegram client", "client", cl.Name, "error", err)
+		return
+	}
+
+	clientCtx, cancel := context.WithCancel(ctx)
+	m.running[cl.ID] = &managedClient{stop: tgClient.Stop, cancel: cancel, hash: clientHash(cl)}
+
+	go func(name string) {
+		time.Sleep(500 * time.Millisecond)
+		if err := tgClient.Start(clientCtx); err != nil {
+			if clientCtx.Err() == nil {
+				m.logger.Error("Telegram client error", "client", name, "error", err)
+			}
+		}
+	}(cl.Name)
+
+	m.logger.Info("Started Telegram client", "client", cl.Name)
+}
+
+func (m *clientManager) startSlack(ctx context.Context, cl store.ClientDefinition) {
+	if cl.Config.Slack == nil {
+		return
+	}
+
+	var agents []slackclient.AgentInfo
+	for _, agentID := range cl.AllowedAgents {
+		agentDef, ok := m.store.GetAgent(agentID)
+		if !ok {
+			if flowDef, ok := m.store.GetFlow(agentID); ok {
+				agents = append(agents, slackclient.AgentInfo{ID: agentID, Name: flowDef.Name})
+				continue
+			}
+			m.logger.Warn("Slack client references unknown agent", "client", cl.Name, "agent", agentID)
+			continue
+		}
+		agents = append(agents, slackclient.AgentInfo{ID: agentID, Name: agentDef.Name})
+	}
+
+	if len(agents) == 0 {
+		m.logger.Warn("Slack client has no valid agents", "client", cl.Name)
+		return
+	}
+
+	skClient, err := slackclient.New(cl, m.agentURL, agents, m.logger)
+	if err != nil {
+		m.logger.Error("Failed to create Slack client", "client", cl.Name, "error", err)
+		return
+	}
+
+	clientCtx, cancel := context.WithCancel(ctx)
+	m.running[cl.ID] = &managedClient{stop: skClient.Stop, cancel: cancel, hash: clientHash(cl)}
+
+	go func(name string) {
+		time.Sleep(500 * time.Millisecond)
+		if err := skClient.Start(clientCtx); err != nil {
+			if clientCtx.Err() == nil {
+				m.logger.Error("Slack client error", "client", name, "error", err)
+			}
+		}
+	}(cl.Name)
+
+	m.logger.Info("Started Slack client", "client", cl.Name)
 }

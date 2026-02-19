@@ -27,6 +27,13 @@
           <Badge variant="muted" v-for="id in mcpIds" :key="id">{{ mcpName(id) }}</Badge>
         </div>
         <p v-else class="text-[11px] text-arena-600">None linked</p>
+
+        <template v-if="skillIds.length">
+          <h4 class="text-[9px] font-medium text-arena-600 uppercase tracking-widest mb-2 mt-4">Skills</h4>
+          <div class="flex flex-wrap gap-1.5">
+            <Badge variant="muted" v-for="id in skillIds" :key="id">{{ skillName(id) }}</Badge>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -59,6 +66,7 @@ const props = defineProps({ agent: { type: Object, required: true } })
 const store = useDataStore()
 
 const mcpIds = computed(() => props.agent.mcpServers || [])
+const skillIds = computed(() => props.agent.skills || [])
 const promptExpanded = ref(false)
 const isPromptLong = computed(() => (props.agent.systemPrompt || '').length > 200)
 
@@ -86,6 +94,11 @@ const ttsSummary = computed(() => {
 function mcpName(id) {
   const m = store.mcps.find(m => m.id === id)
   return m?.name || id
+}
+
+function skillName(id) {
+  const sk = store.skills.find(sk => sk.id === id)
+  return sk?.name || id
 }
 
 function formatPrompt(text) {

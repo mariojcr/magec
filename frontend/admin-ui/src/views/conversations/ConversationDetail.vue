@@ -468,8 +468,27 @@ function formatSource(source) {
 
 function copyRaw() {
   if (!rawEvents.value.length) return
-  navigator.clipboard.writeText(JSON.stringify(rawEvents.value, null, 2))
-  toast.success('Copied to clipboard')
+  const text = JSON.stringify(rawEvents.value, null, 2)
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => toast.success('Copied to clipboard'),
+      () => { fallbackCopy(text); toast.success('Copied to clipboard') }
+    )
+  } else {
+    fallbackCopy(text)
+    toast.success('Copied to clipboard')
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.position = 'fixed'
+  ta.style.opacity = '0'
+  document.body.appendChild(ta)
+  ta.select()
+  document.execCommand('copy')
+  document.body.removeChild(ta)
 }
 
 function handleDelete() {

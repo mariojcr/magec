@@ -9,17 +9,18 @@ func generateID() string {
 
 // AgentDefinition represents a single agent's full configuration in the store.
 type AgentDefinition struct {
-	ID           string     `json:"id" yaml:"id"`
-	Name         string     `json:"name" yaml:"name"`
-	Description  string     `json:"description,omitempty" yaml:"description,omitempty"`
-	SystemPrompt string     `json:"systemPrompt,omitempty" yaml:"systemPrompt,omitempty"`
-	OutputKey    string     `json:"outputKey,omitempty" yaml:"outputKey,omitempty"`
-	LLM          BackendRef `json:"llm" yaml:"llm"`
-	Transcription BackendRef `json:"transcription,omitempty" yaml:"transcription,omitempty"`
-	TTS          TTSRef     `json:"tts,omitempty" yaml:"tts,omitempty"`
-	MCPServers   []string   `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"`
-	Tags         []string   `json:"tags,omitempty" yaml:"tags,omitempty"`
-	ContextGuard *ContextGuardConfig `json:"contextGuard,omitempty" yaml:"contextGuard,omitempty"`
+	ID            string              `json:"id" yaml:"id"`
+	Name          string              `json:"name" yaml:"name"`
+	Description   string              `json:"description,omitempty" yaml:"description,omitempty"`
+	SystemPrompt  string              `json:"systemPrompt,omitempty" yaml:"systemPrompt,omitempty"`
+	OutputKey     string              `json:"outputKey,omitempty" yaml:"outputKey,omitempty"`
+	LLM           BackendRef          `json:"llm" yaml:"llm"`
+	Transcription BackendRef          `json:"transcription,omitempty" yaml:"transcription,omitempty"`
+	TTS           TTSRef              `json:"tts,omitempty" yaml:"tts,omitempty"`
+	MCPServers    []string            `json:"mcpServers,omitempty" yaml:"mcpServers,omitempty"`
+	Skills        []string            `json:"skills,omitempty" yaml:"skills,omitempty"`
+	Tags          []string            `json:"tags,omitempty" yaml:"tags,omitempty"`
+	ContextGuard  *ContextGuardConfig `json:"contextGuard,omitempty" yaml:"contextGuard,omitempty"`
 }
 
 // BackendDefinition represents a reusable AI backend.
@@ -143,6 +144,24 @@ type WebhookClientConfig struct {
 	CommandID   string `json:"commandId,omitempty" yaml:"commandId,omitempty"`
 }
 
+// SkillReference holds metadata for a file uploaded as a skill resource.
+// The actual file lives on disk at data/skills/{skillId}/{Filename}.
+type SkillReference struct {
+	Filename string `json:"filename" yaml:"filename"`
+	Size     int64  `json:"size" yaml:"size"`
+}
+
+// Skill represents a self-contained unit of functionality that an agent can use.
+// Inspired by ADK Skills (L1 metadata + L2 instructions + L3 resources).
+// Skills are defined globally and linked to agents by ID.
+type Skill struct {
+	ID           string           `json:"id" yaml:"id"`
+	Name         string           `json:"name" yaml:"name"`
+	Description  string           `json:"description,omitempty" yaml:"description,omitempty"`
+	Instructions string           `json:"instructions" yaml:"instructions"`
+	References   []SkillReference `json:"references,omitempty" yaml:"references,omitempty"`
+}
+
 // Command represents a reusable prompt that can be invoked against an agent
 // via cron or webhook clients.
 type Command struct {
@@ -261,6 +280,7 @@ type StoreData struct {
 	Backends        []BackendDefinition `json:"backends"`
 	MemoryProviders []MemoryProvider    `json:"memoryProviders"`
 	MCPServers      []MCPServer         `json:"mcpServers"`
+	Skills          []Skill             `json:"skills"`
 	Agents          []AgentDefinition   `json:"agents"`
 	Clients         []ClientDefinition  `json:"clients"`
 	Flows           []FlowDefinition    `json:"flows"`

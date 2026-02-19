@@ -76,6 +76,7 @@ const sectionDefs = [
   { key: 'agents',    label: 'Agents',       icon: 'users',    color: 'sol',       data: () => store.agents },
   { key: 'flows',     label: 'Flows',        icon: 'flow',     color: 'rose',      data: () => store.flows },
   { key: 'commands',  label: 'Commands',     icon: 'command',  color: 'indigo',    data: () => store.commands },
+  { key: 'skills',    label: 'Skills',       icon: 'skill',    color: 'cyan',      data: () => store.skills },
   { key: 'clients',   label: 'Clients',      icon: 'phone',    color: 'lava',      data: () => store.clients },
   { key: 'secrets',   label: 'Secrets',      icon: 'key',      color: 'amber',     data: () => store.secrets },
   { key: 'conversations', label: 'Conversations', icon: 'chat', color: 'teal', data: () => [] },
@@ -137,7 +138,7 @@ function iconBg(color) {
   const map = {
     purple: 'bg-purple-500/15', green: 'bg-green-500/15', atlantico: 'bg-atlantico-500/15',
     sol: 'bg-sol-500/15', rose: 'bg-rose-500/15', indigo: 'bg-indigo-500/15',
-    teal: 'bg-teal-500/15', lava: 'bg-lava-500/15',
+    teal: 'bg-teal-500/15', lava: 'bg-lava-500/15', cyan: 'bg-cyan-500/15', amber: 'bg-amber-500/15',
   }
   return map[color] || map.sol
 }
@@ -146,7 +147,7 @@ function iconText(color) {
   const map = {
     purple: 'text-purple-400', green: 'text-green-400', atlantico: 'text-atlantico-400',
     sol: 'text-sol-400', rose: 'text-rose-400', indigo: 'text-indigo-400',
-    teal: 'text-teal-400', lava: 'text-lava-400',
+    teal: 'text-teal-400', lava: 'text-lava-400', cyan: 'text-cyan-400', amber: 'text-amber-400',
   }
   return map[color] || map.sol
 }

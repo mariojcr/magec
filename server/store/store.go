@@ -20,14 +20,14 @@ import (
 // with ${VAR} references is preserved in rawData so that persist() never writes
 // expanded secrets or API keys to the store file.
 type Store struct {
-	mu       sync.RWMutex
-	data     StoreData
-	rawData  StoreData
-	filePath string
+	mu            sync.RWMutex
+	data          StoreData
+	rawData       StoreData
+	filePath      string
 	encryptionKey string
 
-	changeMu    sync.Mutex
-	changeSubs  []chan struct{}
+	changeMu   sync.Mutex
+	changeSubs []chan struct{}
 }
 
 // New creates a new Store. If filePath is non-empty and the file exists, it loads from it.
@@ -37,6 +37,7 @@ func New(filePath string, encryptionKey string) (*Store, error) {
 		Backends:        []BackendDefinition{},
 		MemoryProviders: []MemoryProvider{},
 		MCPServers:      []MCPServer{},
+		Skills:          []Skill{},
 		Agents:          []AgentDefinition{},
 		Clients:         []ClientDefinition{},
 		Flows:           []FlowDefinition{},
@@ -412,6 +413,9 @@ func (s *Store) CreateAgent(a AgentDefinition) (AgentDefinition, error) {
 	if a.MCPServers == nil {
 		a.MCPServers = []string{}
 	}
+	if a.Skills == nil {
+		a.Skills = []string{}
+	}
 	s.data.Agents = append(s.data.Agents, expandStruct(a))
 	s.rawData.Agents = append(s.rawData.Agents, a)
 	return a, s.persist()
@@ -426,6 +430,9 @@ func (s *Store) UpdateAgent(id string, a AgentDefinition) error {
 			a.ID = id
 			if a.MCPServers == nil {
 				a.MCPServers = []string{}
+			}
+			if a.Skills == nil {
+				a.Skills = []string{}
 			}
 			s.data.Agents[i] = expandStruct(a)
 			s.rawData.Agents[i] = a
@@ -765,6 +772,141 @@ func (s *Store) DeleteFlow(id string) error {
 	return fmt.Errorf("flow %q not found", id)
 }
 
+// --- Skills ---
+
+func (s *Store) ListSkills() []Skill {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Skill, len(s.data.Skills))
+	copy(result, s.data.Skills)
+	return result
+}
+
+func (s *Store) GetSkill(id string) (Skill, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, sk := range s.data.Skills {
+		if sk.ID == id {
+			return sk, true
+		}
+	}
+	return Skill{}, false
+}
+
+func (s *Store) ListRawSkills() []Skill {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Skill, len(s.rawData.Skills))
+	copy(result, s.rawData.Skills)
+	return result
+}
+
+func (s *Store) GetRawSkill(id string) (Skill, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, sk := range s.rawData.Skills {
+		if sk.ID == id {
+			return sk, true
+		}
+	}
+	return Skill{}, false
+}
+
+func (s *Store) CreateSkill(sk Skill) (Skill, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	sk.ID = generateID()
+	s.data.Skills = append(s.data.Skills, expandStruct(sk))
+	s.rawData.Skills = append(s.rawData.Skills, sk)
+	return sk, s.persist()
+}
+
+func (s *Store) UpdateSkill(id string, sk Skill) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, existing := range s.data.Skills {
+		if existing.ID == id {
+			sk.ID = id
+			s.data.Skills[i] = expandStruct(sk)
+			s.rawData.Skills[i] = sk
+			return s.persist()
+		}
+	}
+	return fmt.Errorf("skill %q not found", id)
+}
+
+func (s *Store) DeleteSkill(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, existing := range s.data.Skills {
+		if existing.ID == id {
+			s.data.Skills = append(s.data.Skills[:i], s.data.Skills[i+1:]...)
+			s.rawData.Skills = append(s.rawData.Skills[:i], s.rawData.Skills[i+1:]...)
+			if err := s.persist(); err != nil {
+				return err
+			}
+			dir := s.SkillDir(id)
+			os.RemoveAll(dir)
+			return nil
+		}
+	}
+	return fmt.Errorf("skill %q not found", id)
+}
+
+// SkillDir returns the filesystem path for a skill's reference files.
+func (s *Store) SkillDir(skillID string) string {
+	base := filepath.Dir(s.filePath)
+	return filepath.Join(base, "skills", skillID)
+}
+
+// AddSkillReference appends a reference entry to a skill's metadata.
+func (s *Store) AddSkillReference(skillID string, ref SkillReference) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, existing := range s.data.Skills {
+		if existing.ID == skillID {
+			for _, r := range existing.References {
+				if r.Filename == ref.Filename {
+					return fmt.Errorf("reference %q already exists in skill %q", ref.Filename, skillID)
+				}
+			}
+			s.data.Skills[i].References = append(s.data.Skills[i].References, ref)
+			s.rawData.Skills[i].References = append(s.rawData.Skills[i].References, ref)
+			return s.persist()
+		}
+	}
+	return fmt.Errorf("skill %q not found", skillID)
+}
+
+// RemoveSkillReference removes a reference entry from a skill's metadata.
+func (s *Store) RemoveSkillReference(skillID, filename string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, existing := range s.data.Skills {
+		if existing.ID == skillID {
+			idx := -1
+			for j, r := range existing.References {
+				if r.Filename == filename {
+					idx = j
+					break
+				}
+			}
+			if idx == -1 {
+				return fmt.Errorf("reference %q not found in skill %q", filename, skillID)
+			}
+			s.data.Skills[i].References = append(existing.References[:idx], existing.References[idx+1:]...)
+			s.rawData.Skills[i].References = append(s.rawData.Skills[i].References[:idx], s.rawData.Skills[i].References[idx+1:]...)
+			return s.persist()
+		}
+	}
+	return fmt.Errorf("skill %q not found", skillID)
+}
+
 // --- Commands ---
 
 func (s *Store) ListCommands() []Command {
@@ -1032,6 +1174,9 @@ func (s *Store) loadFromDisk() error {
 		}
 		if sd.MCPServers == nil {
 			sd.MCPServers = []MCPServer{}
+		}
+		if sd.Skills == nil {
+			sd.Skills = []Skill{}
 		}
 		if sd.Agents == nil {
 			sd.Agents = []AgentDefinition{}

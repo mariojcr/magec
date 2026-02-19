@@ -79,6 +79,7 @@
                 <Badge v-if="a.transcription?.backend" variant="muted">STT</Badge>
                 <Badge v-if="a.tts?.backend" variant="muted">TTS</Badge>
                 <Badge v-if="(a.mcpServers||[]).length" variant="muted">{{ (a.mcpServers||[]).length }} MCP{{ (a.mcpServers||[]).length > 1 ? 's' : '' }}</Badge>
+                <Badge v-if="(a.skills||[]).length" variant="muted">{{ (a.skills||[]).length }} Skill{{ (a.skills||[]).length > 1 ? 's' : '' }}</Badge>
               </div>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">

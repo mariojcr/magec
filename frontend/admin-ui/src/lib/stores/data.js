@@ -8,6 +8,7 @@ import {
   clientsApi,
   flowsApi,
   commandsApi,
+  skillsApi,
   settingsApi,
   secretsApi,
 } from '../api/index.js'
@@ -20,6 +21,7 @@ export const useDataStore = defineStore('data', () => {
   const clients = ref([])
   const flows = ref([])
   const commands = ref([])
+  const skills = ref([])
   const secrets = ref([])
   const memoryTypes = ref([])
   const clientTypes = ref([])
@@ -43,6 +45,7 @@ export const useDataStore = defineStore('data', () => {
         clientsApi.list(),
         flowsApi.list(),
         commandsApi.list(),
+        skillsApi.list(),
         settingsApi.get(),
         secretsApi.list(),
       ])
@@ -53,8 +56,9 @@ export const useDataStore = defineStore('data', () => {
       clients.value = results[4] || []
       flows.value = results[5] || []
       commands.value = results[6] || []
-      settings.value = results[7] || { sessionProvider: '', longTermProvider: '' }
-      secrets.value = results[8] || []
+      skills.value = results[7] || []
+      settings.value = results[8] || { sessionProvider: '', longTermProvider: '' }
+      secrets.value = results[9] || []
     } catch (e) {
       console.error('Failed to load data:', e)
     } finally {
@@ -80,6 +84,12 @@ export const useDataStore = defineStore('data', () => {
     return c?.name || id
   }
 
+  function skillLabel(id) {
+    if (!id) return ''
+    const sk = skills.value.find((sk) => sk.id === id)
+    return sk?.name || id
+  }
+
   async function saveSettings(newSettings) {
     settings.value = await settingsApi.update(newSettings)
   }
@@ -92,6 +102,7 @@ export const useDataStore = defineStore('data', () => {
     clients,
     flows,
     commands,
+    skills,
     secrets,
     memoryTypes,
     clientTypes,
@@ -103,5 +114,6 @@ export const useDataStore = defineStore('data', () => {
     backendLabel,
     agentLabel,
     commandLabel,
+    skillLabel,
   }
 })

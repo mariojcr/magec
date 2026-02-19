@@ -67,8 +67,8 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: User-facing API for Magec. Includes device pairing, voice proxies, and
-    health checks.
+  description: User-facing API for Magec. Includes device pairing, voice proxies,
+    and health checks.
   title: Magec User API
   version: "1.0"
 paths:

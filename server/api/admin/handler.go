@@ -105,6 +105,16 @@ func (h *Handler) buildRouter() *mux.Router {
 	r.HandleFunc("/commands/{id}", h.updateCommand).Methods("PUT")
 	r.HandleFunc("/commands/{id}", h.deleteCommand).Methods("DELETE")
 
+	// Skills
+	r.HandleFunc("/skills", h.listSkills).Methods("GET")
+	r.HandleFunc("/skills", h.createSkill).Methods("POST")
+	r.HandleFunc("/skills/{id}", h.getSkill).Methods("GET")
+	r.HandleFunc("/skills/{id}", h.updateSkill).Methods("PUT")
+	r.HandleFunc("/skills/{id}", h.deleteSkill).Methods("DELETE")
+	r.HandleFunc("/skills/{id}/references", h.uploadSkillReference).Methods("POST")
+	r.HandleFunc("/skills/{id}/references/{filename}", h.downloadSkillReference).Methods("GET")
+	r.HandleFunc("/skills/{id}/references/{filename}", h.deleteSkillReference).Methods("DELETE")
+
 	// Flows
 	r.HandleFunc("/flows", h.listFlows).Methods("GET")
 	r.HandleFunc("/flows", h.createFlow).Methods("POST")

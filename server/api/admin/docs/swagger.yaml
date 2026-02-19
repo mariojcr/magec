@@ -110,6 +110,10 @@ definitions:
         type: string
       outputKey:
         type: string
+      skills:
+        items:
+          type: string
+        type: array
       systemPrompt:
         type: string
       tags:
@@ -363,6 +367,28 @@ definitions:
         type: string
       sessionProvider:
         type: string
+    type: object
+  store.Skill:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      instructions:
+        type: string
+      name:
+        type: string
+      references:
+        items:
+          $ref: '#/definitions/store.SkillReference'
+        type: array
+    type: object
+  store.SkillReference:
+    properties:
+      filename:
+        type: string
+      size:
+        type: integer
     type: object
   store.SlackClientConfig:
     properties:
@@ -1884,6 +1910,228 @@ paths:
       summary: Update settings
       tags:
       - settings
+  /skills:
+    get:
+      description: Returns all configured skills
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/store.Skill'
+            type: array
+      security:
+      - AdminAuth: []
+      summary: List skills
+      tags:
+      - skills
+    post:
+      consumes:
+      - application/json
+      description: Creates a new skill with instructions and optional references
+      parameters:
+      - description: Skill definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/store.Skill'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Skill'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Create skill
+      tags:
+      - skills
+  /skills/{id}:
+    delete:
+      description: Deletes a skill by ID
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Delete skill
+      tags:
+      - skills
+    get:
+      description: Returns a skill by its unique ID
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Skill'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Get skill
+      tags:
+      - skills
+    put:
+      consumes:
+      - application/json
+      description: Updates a skill by ID
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Skill definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/store.Skill'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Skill'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Update skill
+      tags:
+      - skills
+  /skills/{id}/references:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a file and registers it as a reference for the skill
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reference file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.SkillReference'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Upload skill reference
+      tags:
+      - skills
+  /skills/{id}/references/{filename}:
+    delete:
+      description: Removes a reference file from a skill
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reference filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Delete skill reference
+      tags:
+      - skills
+    get:
+      description: Downloads a reference file from a skill
+      parameters:
+      - description: Skill ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reference filename
+        in: path
+        name: filename
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Download skill reference
+      tags:
+      - skills
 schemes:
 - http
 securityDefinitions:

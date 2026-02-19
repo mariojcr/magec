@@ -1,8 +1,9 @@
 <template>
   <div ref="wrapperRef" class="relative">
     <button
+      ref="buttonRef"
       type="button"
-      @click="open = !open"
+      @click="toggle"
       class="w-full flex items-center justify-between bg-piedra-800 border rounded-lg px-3 py-2 text-sm text-left outline-none transition-colors cursor-pointer"
       :class="open
         ? 'border-sol-500 ring-1 ring-sol-500'
@@ -30,7 +31,9 @@
     >
       <ul
         v-if="open"
-        class="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-lg border border-piedra-700 bg-piedra-800 py-1 shadow-lg shadow-black/30 text-sm"
+        ref="listRef"
+        :style="floatingStyle"
+        class="fixed z-[9999] max-h-48 overflow-auto rounded-lg border border-piedra-700 bg-piedra-800 py-1 shadow-lg shadow-black/30 text-sm"
       >
         <li
           v-for="opt in normalizedOptions"
@@ -49,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, useSlots } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, useSlots } from 'vue'
 
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
@@ -61,6 +64,31 @@ const emit = defineEmits(['update:modelValue'])
 const slots = useSlots()
 const open = ref(false)
 const wrapperRef = ref(null)
+const buttonRef = ref(null)
+const listRef = ref(null)
+const floatingStyle = ref({})
+
+function updatePosition() {
+  if (!buttonRef.value) return
+  const rect = buttonRef.value.getBoundingClientRect()
+  floatingStyle.value = {
+    top: `${rect.bottom + 4}px`,
+    left: `${rect.left}px`,
+    width: `${rect.width}px`,
+  }
+}
+
+function toggle() {
+  open.value = !open.value
+}
+
+watch(open, async (val) => {
+  if (val) {
+    updatePosition()
+    await nextTick()
+    updatePosition()
+  }
+})
 
 const normalizedOptions = computed(() => {
   if (props.options.length) {
@@ -105,11 +133,24 @@ function select(val) {
 }
 
 function onClickOutside(e) {
-  if (wrapperRef.value && !wrapperRef.value.contains(e.target)) {
-    open.value = false
-  }
+  if (wrapperRef.value?.contains(e.target)) return
+  if (listRef.value?.contains(e.target)) return
+  open.value = false
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
+function onScroll() {
+  if (open.value) updatePosition()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  window.addEventListener('scroll', onScroll, true)
+  window.addEventListener('resize', onScroll)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutside)
+  window.removeEventListener('scroll', onScroll, true)
+  window.removeEventListener('resize', onScroll)
+})
 </script>

@@ -41,6 +41,7 @@ magec/
 │   │   │   ├── backends.go     # Backend CRUD
 │   │   │   ├── clients.go      # Client CRUD + /types (JSON Schema) + token regen
 │   │   │   ├── commands.go     # Command CRUD
+│   │   │   ├── skills.go       # Skill CRUD + reference file upload/download/delete
 │   │   │   ├── memory.go       # Memory provider CRUD + health check + /types
 │   │   │   ├── flows.go        # Flow CRUD + recursive validation
 │   │   │   ├── conversations.go # Conversation audit (list/get/delete/clear/stats/summary)
@@ -96,8 +97,8 @@ magec/
 │   │   │   ├── lib/api/        # Fetch wrapper + CRUD per resource
 │   │   │   ├── lib/stores/data.js # Pinia central store
 │   │   │   ├── components/     # Shared: AppDialog, Card, Badge, FormInput, Icon, Toast, etc.
-│   │   │   └── views/          # Entity views (backends/, memory/, mcps/, agents/, clients/,
-│   │   │                       #   commands/, flows/, conversations/)
+│   │   │   └── views/          # Entity views (backends/, memory/, mcps/, agents/, skills/,
+│   │   │                       #   clients/, commands/, flows/, conversations/)
 │   │   ├── vite.config.js      # Vue + Tailwind plugin + dev proxy to :8081
 │   │   └── package.json        # vue, pinia, vuedraggable, marked, tailwindcss v4
 │   └── voice-ui/               # Voice UI (Vue 3 + Vite + Tailwind v4 + Pinia)
@@ -156,6 +157,7 @@ magec/
 | | **Backends** | CRUD: `/backends`, `/backends/{id}` |
 | | **Memory** | CRUD: `/memory`, `/memory/{id}`, `/memory/types`, `/memory/{id}/health` |
 | | **MCP Servers** | CRUD: `/mcps`, `/mcps/{id}` |
+| | **Skills** | CRUD: `/skills`, `/skills/{id}` + references: `/skills/{id}/references`, `/skills/{id}/references/{filename}` |
 | | **Agents** | CRUD: `/agents`, `/agents/{id}`, `/agents/{id}/mcps`, `/agents/{id}/mcps/{mcpId}` |
 | | **Clients** | CRUD: `/clients`, `/clients/{id}`, `/clients/types`, `/clients/{id}/regenerate-token` |
 | | **Commands** | CRUD: `/commands`, `/commands/{id}` |
@@ -203,6 +205,7 @@ log:
 - **Flow execution**: `FlowDefinition` recursive tree maps 1:1 to ADK workflow agents. `responseAgent` flag on `FlowStep` filters output
 - **Voice endpoints**: `/api/v1/voice/{agentId}/speech` and `/transcription` resolve backends dynamically per agent
 - **MCP headers/TLS**: `MCPServer` struct has `Headers map[string]string` and `Insecure bool`. `httpClientForMCP()` creates transport with optional `InsecureSkipVerify`
+- **Skill injection**: Skills are injected into the agent system prompt at build time. Instructions appended as `--- Skill: {name} ---`, reference file contents appended as `[Reference: {filename}]`. Files read from `data/skills/{skillId}/`
 - **Encryption key**: `server.encryptionKey` in config.yaml. Independent from `adminPassword`. Used to encrypt secrets at rest (AES-256-GCM, PBKDF2-derived)
 
 ### Frontend Conventions (admin-ui)
@@ -214,7 +217,7 @@ log:
 - **JSON Schema form renderer**: `ClientDialog.vue` renders forms dynamically from `ConfigSchema()`
 - **Flow editor**: `FlowCanvas.vue` (pan/zoom/toolbar) + `FlowBlock.vue` (recursive, vuedraggable)
 - **Tailwind v4**: `@tailwindcss/vite` plugin, `@theme` directive for custom colors
-- **8 active tabs**: backends, memory, mcps, agents, flows, commands, clients, conversations
+- **9 active tabs**: backends, memory, mcps, agents, skills, flows, commands, clients, conversations
 
 ### Frontend Conventions (voice-ui)
 

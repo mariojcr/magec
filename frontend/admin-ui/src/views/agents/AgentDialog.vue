@@ -112,6 +112,30 @@
         </div>
       </details>
 
+      <!-- Skills -->
+      <details class="group border border-piedra-700/40 rounded-xl">
+        <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-xs font-medium text-arena-400 hover:text-arena-300">
+          <span>Skills</span>
+          <Icon name="chevronDown" size="md" class="text-arena-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div class="px-4 pb-4">
+          <div v-if="store.skills.length" class="flex flex-wrap gap-1.5">
+            <button
+              v-for="sk in store.skills" :key="sk.id"
+              type="button"
+              @click="toggleSkill(sk.id)"
+              class="px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-all cursor-pointer"
+              :class="form.skills.includes(sk.id)
+                ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                : 'bg-piedra-800 text-arena-500 border-piedra-700/40 hover:border-piedra-600 hover:text-arena-300'"
+            >
+              {{ sk.name }}
+            </button>
+          </div>
+          <p v-else class="text-xs text-arena-500">No skills defined yet</p>
+        </div>
+      </details>
+
       <!-- Voice -->
       <details class="group border border-piedra-700/40 rounded-xl">
         <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-xs font-medium text-arena-400 hover:text-arena-300">
@@ -195,6 +219,7 @@ const form = reactive({
   llmBackend: '',
   llmModel: '',
   mcpServers: [],
+  skills: [],
   tags: [],
   transcriptionBackend: '',
   transcriptionModel: '',
@@ -211,6 +236,12 @@ function toggleMcp(id) {
   const idx = form.mcpServers.indexOf(id)
   if (idx === -1) form.mcpServers.push(id)
   else form.mcpServers.splice(idx, 1)
+}
+
+function toggleSkill(id) {
+  const idx = form.skills.indexOf(id)
+  if (idx === -1) form.skills.push(id)
+  else form.skills.splice(idx, 1)
 }
 
 function addTag() {
@@ -235,6 +266,7 @@ function open(agent = null) {
   form.llmBackend = agent?.llm?.backend || ''
   form.llmModel = agent?.llm?.model || ''
   form.mcpServers = [...(agent?.mcpServers || [])]
+  form.skills = [...(agent?.skills || [])]
   form.tags = [...(agent?.tags || [])]
   form.transcriptionBackend = agent?.transcription?.backend || ''
   form.transcriptionModel = agent?.transcription?.model || ''
@@ -263,6 +295,7 @@ async function save() {
       speed: parseFloat(form.ttsSpeed) || 0,
     },
     mcpServers: form.mcpServers,
+    skills: form.skills,
     tags: form.tags.length ? form.tags : undefined,
     contextGuard: form.contextGuardEnabled ? {
       enabled: true,

@@ -12,6 +12,9 @@ Store (in-memory + JSON persistence → data/store.json)
 ├── MCPServers[]        — reusable MCP servers (global)
 │   ├── endpoint, type (http|stdio), headers, insecure
 │   └── systemPrompt
+├── Skills[]            — reusable skill packs (instructions + reference files)
+│   ├── id, name, description, instructions
+│   └── references: [{filename, size}]  — files stored at data/skills/{skillId}/
 ├── Agents[]            — each agent is an independent unit
 │   ├── id, name, description, outputKey
 │   ├── systemPrompt
@@ -19,7 +22,8 @@ Store (in-memory + JSON persistence → data/store.json)
 │   ├── transcription: {backend, model}
 │   ├── tts: {backend, model, voice, speed}
 │   ├── memory: {session: "provider-id", longTerm: "provider-id"}
-│   └── mcpServers: ["id1", "id2"]
+│   ├── mcpServers: ["id1", "id2"]
+│   └── skills: ["id1", "id2"]
 ├── Clients[]           — access points with token-based auth
 │   ├── id, name, type, token, allowedAgents, enabled
 │   └── config: {telegram?, cron?, webhook?}  — JSON Schema driven
@@ -35,8 +39,8 @@ Store (in-memory + JSON persistence → data/store.json)
 ### Resource Hierarchy
 
 ```
-Backends (AI infra) → Memory (data infra) → MCPs (tools) → Agents (consumers) → Commands (prompts) → Clients (access + automation)
-                                                                                                       └── Flows (workflows)
+Backends (AI infra) → Memory (data infra) → MCPs (tools) → Skills (knowledge) → Agents (consumers) → Commands (prompts) → Clients (access + automation)
+                                                                                                                            └── Flows (workflows)
 ```
 
 ## API Reference
@@ -69,6 +73,17 @@ Types: `openai`, `anthropic`, `gemini`
 | GET/PUT/DELETE | `/mcps/{id}` | Get / Update / Delete |
 
 Types: `http` (StreamableClientTransport), `stdio` (CommandTransport)
+
+### Skills
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/POST | `/skills` | List / Create |
+| GET/PUT/DELETE | `/skills/{id}` | Get / Update / Delete |
+| POST | `/skills/{id}/references` | Upload reference file (multipart, 10MB limit) |
+| GET/DELETE | `/skills/{id}/references/{filename}` | Download / Delete reference file |
+
+Skill instructions and reference file contents are injected into the agent system prompt at runtime. Files stored on disk at `data/skills/{skillId}/`, metadata only in store.
 
 ### Agents
 

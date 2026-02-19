@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -82,7 +83,7 @@ type Service struct {
 // routes requests to the right agent based on the appName in the request body.
 // Any FlowDefinitions are translated into ADK workflow agents and registered
 // alongside the regular agents.
-func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, flows []store.FlowDefinition, settings store.Settings, cwRegistry *contextwindow.Registry) (*Service, error) {
+func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, skills []store.Skill, flows []store.FlowDefinition, settings store.Settings, cwRegistry *contextwindow.Registry) (*Service, error) {
 	if len(agents) == 0 {
 		return nil, fmt.Errorf("no agents defined")
 	}
@@ -100,6 +101,11 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	mcpServerMap := make(map[string]store.MCPServer, len(mcpServers))
 	for _, m := range mcpServers {
 		mcpServerMap[m.ID] = m
+	}
+
+	skillMap := make(map[string]store.Skill, len(skills))
+	for _, sk := range skills {
+		skillMap[sk.ID] = sk
 	}
 
 	sessionSvc, err := createSessionService(settings, memoryProviderMap)
@@ -144,7 +150,7 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 		}
 		toolsets = append(toolsets, baseTset)
 
-		instruction := buildInstruction(agentDef, mcpServerMap, memorySvc)
+		instruction := buildInstruction(agentDef, mcpServerMap, skillMap, filepath.Join("data", "skills"), memorySvc)
 
 		agentCfg := llmagent.Config{
 			Name:        agentDef.ID,
@@ -486,8 +492,8 @@ func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // buildInstruction assembles the system prompt for an agent. It starts with
 // the agent's custom prompt (or a default), appends memory instructions if
-// long-term memory is enabled, and appends any MCP server system prompts.
-func buildInstruction(agentDef store.AgentDefinition, mcpServerMap map[string]store.MCPServer, memorySvc memory.Service) string {
+// long-term memory is enabled, and appends any MCP server system prompts, then skills.
+func buildInstruction(agentDef store.AgentDefinition, mcpServerMap map[string]store.MCPServer, skillMap map[string]store.Skill, skillsBaseDir string, memorySvc memory.Service) string {
 	instruction := baseInstruction
 	if agentDef.SystemPrompt != "" {
 		instruction = agentDef.SystemPrompt
@@ -500,6 +506,22 @@ func buildInstruction(agentDef store.AgentDefinition, mcpServerMap map[string]st
 	for _, mcpName := range agentDef.MCPServers {
 		if srv, ok := mcpServerMap[mcpName]; ok && srv.SystemPrompt != "" {
 			instruction += "\n\n" + srv.SystemPrompt
+		}
+	}
+
+	for _, skillID := range agentDef.Skills {
+		sk, ok := skillMap[skillID]
+		if !ok {
+			continue
+		}
+		instruction += "\n\n--- Skill: " + sk.Name + " ---\n" + sk.Instructions
+		for _, ref := range sk.References {
+			content, err := os.ReadFile(filepath.Join(skillsBaseDir, skillID, ref.Filename))
+			if err != nil {
+				slog.Warn("Failed to read skill reference", "skill", sk.Name, "file", ref.Filename, "error", err)
+				continue
+			}
+			instruction += "\n\n[Reference: " + ref.Filename + "]\n" + string(content)
 		}
 	}
 

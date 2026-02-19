@@ -14,6 +14,7 @@ Each entity type in the admin UI has an assigned color for visual consistency ac
 | **Commands** | Indigo | `indigo` | `#818cf8` |
 | **Flows** | Rose | `rose` | `#fb7185` |
 | **Conversations** | Teal | `teal` | `#2dd4bf` |
+| **Skills** | Cyan | `cyan` | `#22d3ee` |
 | **Secrets** | Amber | `amber` | `#f59e0b` |
 
 ## Client Type Badges
@@ -43,7 +44,7 @@ Badge:    <Badge variant="{color}">
 
 ## Badge Variants
 
-The `Badge.vue` component supports a `variant` prop matching each entity color. All nine entity colors are registered as variants.
+The `Badge.vue` component supports a `variant` prop matching each entity color. All ten entity colors are registered as variants.
 
 ## Notes
 

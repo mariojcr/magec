@@ -105,6 +105,7 @@ const groups = [
     label: 'Agents',
     items: [
       { id: 'agents', label: 'Agents', icon: 'users', color: 'sol' },
+      { id: 'skills', label: 'Skills', icon: 'skill', color: 'cyan' },
       { id: 'flows', label: 'Flows', icon: 'flow', color: 'rose' },
       { id: 'commands', label: 'Commands', icon: 'command', color: 'indigo' },
     ],
@@ -132,6 +133,7 @@ function itemCount(id) {
     flows: store.flows,
     commands: store.commands,
     clients: store.clients,
+    skills: store.skills,
     secrets: store.secrets,
   }
   return map[id]?.length || 0
@@ -142,6 +144,7 @@ function activeClasses(color) {
     purple: 'bg-purple-500/10 text-purple-200',
     green: 'bg-green-500/10 text-green-200',
     atlantico: 'bg-atlantico-500/10 text-atlantico-200',
+    cyan: 'bg-cyan-500/10 text-cyan-200',
     sol: 'bg-sol-500/10 text-sol-200',
     rose: 'bg-rose-500/10 text-rose-200',
     indigo: 'bg-indigo-500/10 text-indigo-200',
@@ -158,6 +161,7 @@ function iconBgClasses(color) {
     purple: 'bg-purple-500/20 text-purple-300',
     green: 'bg-green-500/20 text-green-300',
     atlantico: 'bg-atlantico-500/20 text-atlantico-300',
+    cyan: 'bg-cyan-500/20 text-cyan-300',
     sol: 'bg-sol-500/20 text-sol-300',
     rose: 'bg-rose-500/20 text-rose-300',
     indigo: 'bg-indigo-500/20 text-indigo-300',
@@ -174,6 +178,7 @@ function countActiveClasses(color) {
     purple: 'text-purple-300 bg-purple-500/15',
     green: 'text-green-300 bg-green-500/15',
     atlantico: 'text-atlantico-300 bg-atlantico-500/15',
+    cyan: 'text-cyan-300 bg-cyan-500/15',
     sol: 'text-sol-300 bg-sol-500/15',
     rose: 'text-rose-300 bg-rose-500/15',
     indigo: 'text-indigo-300 bg-indigo-500/15',
