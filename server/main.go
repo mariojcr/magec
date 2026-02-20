@@ -581,7 +581,7 @@ func (h *agentRouterHandler) rebuild(ctx context.Context, dataStore *store.Store
 				h.adminHandler.SetSessionService(svc.SessionService())
 			}
 			if h.a2aHandler != nil {
-				h.a2aHandler.Rebuild(storeData.Agents, svc.ADKAgents(), svc.SessionService(), svc.MemoryService())
+				h.a2aHandler.Rebuild(storeData.Agents, storeData.Flows, svc.ADKAgents(), svc.SessionService(), svc.MemoryService())
 			}
 		}
 	} else {

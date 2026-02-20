@@ -113,15 +113,20 @@ theme = 'magec'
     url = '/docs/skills/'
     weight = 6
   [[menu.docs]]
+    name = 'A2A Protocol'
+    parent = 'core'
+    url = '/docs/a2a/'
+    weight = 7
+  [[menu.docs]]
     name = 'Secrets'
     parent = 'core'
     url = '/docs/secrets/'
-    weight = 7
+    weight = 8
   [[menu.docs]]
     name = 'Commands'
     parent = 'core'
     url = '/docs/commands/'
-    weight = 8
+    weight = 9
 
   [[menu.docs]]
     identifier = 'clients'

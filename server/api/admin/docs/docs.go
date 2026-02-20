@@ -3087,6 +3087,9 @@ const docTemplate = `{
         "store.FlowDefinition": {
             "type": "object",
             "properties": {
+                "a2a": {
+                    "$ref": "#/definitions/store.A2AConfig"
+                },
                 "description": {
                     "type": "string"
                 },

@@ -185,6 +185,7 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 			continue
 		}
 		otherAgents = append(otherAgents, flowAgent)
+		adkAgentMap[flow.ID] = flowAgent
 		slog.Info("Flow initialized", "id", flow.ID, "name", flow.Name)
 	}
 

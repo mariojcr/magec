@@ -288,6 +288,8 @@ definitions:
     type: object
   store.FlowDefinition:
     properties:
+      a2a:
+        $ref: '#/definitions/store.A2AConfig'
       description:
         type: string
       id:

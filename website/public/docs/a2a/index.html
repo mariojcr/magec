@@ -3,12 +3,12 @@
 <head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Commands — Magec — Self-hosted Multi-Agent AI Platform</title>
+  <title>A2A Protocol — Magec — Self-hosted Multi-Agent AI Platform</title>
   <meta name="description" content="Define multiple AI agents, chain them into workflows, connect tools. Voice, Telegram, webhooks, cron. Your server, your rules.">
   <meta name="theme-color" content="#1c1917">
   <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
   <link rel="stylesheet" href="/css/style.css">
-  <meta property="og:title" content="Commands">
+  <meta property="og:title" content="A2A Protocol">
   <meta property="og:description" content="Define multiple AI agents, chain them into workflows, connect tools. Voice, Telegram, webhooks, cron. Your server, your rules.">
   <meta property="og:type" content="website">
 </head>
@@ -96,11 +96,11 @@
         
         <a href="/docs/skills/" class="docs-sidebar__link">Skills</a>
         
-        <a href="/docs/a2a/" class="docs-sidebar__link">A2A Protocol</a>
+        <a href="/docs/a2a/" class="docs-sidebar__link docs-sidebar__link--active">A2A Protocol</a>
         
         <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
-        <a href="/docs/commands/" class="docs-sidebar__link docs-sidebar__link--active">Commands</a>
+        <a href="/docs/commands/" class="docs-sidebar__link">Commands</a>
         
       </div>
       
@@ -147,27 +147,78 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         Navigation
       </button>
-      <h1>Commands</h1>
-      <p>Commands are reusable prompts — predefined messages that you write once and trigger repeatedly through <a href="/docs/cron/">cron jobs</a> and <a href="/docs/webhooks/">webhooks</a>. Instead of duplicating the same prompt across multiple triggers, you define it as a command and reference it wherever you need it.</p>
-<div class="screenshots" style="margin-bottom: 2rem;">
+      <h1>A2A Protocol</h1>
+      <p>A2A (Agent-to-Agent) lets your Magec agents talk to external AI systems — and lets external systems talk to yours. When you enable A2A on an agent, it becomes discoverable and callable by any application that speaks the <a href="https://a2a-protocol.org/latest/specification/">A2A protocol</a>.</p>
+<p>In practice: you flip a toggle, and your agent gets a URL that other tools can connect to. They discover what the agent can do, authenticate, and send it messages — all without you writing any code.</p>
+<h2 id="why-would-i-use-this">Why would I use this?</h2>
+<p>Think of A2A as giving your agent a phone number that other AI systems can call.</p>
+<ul>
+<li><strong>Connect agents across platforms.</strong> An agent running in another tool (Claude Desktop, a custom app, another Magec instance) can discover and invoke your agent directly.</li>
+<li><strong>Build multi-agent systems.</strong> A coordinator agent somewhere else can delegate tasks to your specialized agents — your &ldquo;database expert&rdquo; handles queries, your &ldquo;email writer&rdquo; drafts responses, each on their own Magec instance.</li>
+<li><strong>Expose agents as services.</strong> Instead of building a custom API for each agent, A2A gives you a standard protocol that any compatible client already knows how to use.</li>
+</ul>
+<p>If you&rsquo;re running Magec for personal use or within a single app, you probably don&rsquo;t need A2A. It becomes useful when you want agents to collaborate across different systems.</p>
+<h2 id="how-it-works">How it works</h2>
+<p>When you enable A2A on an agent, Magec does three things:</p>
+<ol>
+<li><strong>Publishes an agent card</strong> — a JSON document describing the agent&rsquo;s name, capabilities, skills, and how to authenticate. This is the discovery mechanism.</li>
+<li><strong>Exposes a JSON-RPC endpoint</strong> — the URL where clients send messages to the agent. Supports both synchronous and streaming responses.</li>
+<li><strong>Auto-generates skills from the agent&rsquo;s tools</strong> — MCP servers, built-in tools, and the agent&rsquo;s instructions are all reflected in the card so clients know what the agent can do.</li>
+</ol>
+<p>You don&rsquo;t configure any of this manually. The card and skills are derived from the agent&rsquo;s existing setup.</p>
+<h2 id="enabling-a2a">Enabling A2A</h2>
+<ol>
+<li>Open an agent in the Admin UI</li>
+<li>Toggle <strong>A2A Protocol</strong> on</li>
+<li>Save</li>
+</ol>
+<p>That&rsquo;s it. The agent is now discoverable and invocable via A2A.</p>
+<h2 id="endpoints">Endpoints</h2>
+<table>
+  <thead>
+      <tr>
+          <th>Endpoint</th>
+          <th>Auth</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>/.well-known/agent-card.json</code></td>
+          <td>No</td>
+          <td>Lists all A2A-enabled agents</td>
+      </tr>
+      <tr>
+          <td><code>/api/v1/a2a/{agentId}/.well-known/agent-card.json</code></td>
+          <td>No</td>
+          <td>Agent card for a specific agent</td>
+      </tr>
+      <tr>
+          <td><code>/api/v1/a2a/{agentId}</code></td>
+          <td>Bearer token</td>
+          <td>JSON-RPC invocation endpoint</td>
+      </tr>
+  </tbody>
+</table>
+<p>Discovery endpoints are public so that external clients can find your agents. The invocation endpoint requires a <strong>Bearer token</strong> — this is a regular Magec client token, the same ones you create in the Admin UI under Clients.</p>
+<h2 id="connecting-a-client">Connecting a client</h2>
+<p>Give the external A2A client this URL:</p>
+<pre tabindex="0"><code>https://your-server/api/v1/a2a/{agentId}
+</code></pre><p>The client will automatically fetch the agent card from the <code>.well-known</code> path relative to that URL, read the security requirements, and use the Bearer token you provide to send messages.</p>
+<h2 id="public-url">Public URL</h2>
+<p>By default, agent cards reference <code>http://localhost:{port}</code> as the agent&rsquo;s URL. This works for local development but not when your server is behind a reverse proxy or exposed to the internet.</p>
+<p>Set <code>publicURL</code> in your config so that agent cards contain the correct address:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">publicURL</span><span class="p">:</span><span class="w"> </span><span class="l">https://magec.example.com</span><span class="w">
+</span></span></span></code></pre></div>
 
 
-
-<img src="/img/screenshots/admin-commands.png" alt="Admin UI — Commands" class="screenshot screenshot--desktop">
-
+<div class="docs-callout docs-callout--info">
+  If you don&rsquo;t set <code>publicURL</code>, everything still works locally. You only need it when external systems need to reach your server from outside.
 </div>
-<h2 id="why-commands-exist">Why commands exist</h2>
-<p>Imagine you have a daily report that needs to be generated every morning. The prompt is always the same: <em>&ldquo;Generate a summary of yesterday&rsquo;s sales data, including total revenue, top products, and notable trends.&rdquo;</em> Without commands, you&rsquo;d have to write this prompt into every cron job or webhook that triggers it. If you want to change the wording, you&rsquo;d need to update it in multiple places.</p>
-<p>With commands, you write the prompt once. Every cron job or webhook that uses it just references the command by ID. Change the prompt in one place, and all triggers use the updated version.</p>
-<h2 id="creating-a-command">Creating a command</h2>
-<p>In the Admin UI, go to <strong>Commands</strong> and click <strong>New</strong>:</p>
-<div class="screenshots" style="margin-bottom: 2rem;">
 
-
-
-<img src="/img/screenshots/admin-command-dialog.png" alt="Admin UI — Edit Command dialog" class="screenshot screenshot--desktop">
-
-</div>
+<h2 id="whats-in-an-agent-card">What&rsquo;s in an agent card?</h2>
+<p>The agent card is what clients read to understand your agent. Here&rsquo;s what it contains:</p>
 <table>
   <thead>
       <tr>
@@ -178,69 +229,33 @@
   <tbody>
       <tr>
           <td><code>name</code></td>
-          <td>Display name — appears in cron and webhook selectors</td>
+          <td>Agent&rsquo;s display name</td>
       </tr>
       <tr>
           <td><code>description</code></td>
-          <td>Optional note about what this command does</td>
+          <td>What the agent does</td>
       </tr>
       <tr>
-          <td><code>prompt</code></td>
-          <td>The text to send to the agent when the command is triggered</td>
+          <td><code>url</code></td>
+          <td>JSON-RPC endpoint for invocation</td>
       </tr>
       <tr>
-          <td><code>agentId</code></td>
-          <td>Which agent (or flow) processes this command</td>
+          <td><code>skills</code></td>
+          <td>Auto-generated list of capabilities (from system prompt + tools)</td>
+      </tr>
+      <tr>
+          <td><code>securitySchemes</code></td>
+          <td>How to authenticate (Bearer token)</td>
+      </tr>
+      <tr>
+          <td><code>capabilities</code></td>
+          <td>Protocol features supported (streaming)</td>
       </tr>
   </tbody>
 </table>
-<p>The <strong>prompt</strong> is the message that gets sent to the agent as if a user had typed it. The agent receives this prompt, processes it using its LLM, system prompt, memory, and tools, then produces a response.</p>
-<p>The <strong>agent</strong> field determines who handles the command. This can be a single agent or a flow. If it&rsquo;s a flow, the prompt enters the pipeline and is processed by all agents in the flow.</p>
-<h2 id="example-commands">Example commands</h2>
-<table>
-  <thead>
-      <tr>
-          <th>Name</th>
-          <th>Agent</th>
-          <th>Prompt</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td>Daily Sales Report</td>
-          <td>Analytics Agent</td>
-          <td>&ldquo;Generate a summary of yesterday&rsquo;s sales. Include total revenue, top 5 products, and any anomalies.&rdquo;</td>
-      </tr>
-      <tr>
-          <td>Security Check</td>
-          <td>Security Agent</td>
-          <td>&ldquo;Check for any failed login attempts, unusual network activity, or expired certificates in the last 24 hours.&rdquo;</td>
-      </tr>
-      <tr>
-          <td>News Digest</td>
-          <td>Research Pipeline (flow)</td>
-          <td>&ldquo;Research and summarize the top 5 technology news stories from today.&rdquo;</td>
-      </tr>
-      <tr>
-          <td>Health Check</td>
-          <td>DevOps Agent</td>
-          <td>&ldquo;Check the status of all monitored services and report any that are down or degraded.&rdquo;</td>
-      </tr>
-  </tbody>
-</table>
-<h2 id="using-commands">Using commands</h2>
-<p>Commands are used by two client types:</p>
-<h3 id="in-cron-jobs">In cron jobs</h3>
-<p>A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See <a href="/docs/cron/">Cron</a> for details.</p>
-<h3 id="in-webhooks-command-mode">In webhooks (command mode)</h3>
-<p>A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See <a href="/docs/webhooks/">Webhooks</a> for details.</p>
-
-
-
-<div class="docs-callout docs-callout--info">
-  Commands are optional — you don&rsquo;t need them if you only use the Voice UI, Telegram, or webhooks in passthrough mode. They become useful when you want to automate tasks that always use the same prompt.
-</div>
-
+<p>Skills are generated automatically from the agent&rsquo;s configuration. Each MCP tool the agent has access to appears as a separate skill. The agent&rsquo;s system prompt is reflected in the primary skill description, so external clients can understand what the agent is good at without any manual setup.</p>
+<h2 id="hot-reload">Hot-reload</h2>
+<p>Like everything in Magec, A2A configuration reloads automatically. Enable or disable A2A on an agent, save, and the change is live — no restart needed.</p>
 
     </div>
   </div>

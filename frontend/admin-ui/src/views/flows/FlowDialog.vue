@@ -11,6 +11,15 @@
           <FormInput v-model="form.description" placeholder="What this flow does..." />
         </div>
       </div>
+      <div class="border border-piedra-700/40 rounded-xl px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-arena-400">A2A Protocol</span>
+            <p class="text-[10px] text-arena-500 mt-0.5">Expose this flow via the Agent-to-Agent protocol for external discovery and invocation</p>
+          </div>
+          <FormToggle v-model="form.a2aEnabled" />
+        </div>
+      </div>
       <FlowCanvas
         v-model="form.root"
         :agents="store.agents"
@@ -46,6 +55,7 @@ import { flowsApi } from '../../lib/api/index.js'
 import AppDialog from '../../components/AppDialog.vue'
 import FormInput from '../../components/FormInput.vue'
 import FormLabel from '../../components/FormLabel.vue'
+import FormToggle from '../../components/FormToggle.vue'
 import FlowCanvas from './FlowCanvas.vue'
 
 const emit = defineEmits(['saved'])
@@ -59,6 +69,7 @@ const form = reactive({
   name: '',
   description: '',
   root: null,
+  a2aEnabled: false,
 })
 
 function open(flow = null) {
@@ -67,6 +78,7 @@ function open(flow = null) {
   form.name = flow?.name || ''
   form.description = flow?.description || ''
   form.root = flow ? JSON.parse(JSON.stringify(flow.root)) : null
+  form.a2aEnabled = flow?.a2a?.enabled || false
   dialogRef.value?.open()
 }
 
@@ -75,6 +87,7 @@ async function save() {
     name: form.name.trim(),
     description: form.description.trim(),
     root: cleanStep(form.root),
+    a2a: form.a2aEnabled ? { enabled: true } : undefined,
   }
   try {
     if (isEdit.value) {

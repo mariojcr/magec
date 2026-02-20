@@ -37,25 +37,38 @@ func NewHandler(publicURL string) *Handler {
 	}
 }
 
-func (h *Handler) Rebuild(agents []store.AgentDefinition, adkAgents map[string]agent.Agent, sessionSvc session.Service, memorySvc memory.Service) {
+func (h *Handler) Rebuild(agents []store.AgentDefinition, flows []store.FlowDefinition, adkAgents map[string]agent.Agent, sessionSvc session.Service, memorySvc memory.Service) {
 	handlers := make(map[string]http.Handler)
 	cards := make(map[string]*a2a.AgentCard)
 
-	for _, agentDef := range agents {
-		if agentDef.A2A == nil || !agentDef.A2A.Enabled {
+	type a2aEntry struct {
+		id, name, description string
+		a2aCfg                *store.A2AConfig
+	}
+
+	var entries []a2aEntry
+	for _, ag := range agents {
+		entries = append(entries, a2aEntry{ag.ID, ag.Name, ag.Description, ag.A2A})
+	}
+	for _, fl := range flows {
+		entries = append(entries, a2aEntry{fl.ID, fl.Name, fl.Description, fl.A2A})
+	}
+
+	for _, entry := range entries {
+		if entry.a2aCfg == nil || !entry.a2aCfg.Enabled {
 			continue
 		}
-		adkAgent, ok := adkAgents[agentDef.ID]
+		adkAgent, ok := adkAgents[entry.id]
 		if !ok {
-			slog.Warn("A2A: agent not found in ADK map", "agent", agentDef.ID)
+			slog.Warn("A2A: agent not found in ADK map", "agent", entry.id)
 			continue
 		}
 
-		invokeURL := fmt.Sprintf("%s/api/v1/a2a/%s", h.publicURL, agentDef.ID)
+		invokeURL := fmt.Sprintf("%s/api/v1/a2a/%s", h.publicURL, entry.id)
 
 		card := &a2a.AgentCard{
-			Name:               agentDef.Name,
-			Description:        agentDef.Description,
+			Name:               entry.name,
+			Description:        entry.description,
 			URL:                invokeURL,
 			Version:            "1.0.0",
 			ProtocolVersion:    protocolVersion,
@@ -76,11 +89,11 @@ func (h *Handler) Rebuild(agents []store.AgentDefinition, adkAgents map[string]a
 				{"bearer": a2a.SecuritySchemeScopes{}},
 			},
 		}
-		cards[agentDef.ID] = card
+		cards[entry.id] = card
 
 		execCfg := adka2a.ExecutorConfig{
 			RunnerConfig: runner.Config{
-				AppName:        agentDef.ID,
+				AppName:        entry.id,
 				Agent:          adkAgent,
 				SessionService: sessionSvc,
 				MemoryService:  memorySvc,
@@ -88,9 +101,9 @@ func (h *Handler) Rebuild(agents []store.AgentDefinition, adkAgents map[string]a
 		}
 		executor := adka2a.NewExecutor(execCfg)
 		reqHandler := a2asrv.NewHandler(executor, a2asrv.WithLogger(slog.Default()))
-		handlers[agentDef.ID] = a2asrv.NewJSONRPCHandler(reqHandler)
+		handlers[entry.id] = a2asrv.NewJSONRPCHandler(reqHandler)
 
-		slog.Info("A2A endpoint enabled", "agent", agentDef.ID, "name", agentDef.Name)
+		slog.Info("A2A endpoint enabled", "agent", entry.id, "name", entry.name)
 	}
 
 	h.mu.Lock()

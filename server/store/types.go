@@ -257,10 +257,11 @@ func collectAgentIDs(step *FlowStep, seen map[string]bool, ids *[]string) {
 // FlowDefinition represents a multi-agent workflow stored as a recursive tree
 // of steps that maps directly to ADK workflow agents.
 type FlowDefinition struct {
-	ID          string   `json:"id" yaml:"id"`
-	Name        string   `json:"name" yaml:"name"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
-	Root        FlowStep `json:"root" yaml:"root"`
+	ID          string     `json:"id" yaml:"id"`
+	Name        string     `json:"name" yaml:"name"`
+	Description string     `json:"description,omitempty" yaml:"description,omitempty"`
+	Root        FlowStep   `json:"root" yaml:"root"`
+	A2A         *A2AConfig `json:"a2a,omitempty" yaml:"a2a,omitempty"`
 }
 
 // Settings holds global configuration that applies to the launcher/runtime
