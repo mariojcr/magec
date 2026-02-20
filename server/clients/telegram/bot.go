@@ -143,6 +143,11 @@ func (c *Client) Start(ctx context.Context) error {
 		return c.handleAgentCommand(ctx, msg)
 	}, th.CommandEqual("agent"))
 
+	// Handle /reset command
+	handler.HandleMessage(func(ctx *th.Context, msg telego.Message) error {
+		return c.handleResetCommand(ctx, msg)
+	}, th.CommandEqual("reset"))
+
 	// Handle /responsemode command
 	handler.HandleMessage(func(ctx *th.Context, msg telego.Message) error {
 		return c.handleResponseModeCommand(ctx, msg)
@@ -257,6 +262,7 @@ func (c *Client) handleHelpCommand(ctx *th.Context, msg telego.Message) error {
 	text := "*Available commands:*\n\n" +
 		"/help — Show this help message\n" +
 		"/agent — Show or switch the active agent\n" +
+		"/reset — Reset the conversation session\n" +
 		"/responsemode — Show or change the response mode\n" +
 		"/start — Show the welcome message"
 
@@ -657,9 +663,76 @@ func (c *Client) buildMessageContext(msg telego.Message) string {
 // callAgent sends a user message to the active agent via the magec API and
 // returns the text response. It ensures a session exists for the chat+agent
 // pair before making the request.
+func (c *Client) buildSessionID(chatID int64, threadID int) string {
+	agentID := c.getActiveAgentID(chatID)
+	if threadID != 0 {
+		return fmt.Sprintf("telegram_%d_%d_%s", chatID, threadID, agentID)
+	}
+	return fmt.Sprintf("telegram_%d_%s", chatID, agentID)
+}
+
+func (c *Client) deleteSession(agentID, sessionID string) error {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, "default_user", sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("failed to delete session: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (c *Client) handleResetCommand(ctx *th.Context, msg telego.Message) error {
+	if !c.isAllowed(msg.From.ID, msg.Chat.ID) {
+		return nil
+	}
+
+	agentID := c.getActiveAgentID(msg.Chat.ID)
+	sessionID := c.buildSessionID(msg.Chat.ID, 0)
+	if err := c.deleteSession(agentID, sessionID); err != nil {
+		c.logger.Error("Failed to delete session", "error", err)
+		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(msg.Chat.ID),
+			Text:   "Failed to reset session.",
+		})
+		return nil
+	}
+
+	c.logger.Info("Session reset",
+		"chat_id", msg.Chat.ID,
+		"user_id", msg.From.ID,
+		"agent", agentID,
+		"session", sessionID,
+	)
+
+	agent := c.getAgentInfo(agentID)
+	label := agentID
+	if agent != nil && agent.Name != "" {
+		label = agent.Name
+	}
+
+	_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+		ChatID:    tu.ID(msg.Chat.ID),
+		Text:      fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label),
+		ParseMode: "Markdown",
+	})
+	return nil
+}
+
 func (c *Client) callAgent(msg telego.Message, message string) (string, error) {
 	agentID := c.getActiveAgentID(msg.Chat.ID)
-	sessionID := fmt.Sprintf("telegram_%d_%s", msg.Chat.ID, agentID)
+	sessionID := c.buildSessionID(msg.Chat.ID, msg.MessageThreadID)
 	userIDStr := "default_user"
 
 	// Ensure session exists
@@ -688,7 +761,7 @@ func (c *Client) callAgent(msg telego.Message, message string) (string, error) {
 	}
 
 	// Call agent
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))

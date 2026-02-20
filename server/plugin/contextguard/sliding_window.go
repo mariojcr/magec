@@ -65,7 +65,7 @@ func (s *slidingWindowStrategy) Compact(ctx agent.CallbackContext, req *model.LL
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	splitIdx := len(req.Contents) - s.maxTurns
+	splitIdx := safeSplitIndex(req.Contents, len(req.Contents)-s.maxTurns)
 	oldContents := req.Contents[:splitIdx]
 	recentContents := req.Contents[splitIdx:]
 

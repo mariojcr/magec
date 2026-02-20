@@ -2,11 +2,13 @@ package agent
 
 import (
 	"fmt"
+	"iter"
 
 	adkagent "google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/workflowagents/loopagent"
 	"google.golang.org/adk/agent/workflowagents/parallelagent"
 	"google.golang.org/adk/agent/workflowagents/sequentialagent"
+	"google.golang.org/adk/session"
 
 	"github.com/achetronic/magec/server/store"
 )
@@ -31,7 +33,7 @@ func buildStep(flowID string, step *store.FlowStep, agentMap map[string]adkagent
 		if !ok {
 			return nil, fmt.Errorf("agent %q not found in agent map", step.AgentID)
 		}
-		return a, nil
+		return wrapAgent(stepName, a)
 
 	case store.FlowStepSequential:
 		children, err := buildChildren(flowID, step.Steps, agentMap, path)
@@ -73,6 +75,19 @@ func buildStep(flowID string, step *store.FlowStep, agentMap map[string]adkagent
 	default:
 		return nil, fmt.Errorf("unknown flow step type %q", step.Type)
 	}
+}
+
+// wrapAgent creates a uniquely-named agent that delegates execution to the
+// original. This allows the same logical agent to appear multiple times in a
+// flow tree without violating ADK's single-parent constraint.
+func wrapAgent(uniqueName string, delegate adkagent.Agent) (adkagent.Agent, error) {
+	return adkagent.New(adkagent.Config{
+		Name:        uniqueName,
+		Description: delegate.Description(),
+		Run: func(ctx adkagent.InvocationContext) iter.Seq2[*session.Event, error] {
+			return delegate.Run(ctx)
+		},
+	})
 }
 
 func buildChildren(flowID string, steps []store.FlowStep, agentMap map[string]adkagent.Agent, parentPath string) ([]adkagent.Agent, error) {

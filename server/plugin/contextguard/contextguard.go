@@ -441,15 +441,40 @@ func findSplitIndex(contents []*genai.Content, recentBudget int) int {
 		}
 		if tokens >= recentBudget {
 			if i < len(contents)-2 {
-				return i + 1
+				return safeSplitIndex(contents, i+1)
 			}
-			return len(contents) - 2
+			return safeSplitIndex(contents, len(contents)-2)
 		}
 	}
 	if len(contents) > 2 {
-		return len(contents) / 2
+		return safeSplitIndex(contents, len(contents)/2)
 	}
-	return 1
+	return safeSplitIndex(contents, 1)
+}
+
+// safeSplitIndex adjusts a candidate split index so it never lands right
+// after an assistant message containing tool_use blocks. If the first
+// "recent" message (at idx) is a user message with tool_result parts, the
+// split is moved back to include the preceding assistant tool_use message
+// in the recent window. This prevents orphaned tool_result blocks that
+// Anthropic rejects with "unexpected tool_use_id in tool_result".
+func safeSplitIndex(contents []*genai.Content, idx int) int {
+	if idx <= 0 || idx >= len(contents) {
+		return idx
+	}
+	c := contents[idx]
+	if c == nil || c.Role != "user" {
+		return idx
+	}
+	for _, part := range c.Parts {
+		if part != nil && part.FunctionResponse != nil {
+			if idx > 0 {
+				return idx - 1
+			}
+			return idx
+		}
+	}
+	return idx
 }
 
 // injectSummary prepends a summary content block to the request if one

@@ -157,8 +157,17 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 		return
 	}
 
+	threadTS := ev.ThreadTimeStamp
+	if threadTS == "" {
+		threadTS = ev.TimeStamp
+	}
+
+	if c.handleBotCommand(ev.User, ev.Channel, text) {
+		return
+	}
+
 	c.logger.Info("Slack mention received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "channel", text, ev.TimeStamp, event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "channel", text, threadTS, event.TeamID, false)
 }
 
 func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
@@ -193,8 +202,10 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 
+	threadTS := ev.ThreadTimeStamp
+
 	c.logger.Info("Slack DM received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "im", text, "", event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, event.TeamID, false)
 }
 
 func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bool {
@@ -269,7 +280,7 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 
 		c.logger.Info("Transcribed audio clip", "text", text)
 
-		c.processMessage(ev.User, ev.Channel, "im", text, "", teamID, true)
+		c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, teamID, true)
 		return true
 	}
 	return false
@@ -289,6 +300,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			"• `!help` — Show this help message\n" +
 			"• `!agent` — Show or switch the active agent\n" +
 			"• `!agent <id>` — Switch to a specific agent\n" +
+			"• `!reset` — Reset the conversation session\n" +
 			"• `!responsemode` — Show or change the response mode\n" +
 			"• `!responsemode <mode>` — Set response mode (`text`, `voice`, `mirror`, `both`, `reset`)"
 		c.postMessage(channelID, helpText, "")
@@ -363,6 +375,24 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		return true
 	}
 
+	if lower == "reset" {
+		agentID := c.getActiveAgentID(channelID)
+		sessionID := c.buildSessionID(channelID, "")
+		if err := c.deleteSession(agentID, sessionID); err != nil {
+			c.logger.Error("Failed to delete session", "error", err)
+			c.postMessage(channelID, "Failed to reset session.", "")
+			return true
+		}
+		c.logger.Info("Session reset", "channel", channelID, "agent", agentID, "session", sessionID)
+		agent := c.getAgentInfo(agentID)
+		label := agentID
+		if agent != nil && agent.Name != "" {
+			label = agent.Name
+		}
+		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), "")
+		return true
+	}
+
 	if strings.HasPrefix(lower, "responsemode ") {
 		arg := strings.TrimSpace(text[13:])
 		return c.handleResponseModeCommand(channelID, arg)
@@ -412,9 +442,39 @@ func (c *Client) getResponseMode() string {
 	return mode
 }
 
+func (c *Client) buildSessionID(channelID, threadTS string) string {
+	agentID := c.getActiveAgentID(channelID)
+	if threadTS != "" {
+		return fmt.Sprintf("slack_%s_%s_%s", channelID, threadTS, agentID)
+	}
+	return fmt.Sprintf("slack_%s_%s", channelID, agentID)
+}
+
+func (c *Client) deleteSession(agentID, sessionID string) error {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, "default_user", sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("failed to delete session: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, teamID string, inputWasVoice bool) {
 	agentID := c.getActiveAgentID(channelID)
-	sessionID := fmt.Sprintf("slack_%s_%s", channelID, agentID)
+	sessionID := c.buildSessionID(channelID, threadTS)
 
 	if err := c.ensureSession(agentID, "default_user", sessionID); err != nil {
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
@@ -441,7 +501,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))
