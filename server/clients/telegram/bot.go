@@ -660,6 +660,9 @@ func (c *Client) buildMessageContext(msg telego.Message) string {
 func (c *Client) callAgent(msg telego.Message, message string) (string, error) {
 	agentID := c.getActiveAgentID(msg.Chat.ID)
 	sessionID := fmt.Sprintf("telegram_%d_%s", msg.Chat.ID, agentID)
+	if msg.MessageThreadID != 0 {
+		sessionID = fmt.Sprintf("telegram_%d_%d_%s", msg.Chat.ID, msg.MessageThreadID, agentID)
+	}
 	userIDStr := "default_user"
 
 	// Ensure session exists
@@ -688,7 +691,7 @@ func (c *Client) callAgent(msg telego.Message, message string) (string, error) {
 	}
 
 	// Call agent
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))

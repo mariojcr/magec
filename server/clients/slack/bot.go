@@ -157,8 +157,13 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 		return
 	}
 
+	threadTS := ev.ThreadTimeStamp
+	if threadTS == "" {
+		threadTS = ev.TimeStamp
+	}
+
 	c.logger.Info("Slack mention received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "channel", text, ev.TimeStamp, event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "channel", text, threadTS, event.TeamID, false)
 }
 
 func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
@@ -193,8 +198,10 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 
+	threadTS := ev.ThreadTimeStamp
+
 	c.logger.Info("Slack DM received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "im", text, "", event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, event.TeamID, false)
 }
 
 func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bool {
@@ -269,7 +276,7 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 
 		c.logger.Info("Transcribed audio clip", "text", text)
 
-		c.processMessage(ev.User, ev.Channel, "im", text, "", teamID, true)
+		c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, teamID, true)
 		return true
 	}
 	return false
@@ -415,6 +422,9 @@ func (c *Client) getResponseMode() string {
 func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, teamID string, inputWasVoice bool) {
 	agentID := c.getActiveAgentID(channelID)
 	sessionID := fmt.Sprintf("slack_%s_%s", channelID, agentID)
+	if threadTS != "" {
+		sessionID = fmt.Sprintf("slack_%s_%s_%s", channelID, threadTS, agentID)
+	}
 
 	if err := c.ensureSession(agentID, "default_user", sessionID); err != nil {
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
@@ -441,7 +451,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))
