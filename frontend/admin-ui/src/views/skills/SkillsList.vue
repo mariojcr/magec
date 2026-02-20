@@ -34,8 +34,16 @@
         </div>
         <p class="text-[10px] text-arena-500 line-clamp-2 italic">"{{ sk.instructions }}"</p>
         <div v-if="sk.references && sk.references.length" class="flex flex-wrap gap-1 mt-2">
-          <Badge variant="muted" v-for="ref in sk.references" :key="ref.filename">{{ ref.filename }}</Badge>
+          <Badge variant="muted" v-for="ref in sk.references" :key="ref.filename">
+            <span class="text-arena-500 mr-0.5">📎</span> {{ ref.filename }}
+          </Badge>
         </div>
+        <div v-if="usedBy(sk.id).length" class="flex flex-wrap gap-1 mt-2">
+          <Tooltip v-for="ref in usedBy(sk.id)" :key="ref.name" :text="ref.tooltip">
+            <Badge variant="muted">{{ ref.name }}</Badge>
+          </Tooltip>
+        </div>
+        <p v-else class="text-[10px] text-arena-600 mt-2">Not linked to any agent</p>
       </Card>
     </div>
 
@@ -49,6 +57,7 @@ import { useDataStore } from '../../lib/stores/data.js'
 import { skillsApi } from '../../lib/api/index.js'
 import Card from '../../components/Card.vue'
 import Badge from '../../components/Badge.vue'
+import Tooltip from '../../components/Tooltip.vue'
 import Icon from '../../components/Icon.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import SkeletonCard from '../../components/SkeletonCard.vue'
@@ -64,6 +73,18 @@ onUnmounted(() => registerNew(null))
 
 function openDialog(skill = null) {
   dialog.value?.open(skill)
+}
+
+function usedBy(id) {
+  const refs = []
+  for (const a of store.agents) {
+    if ((a.skills || []).includes(id)) {
+      const name = a.name || a.id
+      const prompt = a.systemPrompt ? a.systemPrompt.slice(0, 80) + (a.systemPrompt.length > 80 ? '...' : '') : ''
+      refs.push({ name, tooltip: a.description || prompt })
+    }
+  }
+  return refs
 }
 
 function handleDelete(sk) {

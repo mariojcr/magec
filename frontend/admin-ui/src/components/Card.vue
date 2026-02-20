@@ -19,6 +19,7 @@ const colorMap = {
   purple: 'hover:border-purple-500/15 hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.04)]',
   green: 'hover:border-green-500/15 hover:shadow-[0_0_15px_-3px_rgba(74,222,128,0.04)]',
   atlantico: 'hover:border-atlantico-500/15 hover:shadow-[0_0_15px_-3px_rgba(56,188,216,0.04)]',
+  cyan: 'hover:border-cyan-500/15 hover:shadow-[0_0_15px_-3px_rgba(34,211,238,0.04)]',
   sol: 'hover:border-sol-500/15 hover:shadow-[0_0_15px_-3px_rgba(250,204,21,0.04)]',
   rose: 'hover:border-rose-500/15 hover:shadow-[0_0_15px_-3px_rgba(244,63,94,0.04)]',
   indigo: 'hover:border-indigo-500/15 hover:shadow-[0_0_15px_-3px_rgba(99,102,241,0.04)]',
