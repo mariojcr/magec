@@ -12,6 +12,7 @@ server:
   adminPort: 8081 # Admin UI + API (separate port for security)
   # adminPassword: ${MAGEC_ADMIN_PASSWORD}  # Protect admin API with a password
   # encryptionKey: ${MAGEC_ENCRYPTION_KEY}  # Encrypt secrets (API keys) at rest
+  # publicURL: https://magec.example.com    # External URL for A2A agent cards (defaults to http://localhost:{port})
 
 voice:
   ui:
