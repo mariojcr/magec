@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A2A Protocol — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -167,12 +167,15 @@
 </ol>
 <p>You don&rsquo;t configure any of this manually. The card and skills are derived from the agent&rsquo;s existing setup.</p>
 <h2 id="enabling-a2a">Enabling A2A</h2>
+<h3 id="agents">Agents</h3>
 <ol>
 <li>Open an agent in the Admin UI</li>
 <li>Toggle <strong>A2A Protocol</strong> on</li>
 <li>Save</li>
 </ol>
-<p>That&rsquo;s it. The agent is now discoverable and invocable via A2A.</p>
+<h3 id="flows">Flows</h3>
+<p>Agentic flows (sequential, parallel, loop) can also be exposed via A2A. The process is the same — open the flow in the editor, enable the A2A toggle, and save.</p>
+<p>The external client sees the flow as a single agent. The internal orchestration (which steps run in sequence, which run in parallel) is completely transparent. The agent card auto-generates skills that describe the flow&rsquo;s sub-agents and their capabilities, so the client understands what the flow can do without knowing how it&rsquo;s structured internally.</p>
 <h2 id="endpoints">Endpoints</h2>
 <table>
   <thead>
