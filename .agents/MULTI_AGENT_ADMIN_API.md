@@ -125,6 +125,15 @@ Client types: `direct`, `telegram`, `cron`, `webhook`. See [CLIENT_DESIGN.md](CL
 |--------|------|-------------|
 | POST | `/api/v1/webhooks/{clientId}` | Fire a webhook — Bearer token auth, passthrough or fixed command |
 
+### Backup & Restore
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/backup` | Download a `.tar.gz` archive of the entire `data/` directory |
+| POST | `/restore` | Upload a `.tar.gz` to atomically replace all data (500MB limit) |
+
+The backup archive contains `store.json`, `conversations.json`, and `skills/{id}/` files. On restore, the archive must contain a valid `store.json` at the root level. The current data directory is atomically swapped (rename) and both stores are reloaded in memory.
+
 ## Persistence
 
 - Store persists to `data/store.json` on each write

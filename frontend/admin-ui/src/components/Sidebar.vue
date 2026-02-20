@@ -122,6 +122,12 @@ const groups = [
       { id: 'conversations', label: 'Conversations', icon: 'chat', color: 'teal' },
     ],
   },
+  {
+    label: 'System',
+    items: [
+      { id: 'settings', label: 'Settings', icon: 'automation', color: 'blue' },
+    ],
+  },
 ]
 
 function itemCount(id) {
@@ -152,6 +158,7 @@ function activeClasses(color) {
     lava: 'bg-lava-500/10 text-lava-200',
     amber: 'bg-amber-500/10 text-amber-200',
     arena: 'bg-arena-500/10 text-arena-200',
+    blue: 'bg-blue-500/10 text-blue-200',
   }
   return map[color] || map.sol
 }
@@ -169,6 +176,7 @@ function iconBgClasses(color) {
     lava: 'bg-lava-500/20 text-lava-300',
     amber: 'bg-amber-500/20 text-amber-300',
     arena: 'bg-arena-500/20 text-arena-300',
+    blue: 'bg-blue-500/20 text-blue-300',
   }
   return map[color] || map.sol
 }
@@ -186,6 +194,7 @@ function countActiveClasses(color) {
     lava: 'text-lava-300 bg-lava-500/15',
     amber: 'text-amber-300 bg-amber-500/15',
     arena: 'text-arena-300 bg-arena-500/15',
+    blue: 'text-blue-300 bg-blue-500/15',
   }
   return map[color] || map.sol
 }
