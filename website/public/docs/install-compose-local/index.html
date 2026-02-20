@@ -68,8 +68,6 @@
         
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
-        <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
-        
       </div>
       
       
@@ -95,6 +93,8 @@
         <a href="/docs/memory/" class="docs-sidebar__link">Memory</a>
         
         <a href="/docs/mcp/" class="docs-sidebar__link">MCP Tools</a>
+        
+        <a href="/docs/skills/" class="docs-sidebar__link">Skills</a>
         
         <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
@@ -131,6 +131,8 @@
         <a href="/docs/voice-system/" class="docs-sidebar__link">Voice System</a>
         
         <a href="/docs/secrets-advanced/" class="docs-sidebar__link">Advanced Secrets</a>
+        
+        <a href="/docs/skills-vs-agents/" class="docs-sidebar__link">Skills vs. Agents</a>
         
         <a href="/docs/screenshots/" class="docs-sidebar__link">Screenshots</a>
         
@@ -547,13 +549,43 @@
 <p>To start completely fresh:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker compose down -v    <span class="c1"># -v removes all volumes</span>
 </span></span><span class="line"><span class="cl">docker compose up -d      <span class="c1"># fresh start</span>
-</span></span></code></pre></div><h2 id="next-steps">Next steps</h2>
+</span></span></code></pre></div><h2 id="customizing-your-deployment">Customizing your deployment</h2>
+<h3 id="adding-mcp-servers-as-containers">Adding MCP servers as containers</h3>
+<p>You can extend the Docker Compose file to add MCP servers alongside Magec:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">hass-mcp</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ghcr.io/achetronic/hass-mcp:latest</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">environment</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="l">HASS_URL=http://homeassistant:8123</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="l">HASS_TOKEN=${HASS_TOKEN}</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;8888:8080&#34;</span><span class="w">
+</span></span></span></code></pre></div><p>Then add the MCP server in the Admin UI pointing at <code>http://hass-mcp:8080/sse</code>.</p>
+<h3 id="changing-ports">Changing ports</h3>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">magec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;3000:8080&#34;</span><span class="w">   </span><span class="c"># Voice UI + User API on port 3000</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;3001:8081&#34;</span><span class="w">   </span><span class="c"># Admin UI + Admin API on port 3001</span><span class="w">
+</span></span></span></code></pre></div><h3 id="accessing-host-services">Accessing host services</h3>
+<p>If your LLM or other services run on the Docker host (not in containers), use <code>host.docker.internal</code>:</p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">magec</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">extra_hosts</span><span class="p">:</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;host.docker.internal:host-gateway&#34;</span><span class="w">
+</span></span></span></code></pre></div>
+
+
+<div class="docs-callout docs-callout--info">
+  On macOS and Windows, <code>host.docker.internal</code> works automatically. On Linux, you need the <code>extra_hosts</code> mapping above.
+</div>
+
+<h2 id="next-steps">Next steps</h2>
 <ul>
 <li><strong><a href="/docs/configuration/">Configuration</a></strong> — understand <code>config.yaml</code> vs. Admin UI resources</li>
 <li><strong><a href="/docs/agents/">Agents</a></strong> — customize agent behavior, prompts, and voice</li>
 <li><strong><a href="/docs/mcp/">MCP Tools</a></strong> — connect external tools (Home Assistant, GitHub, databases, etc.)</li>
 <li><strong><a href="/docs/flows/">Flows</a></strong> — chain agents into multi-step workflows</li>
-<li><strong><a href="/docs/docker/">Docker Reference</a></strong> — advanced Docker topics (image architecture, customization, host access)</li>
 </ul>
 
     </div>

@@ -96,6 +96,8 @@
         
         <a href="/docs/mcp/" class="docs-sidebar__link">MCP Tools</a>
         
+        <a href="/docs/skills/" class="docs-sidebar__link">Skills</a>
+        
         <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
         <a href="/docs/commands/" class="docs-sidebar__link">Commands</a>
@@ -132,6 +134,8 @@
         
         <a href="/docs/secrets-advanced/" class="docs-sidebar__link">Advanced Secrets</a>
         
+        <a href="/docs/skills-vs-agents/" class="docs-sidebar__link">Skills vs. Agents</a>
+        
         <a href="/docs/screenshots/" class="docs-sidebar__link">Screenshots</a>
         
       </div>
@@ -146,9 +150,8 @@
       <h1>Docker Reference</h1>
       <p>This page covers advanced Docker topics: the container architecture, Docker Compose file structure, GPU support, data persistence, customization, and common operations. For getting started with Docker, see the installation guides:</p>
 <ul>
-<li><a href="/docs/install-docker/">Docker Quick Start (OpenAI)</a> — single container, minimal setup</li>
-<li><a href="/docs/install-compose-local/">Docker Compose — Local</a> — fully local, all services</li>
-<li><a href="/docs/install-compose-cloud/">Docker Compose — Cloud</a> — cloud AI providers</li>
+<li><a href="/docs/install-docker/">Docker Quick Start</a> — single container, minimal setup</li>
+<li><a href="/docs/install-compose-local/">Docker Compose</a> — full deployment with all services</li>
 </ul>
 <h2 id="container-architecture">Container architecture</h2>
 <p>A full Magec deployment includes several containers working together:</p>
@@ -199,7 +202,6 @@
   </tbody>
 </table>
 <p>In cloud modes (OpenAI, Anthropic, Gemini), some containers are replaced by cloud API calls. Redis and PostgreSQL always run locally because they store your data.</p>
-<h2 id="docker-compose-files">Docker Compose files</h2>
 <h2 id="docker-compose-file">Docker Compose file</h2>
 <p>The install script generates a <code>docker-compose.yaml</code> with all services pre-configured for your deployment. GPU acceleration for Ollama is included when you enable NVIDIA support during the interactive setup.</p>
 <h2 id="docker-image">Docker image</h2>

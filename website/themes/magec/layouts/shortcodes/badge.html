@@ -1,2 +1,2 @@
 {{ $text := .Get "text" }}
-<span class="docs-badge">{{ $text }}</span>
+<span class="docs-badge">{{ $text }}{{ with .Inner }}{{ . }}{{ end }}</span>

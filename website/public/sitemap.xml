@@ -32,8 +32,6 @@
   </url><url>
     <loc>http://localhost:1313/docs/install-docker/</loc>
   </url><url>
-    <loc>http://localhost:1313/docs/docker/</loc>
-  </url><url>
     <loc>http://localhost:1313/docs/</loc>
   </url><url>
     <loc>http://localhost:1313/docs/getting-started/</loc>
@@ -47,6 +45,10 @@
     <loc>http://localhost:1313/docs/screenshots/</loc>
   </url><url>
     <loc>http://localhost:1313/docs/secrets/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/skills/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/skills-vs-agents/</loc>
   </url><url>
     <loc>http://localhost:1313/docs/slack/</loc>
   </url><url>

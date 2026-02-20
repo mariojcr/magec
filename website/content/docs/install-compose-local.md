@@ -225,10 +225,53 @@ docker compose down -v    # -v removes all volumes
 docker compose up -d      # fresh start
 ```
 
+## Customizing your deployment
+
+### Adding MCP servers as containers
+
+You can extend the Docker Compose file to add MCP servers alongside Magec:
+
+```yaml
+services:
+  hass-mcp:
+    image: ghcr.io/achetronic/hass-mcp:latest
+    environment:
+      - HASS_URL=http://homeassistant:8123
+      - HASS_TOKEN=${HASS_TOKEN}
+    ports:
+      - "8888:8080"
+```
+
+Then add the MCP server in the Admin UI pointing at `http://hass-mcp:8080/sse`.
+
+### Changing ports
+
+```yaml
+services:
+  magec:
+    ports:
+      - "3000:8080"   # Voice UI + User API on port 3000
+      - "3001:8081"   # Admin UI + Admin API on port 3001
+```
+
+### Accessing host services
+
+If your LLM or other services run on the Docker host (not in containers), use `host.docker.internal`:
+
+```yaml
+services:
+  magec:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+{{< callout type="info" >}}
+On macOS and Windows, `host.docker.internal` works automatically. On Linux, you need the `extra_hosts` mapping above.
+{{< /callout >}}
+
 ## Next steps
 
 - **[Configuration](/docs/configuration/)** — understand `config.yaml` vs. Admin UI resources
 - **[Agents](/docs/agents/)** — customize agent behavior, prompts, and voice
 - **[MCP Tools](/docs/mcp/)** — connect external tools (Home Assistant, GitHub, databases, etc.)
 - **[Flows](/docs/flows/)** — chain agents into multi-step workflows
-- **[Docker Reference](/docs/docker/)** — advanced Docker topics (image architecture, customization, host access)

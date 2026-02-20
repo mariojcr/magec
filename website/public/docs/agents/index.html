@@ -68,8 +68,6 @@
         
         <a href="/docs/configuration/" class="docs-sidebar__link">Configuration</a>
         
-        <a href="/docs/docker/" class="docs-sidebar__link">Docker Reference</a>
-        
       </div>
       
       
@@ -95,6 +93,8 @@
         <a href="/docs/memory/" class="docs-sidebar__link">Memory</a>
         
         <a href="/docs/mcp/" class="docs-sidebar__link">MCP Tools</a>
+        
+        <a href="/docs/skills/" class="docs-sidebar__link">Skills</a>
         
         <a href="/docs/secrets/" class="docs-sidebar__link">Secrets</a>
         
@@ -131,6 +131,8 @@
         <a href="/docs/voice-system/" class="docs-sidebar__link">Voice System</a>
         
         <a href="/docs/secrets-advanced/" class="docs-sidebar__link">Advanced Secrets</a>
+        
+        <a href="/docs/skills-vs-agents/" class="docs-sidebar__link">Skills vs. Agents</a>
         
         <a href="/docs/screenshots/" class="docs-sidebar__link">Screenshots</a>
         
@@ -270,7 +272,12 @@
 <p>Each toggle enables a configured MCP server, giving the agent access to its tools. When the agent decides it needs to perform an action (like turning on a light, reading a file, or querying a database), it calls the appropriate tool through MCP.</p>
 <p>An agent with no MCP servers can still chat — it just can&rsquo;t interact with the outside world. Adding MCP tools is what transforms an agent from a chatbot into something genuinely useful. An agent with Home Assistant MCP can control your house. An agent with GitHub MCP can manage your repositories. An agent with a database MCP can query and report on your data.</p>
 <p>The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from &ldquo;another chat interface&rdquo; into a real AI platform.</p>
-<h2 id="context-guard-hahahugoshortcode38s4hbhb">Context Guard 
+<h2 id="skills">Skills</h2>
+<p><a href="/docs/skills/">Skills</a> are reusable knowledge packs — instructions and reference files that teach the agent about a specific domain. A return policy skill, a product catalog skill, a coding standards skill. Create them once, toggle them on the agents that need them.</p>
+<p>While the <strong>system prompt</strong> defines who the agent is, skills define <strong>what it knows</strong>. An agent with a &ldquo;Return Policy&rdquo; skill and a &ldquo;Product Catalog&rdquo; skill becomes a capable customer support representative without you having to cram everything into one massive prompt.</p>
+<p>Skills are especially powerful when shared across agents. Update a product catalog skill once, and every agent that uses it sees the change.</p>
+<p>For a deeper comparison of when to use skills vs. creating specialized agents, see <a href="/docs/skills-vs-agents/">Skills vs. Agents</a>.</p>
+<h2 id="context-guard-hahahugoshortcode72s4hbhb">Context Guard 
 <span class="docs-badge">Experimental</span>
 </h2>
 <p>Long conversations eventually hit the model&rsquo;s token limit and fail. Context Guard watches the conversation size and automatically summarizes older messages before that happens. Recent messages stay untouched.</p>

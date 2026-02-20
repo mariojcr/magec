@@ -103,6 +103,16 @@ An agent with no MCP servers can still chat — it just can't interact with the 
 
 The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from "another chat interface" into a real AI platform.
 
+## Skills
+
+[Skills](/docs/skills/) are reusable knowledge packs — instructions and reference files that teach the agent about a specific domain. A return policy skill, a product catalog skill, a coding standards skill. Create them once, toggle them on the agents that need them.
+
+While the **system prompt** defines who the agent is, skills define **what it knows**. An agent with a "Return Policy" skill and a "Product Catalog" skill becomes a capable customer support representative without you having to cram everything into one massive prompt.
+
+Skills are especially powerful when shared across agents. Update a product catalog skill once, and every agent that uses it sees the change.
+
+For a deeper comparison of when to use skills vs. creating specialized agents, see [Skills vs. Agents](/docs/skills-vs-agents/).
+
 ## Context Guard {{< badge text="Experimental" />}}
 
 Long conversations eventually hit the model's token limit and fail. Context Guard watches the conversation size and automatically summarizes older messages before that happens. Recent messages stay untouched.
