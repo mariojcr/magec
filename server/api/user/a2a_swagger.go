@@ -56,7 +56,7 @@ type A2AJSONRPCResponse struct {
 // @Produce      json
 // @Param        agent  query     string  false  "Filter by agent ID. When provided, returns a single card object instead of an array."  example(home-assistant)
 // @Success      200    {array}   A2AAgentCard  "List of agent cards (or single card object when ?agent= is used)"
-// @Router       /.well-known/agent-card.json [get]
+// @Router       /a2a/.well-known/agent-card.json [get]
 func (h *Handler) A2AListCards() {}
 
 // A2APerAgentCard returns the agent card for a specific agent.

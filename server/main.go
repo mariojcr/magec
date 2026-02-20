@@ -172,9 +172,8 @@ func main() {
 	httpMux.Handle("/api/v1/agent/", userRecorded)
 	httpMux.Handle("/api/v1/voice/", newVoiceHandler(dataStore, agentRouter))
 
-	// A2A protocol endpoints (per-agent card + JSON-RPC invoke)
-	httpMux.HandleFunc("/.well-known/agent-card.json", a2aHandler.ServeAgentCard)
-	httpMux.HandleFunc("/api/v1/a2a/", a2aHandler.ServeJSONRPC)
+	// A2A protocol endpoints (global discovery + per-agent card + JSON-RPC invoke)
+	httpMux.HandleFunc("/api/v1/a2a/", a2aHandler.ServeA2A)
 
 	userAPI := user.New(dataStore)
 	httpMux.HandleFunc("/api/v1/health", userAPI.Health)

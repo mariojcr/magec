@@ -38,7 +38,7 @@ That's it. The agent is now discoverable and invocable via A2A.
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `/.well-known/agent-card.json` | No | Lists all A2A-enabled agents |
+| `/api/v1/a2a/.well-known/agent-card.json` | No | Lists all A2A-enabled agents |
 | `/api/v1/a2a/{agentId}/.well-known/agent-card.json` | No | Agent card for a specific agent |
 | `/api/v1/a2a/{agentId}` | Bearer token | JSON-RPC invocation endpoint |
 

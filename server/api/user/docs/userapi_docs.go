@@ -15,7 +15,7 @@ const docTemplateuserapi = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/.well-known/agent-card.json": {
+        "/a2a/.well-known/agent-card.json": {
             "get": {
                 "description": "Returns agent cards for all agents that have A2A enabled. Each card describes the agent's identity, capabilities, skills, and security requirements following the A2A protocol specification.",
                 "produces": [

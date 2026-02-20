@@ -112,7 +112,27 @@ func (h *Handler) Rebuild(agents []store.AgentDefinition, flows []store.FlowDefi
 	h.mu.Unlock()
 }
 
-func (h *Handler) ServeAgentCard(w http.ResponseWriter, r *http.Request) {
+const a2aPrefix = "/api/v1/a2a/"
+const wellKnownSuffix = "/.well-known/agent-card.json"
+
+func (h *Handler) ServeA2A(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	rest := strings.TrimPrefix(path, a2aPrefix)
+
+	if rest == ".well-known/agent-card.json" {
+		h.serveGlobalCards(w, r)
+		return
+	}
+
+	if strings.HasSuffix(path, wellKnownSuffix) {
+		h.servePerAgentCard(w, r)
+		return
+	}
+
+	h.serveJSONRPC(w, r)
+}
+
+func (h *Handler) serveGlobalCards(w http.ResponseWriter, r *http.Request) {
 	agentID := r.URL.Query().Get("agent")
 
 	h.mu.RLock()
@@ -140,8 +160,8 @@ func (h *Handler) ServeAgentCard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(cardList)
 }
 
-func (h *Handler) ServePerAgentCard(w http.ResponseWriter, r *http.Request) {
-	agentID := extractAgentID(r.URL.Path, "/api/v1/a2a/", "/.well-known/agent-card.json")
+func (h *Handler) servePerAgentCard(w http.ResponseWriter, r *http.Request) {
+	agentID := extractAgentID(r.URL.Path, a2aPrefix, wellKnownSuffix)
 
 	h.mu.RLock()
 	card, ok := h.cards[agentID]
@@ -157,13 +177,8 @@ func (h *Handler) ServePerAgentCard(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(card)
 }
 
-func (h *Handler) ServeJSONRPC(w http.ResponseWriter, r *http.Request) {
-	if strings.HasSuffix(r.URL.Path, "/.well-known/agent-card.json") {
-		h.ServePerAgentCard(w, r)
-		return
-	}
-
-	agentID := extractAgentID(r.URL.Path, "/api/v1/a2a/", "")
+func (h *Handler) serveJSONRPC(w http.ResponseWriter, r *http.Request) {
+	agentID := extractAgentID(r.URL.Path, a2aPrefix, "")
 
 	h.mu.RLock()
 	handler, ok := h.handlers[agentID]
