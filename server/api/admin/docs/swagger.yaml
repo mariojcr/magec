@@ -92,8 +92,15 @@ definitions:
   memory.Schema:
     additionalProperties: true
     type: object
+  store.A2AConfig:
+    properties:
+      enabled:
+        type: boolean
+    type: object
   store.AgentDefinition:
     properties:
+      a2a:
+        $ref: '#/definitions/store.A2AConfig'
       contextGuard:
         $ref: '#/definitions/store.ContextGuardConfig'
       description:

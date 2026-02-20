@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/achetronic/magec/server/agent"
+	mageca2a "github.com/achetronic/magec/server/a2a"
 	"github.com/achetronic/magec/server/api/admin"
 	user "github.com/achetronic/magec/server/api/user"
 	"github.com/achetronic/magec/server/clients"
@@ -140,8 +141,15 @@ func main() {
 	cwRegistry := contextwindow.NewRegistry()
 	cwRegistry.Start(ctx)
 
+	// A2A (Agent-to-Agent) protocol handler
+	a2aPublicURL := cfg.Server.PublicURL
+	if a2aPublicURL == "" {
+		a2aPublicURL = fmt.Sprintf("http://localhost:%d", cfg.Server.Port)
+	}
+	a2aHandler := mageca2a.NewHandler(a2aPublicURL)
+
 	// Swappable handler for agent-related routes (hot-reloaded on store changes)
-	agentRouter := &agentRouterHandler{adminHandler: adminHandler, cwRegistry: cwRegistry}
+	agentRouter := &agentRouterHandler{adminHandler: adminHandler, a2aHandler: a2aHandler, cwRegistry: cwRegistry}
 	agentRouter.rebuild(ctx, dataStore)
 
 	// Executor for running commands against agents (cron, webhooks, etc.)
@@ -163,6 +171,10 @@ func main() {
 	)
 	httpMux.Handle("/api/v1/agent/", userRecorded)
 	httpMux.Handle("/api/v1/voice/", newVoiceHandler(dataStore, agentRouter))
+
+	// A2A protocol endpoints (per-agent card + JSON-RPC invoke)
+	httpMux.HandleFunc("/.well-known/agent-card.json", a2aHandler.ServeAgentCard)
+	httpMux.HandleFunc("/api/v1/a2a/", a2aHandler.ServeJSONRPC)
 
 	userAPI := user.New(dataStore)
 	httpMux.HandleFunc("/api/v1/health", userAPI.Health)
@@ -533,6 +545,7 @@ type agentRouterHandler struct {
 	mu           sync.RWMutex
 	agentHandler http.Handler
 	adminHandler *admin.Handler
+	a2aHandler   *mageca2a.Handler
 	// cwRegistry is passed through to agent.New so the ContextGuard plugin
 	// can look up each model's context window at runtime.
 	cwRegistry *contextwindow.Registry
@@ -566,6 +579,9 @@ func (h *agentRouterHandler) rebuild(ctx context.Context, dataStore *store.Store
 			agentHandler = http.StripPrefix("/api/v1/agent", svc.Handler())
 			if h.adminHandler != nil {
 				h.adminHandler.SetSessionService(svc.SessionService())
+			}
+			if h.a2aHandler != nil {
+				h.a2aHandler.Rebuild(storeData.Agents, svc.ADKAgents(), svc.SessionService(), svc.MemoryService())
 			}
 		}
 	} else {

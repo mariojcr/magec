@@ -2788,9 +2788,20 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": true
         },
+        "store.A2AConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "store.AgentDefinition": {
             "type": "object",
             "properties": {
+                "a2a": {
+                    "$ref": "#/definitions/store.A2AConfig"
+                },
                 "contextGuard": {
                     "$ref": "#/definitions/store.ContextGuardConfig"
                 },

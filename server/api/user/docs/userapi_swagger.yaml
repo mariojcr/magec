@@ -1,5 +1,100 @@
 basePath: /api/v1
 definitions:
+  user.A2AAgentCard:
+    properties:
+      capabilities:
+        $ref: '#/definitions/user.A2ACapabilities'
+      defaultInputModes:
+        example:
+        - text/plain
+        items:
+          type: string
+        type: array
+      defaultOutputModes:
+        example:
+        - text/plain
+        items:
+          type: string
+        type: array
+      description:
+        example: Smart home control agent with access to Home Assistant
+        type: string
+      name:
+        example: Home Assistant
+        type: string
+      preferredTransport:
+        example: JSONRPC
+        type: string
+      protocolVersion:
+        example: 0.2.5
+        type: string
+      security:
+        items:
+          additionalProperties: {}
+          type: object
+        type: array
+      securitySchemes:
+        additionalProperties: {}
+        type: object
+      skills:
+        items:
+          $ref: '#/definitions/user.A2ASkill'
+        type: array
+      url:
+        example: https://magec.example.com/api/v1/a2a/home-assistant
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  user.A2ACapabilities:
+    properties:
+      streaming:
+        example: true
+        type: boolean
+    type: object
+  user.A2AJSONRPCRequest:
+    properties:
+      id:
+        example: 1
+        type: integer
+      jsonrpc:
+        example: "2.0"
+        type: string
+      method:
+        example: message/send
+        type: string
+      params: {}
+    type: object
+  user.A2AJSONRPCResponse:
+    properties:
+      error: {}
+      id:
+        example: 1
+        type: integer
+      jsonrpc:
+        example: "2.0"
+        type: string
+      result: {}
+    type: object
+  user.A2ASkill:
+    properties:
+      description:
+        example: I am a helpful smart home assistant. I can control lights and thermostats.
+        type: string
+      id:
+        example: home-assistant
+        type: string
+      name:
+        example: model
+        type: string
+      tags:
+        example:
+        - llm
+        items:
+          type: string
+        type: array
+    type: object
   user.AgentSummary:
     properties:
       agents:
@@ -72,6 +167,97 @@ info:
   title: Magec User API
   version: "1.0"
 paths:
+  /.well-known/agent-card.json:
+    get:
+      description: Returns agent cards for all agents that have A2A enabled. Each
+        card describes the agent's identity, capabilities, skills, and security requirements
+        following the A2A protocol specification.
+      parameters:
+      - description: Filter by agent ID. When provided, returns a single card object
+          instead of an array.
+        example: home-assistant
+        in: query
+        name: agent
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of agent cards (or single card object when ?agent= is
+            used)
+          schema:
+            items:
+              $ref: '#/definitions/user.A2AAgentCard'
+            type: array
+      summary: List all A2A agent cards
+      tags:
+      - a2a
+  /a2a/{agentID}:
+    post:
+      consumes:
+      - application/json
+      description: Sends a JSON-RPC 2.0 request to the specified agent. Supported
+        methods include `message/send` and `message/stream`. The request must include
+        a valid Bearer token.
+      parameters:
+      - description: Agent ID
+        example: home-assistant
+        in: path
+        name: agentID
+        required: true
+        type: string
+      - description: JSON-RPC 2.0 request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/user.A2AJSONRPCRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-RPC 2.0 response
+          schema:
+            $ref: '#/definitions/user.A2AJSONRPCResponse'
+        "401":
+          description: Missing or invalid Bearer token
+          schema:
+            $ref: '#/definitions/user.ErrorResponse'
+        "404":
+          description: Agent not found or A2A not enabled
+          schema:
+            $ref: '#/definitions/user.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Invoke A2A agent (JSON-RPC)
+      tags:
+      - a2a
+  /a2a/{agentID}/.well-known/agent-card.json:
+    get:
+      description: Returns the A2A agent card for the specified agent. This is the
+        per-agent discovery endpoint that A2A clients resolve relative to the agent's
+        base URL.
+      parameters:
+      - description: Agent ID
+        example: home-assistant
+        in: path
+        name: agentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Agent card
+          schema:
+            $ref: '#/definitions/user.A2AAgentCard'
+        "404":
+          description: Agent not found or A2A not enabled
+          schema:
+            $ref: '#/definitions/user.ErrorResponse'
+      summary: Get agent card by ID
+      tags:
+      - a2a
   /agent/apps/{app}/users/{user}/sessions:
     get:
       description: Returns all conversation sessions for the given app and user.

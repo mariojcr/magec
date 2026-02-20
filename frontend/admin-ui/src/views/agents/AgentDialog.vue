@@ -136,6 +136,17 @@
         </div>
       </details>
 
+      <!-- A2A -->
+      <div class="border border-piedra-700/40 rounded-xl px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-arena-400">A2A Protocol</span>
+            <p class="text-[10px] text-arena-500 mt-0.5">Expose this agent via the Agent-to-Agent protocol for external discovery and invocation</p>
+          </div>
+          <FormToggle v-model="form.a2aEnabled" />
+        </div>
+      </div>
+
       <!-- Voice -->
       <details class="group border border-piedra-700/40 rounded-xl">
         <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-xs font-medium text-arena-400 hover:text-arena-300">
@@ -230,6 +241,7 @@ const form = reactive({
   contextGuardEnabled: false,
   contextGuardStrategy: 'threshold',
   contextGuardMaxTurns: '',
+  a2aEnabled: false,
 })
 
 function toggleMcp(id) {
@@ -277,6 +289,7 @@ function open(agent = null) {
   form.contextGuardEnabled = agent?.contextGuard?.enabled || false
   form.contextGuardStrategy = agent?.contextGuard?.strategy || 'threshold'
   form.contextGuardMaxTurns = agent?.contextGuard?.maxTurns || ''
+  form.a2aEnabled = agent?.a2a?.enabled || false
   dialogRef.value?.open()
 }
 
@@ -302,6 +315,7 @@ async function save() {
       strategy: form.contextGuardStrategy,
       maxTurns: parseInt(form.contextGuardMaxTurns) || 0,
     } : undefined,
+    a2a: form.a2aEnabled ? { enabled: true } : undefined,
   }
   try {
     if (isEdit.value) {

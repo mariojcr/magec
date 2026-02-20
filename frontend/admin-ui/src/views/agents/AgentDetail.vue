@@ -12,6 +12,7 @@
         <DetailRow label="Backend" :value="store.backendLabel(agent.llm?.backend)" />
         <DetailRow label="Model" :value="agent.llm?.model" />
         <DetailRow label="Context Guard" :value="contextGuardSummary" />
+        <DetailRow label="A2A" :value="a2aSummary" />
       </div>
 
       <div class="space-y-1.5 lg:border-l lg:border-piedra-700/20 lg:pl-6">
@@ -77,6 +78,10 @@ const contextGuardSummary = computed(() => {
   const strategy = labels[cg.strategy] || cg.strategy || 'Token threshold'
   const detail = cg.strategy === 'sliding_window' && cg.maxTurns ? `${strategy} (${cg.maxTurns} turns)` : strategy
   return `${detail} (experimental)`
+})
+
+const a2aSummary = computed(() => {
+  return props.agent.a2a?.enabled ? 'Enabled' : 'Disabled'
 })
 
 const sttSummary = computed(() => {

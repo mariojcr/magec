@@ -12,6 +12,133 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/.well-known/agent-card.json": {
+            "get": {
+                "description": "Returns agent cards for all agents that have A2A enabled. Each card describes the agent's identity, capabilities, skills, and security requirements following the A2A protocol specification.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "a2a"
+                ],
+                "summary": "List all A2A agent cards",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "home-assistant",
+                        "description": "Filter by agent ID. When provided, returns a single card object instead of an array.",
+                        "name": "agent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of agent cards (or single card object when ?agent= is used)",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/user.A2AAgentCard"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/a2a/{agentID}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sends a JSON-RPC 2.0 request to the specified agent. Supported methods include `message/send` and `message/stream`. The request must include a valid Bearer token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "a2a"
+                ],
+                "summary": "Invoke A2A agent (JSON-RPC)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "home-assistant",
+                        "description": "Agent ID",
+                        "name": "agentID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "JSON-RPC 2.0 request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.A2AJSONRPCRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON-RPC 2.0 response",
+                        "schema": {
+                            "$ref": "#/definitions/user.A2AJSONRPCResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid Bearer token",
+                        "schema": {
+                            "$ref": "#/definitions/user.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Agent not found or A2A not enabled",
+                        "schema": {
+                            "$ref": "#/definitions/user.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/a2a/{agentID}/.well-known/agent-card.json": {
+            "get": {
+                "description": "Returns the A2A agent card for the specified agent. This is the per-agent discovery endpoint that A2A clients resolve relative to the agent's base URL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "a2a"
+                ],
+                "summary": "Get agent card by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "home-assistant",
+                        "description": "Agent ID",
+                        "name": "agentID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Agent card",
+                        "schema": {
+                            "$ref": "#/definitions/user.A2AAgentCard"
+                        }
+                    },
+                    "404": {
+                        "description": "Agent not found or A2A not enabled",
+                        "schema": {
+                            "$ref": "#/definitions/user.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/agent/apps/{app}/users/{user}/sessions": {
             "get": {
                 "security": [
@@ -1041,6 +1168,141 @@
         }
     },
     "definitions": {
+        "user.A2AAgentCard": {
+            "type": "object",
+            "properties": {
+                "capabilities": {
+                    "$ref": "#/definitions/user.A2ACapabilities"
+                },
+                "defaultInputModes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "text/plain"
+                    ]
+                },
+                "defaultOutputModes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "text/plain"
+                    ]
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Smart home control agent with access to Home Assistant"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Home Assistant"
+                },
+                "preferredTransport": {
+                    "type": "string",
+                    "example": "JSONRPC"
+                },
+                "protocolVersion": {
+                    "type": "string",
+                    "example": "0.2.5"
+                },
+                "security": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "securitySchemes": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.A2ASkill"
+                    }
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://magec.example.com/api/v1/a2a/home-assistant"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "user.A2ACapabilities": {
+            "type": "object",
+            "properties": {
+                "streaming": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "user.A2AJSONRPCRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "message/send"
+                },
+                "params": {}
+            }
+        },
+        "user.A2AJSONRPCResponse": {
+            "type": "object",
+            "properties": {
+                "error": {},
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                },
+                "result": {}
+            }
+        },
+        "user.A2ASkill": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "I am a helpful smart home assistant. I can control lights and thermostats."
+                },
+                "id": {
+                    "type": "string",
+                    "example": "home-assistant"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "model"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "llm"
+                    ]
+                }
+            }
+        },
         "user.AgentSummary": {
             "type": "object",
             "properties": {

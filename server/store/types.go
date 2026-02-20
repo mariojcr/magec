@@ -21,6 +21,13 @@ type AgentDefinition struct {
 	Skills        []string            `json:"skills,omitempty" yaml:"skills,omitempty"`
 	Tags          []string            `json:"tags,omitempty" yaml:"tags,omitempty"`
 	ContextGuard  *ContextGuardConfig `json:"contextGuard,omitempty" yaml:"contextGuard,omitempty"`
+	A2A           *A2AConfig          `json:"a2a,omitempty" yaml:"a2a,omitempty"`
+}
+
+// A2AConfig holds per-agent A2A (Agent-to-Agent) protocol settings.
+// When Enabled is true the agent is discoverable and invocable via A2A.
+type A2AConfig struct {
+	Enabled bool `json:"enabled" yaml:"enabled"`
 }
 
 // BackendDefinition represents a reusable AI backend.

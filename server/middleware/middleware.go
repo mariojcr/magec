@@ -45,6 +45,8 @@ func ClientAuth(next http.Handler, dataStore *store.Store) http.Handler {
 		if r.Method == http.MethodOptions ||
 			path == "/api/v1/health" ||
 			path == "/api/v1/voice/events" ||
+			path == "/.well-known/agent-card.json" ||
+			(strings.HasPrefix(path, "/api/v1/a2a/") && strings.HasSuffix(path, "/.well-known/agent-card.json")) ||
 			strings.HasPrefix(path, "/api/v1/webhooks/") ||
 			!strings.HasPrefix(path, "/api/") {
 			next.ServeHTTP(w, r)

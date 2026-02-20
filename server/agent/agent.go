@@ -76,6 +76,8 @@ When a user shares preferences or important information, proactively save it to 
 type Service struct {
 	handler    http.Handler
 	sessionSvc session.Service
+	memorySvc  memory.Service
+	adkAgents  map[string]agent.Agent
 }
 
 // New builds an ADK agent for every AgentDefinition in the store, wires up
@@ -232,6 +234,8 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	return &Service{
 		handler:    adkrest.NewHandler(launcherCfg, 30*time.Second),
 		sessionSvc: sessionSvc,
+		memorySvc:  memorySvc,
+		adkAgents:  adkAgentMap,
 	}, nil
 }
 
@@ -243,6 +247,17 @@ func (s *Service) Handler() http.Handler {
 // SessionService returns the session.Service used by the launcher.
 func (s *Service) SessionService() session.Service {
 	return s.sessionSvc
+}
+
+// MemoryService returns the memory.Service used by the launcher (may be nil).
+func (s *Service) MemoryService() memory.Service {
+	return s.memorySvc
+}
+
+// ADKAgents returns the map of agent ID → ADK agent instance.
+// Used by the A2A handler to create per-agent executors.
+func (s *Service) ADKAgents() map[string]agent.Agent {
+	return s.adkAgents
 }
 
 // createSessionService returns the session backend based on global settings.
