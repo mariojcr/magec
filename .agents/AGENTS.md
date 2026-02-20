@@ -258,7 +258,7 @@ Single `docker-compose.yaml` in `docker/compose/`. Self-contained with all local
 - **redis** — Session storage
 - **postgres** — Long-term memory (pgvector)
 - **ollama** + **ollama-setup** — LLM (qwen3:8b) + embeddings (nomic-embed-text)
-- **parakeet** — Speech-to-text (URL: `http://parakeet:8888`, no `/v1`)
+- **parakeet** — Speech-to-text (URL: `http://parakeet:5092`, no `/v1`)
 - **tts** — Text-to-speech via openai-edge-tts (URL: `http://tts:5050`, no `/v1`, `REQUIRE_API_KEY=False`)
 
 GPU section commented out by default. Users who want cloud providers create different backends in Admin UI.

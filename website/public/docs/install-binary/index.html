@@ -277,8 +277,8 @@
 <h3 id="optional-local-stt--tts">Optional: Local STT / TTS</h3>
 <p>For voice with local speech processing (no cloud), you need a speech-to-text and text-to-speech service:</p>
 <p><strong>Parakeet (STT):</strong></p>
-<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d -p 8888:8888 ghcr.io/achetronic/parakeet:latest
-</span></span></code></pre></div><p>Backend: Type <code>openai</code>, URL <code>http://localhost:8888</code></p>
+<div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d -p 5092:5092 ghcr.io/achetronic/parakeet:latest
+</span></span></code></pre></div><p>Backend: Type <code>openai</code>, URL <code>http://localhost:5092</code></p>
 <p><strong>OpenAI Edge TTS (local TTS):</strong></p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d -p 5050:5050 -e <span class="nv">REQUIRE_API_KEY</span><span class="o">=</span>False travisvn/openai-edge-tts:latest
 </span></span></code></pre></div><p>Backend: Type <code>openai</code>, URL <code>http://localhost:5050</code></p>

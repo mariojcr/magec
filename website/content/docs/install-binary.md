@@ -160,10 +160,10 @@ For voice with local speech processing (no cloud), you need a speech-to-text and
 **Parakeet (STT):**
 
 ```bash
-docker run -d -p 8888:8888 ghcr.io/achetronic/parakeet:latest
+docker run -d -p 5092:5092 ghcr.io/achetronic/parakeet:latest
 ```
 
-Backend: Type `openai`, URL `http://localhost:8888`
+Backend: Type `openai`, URL `http://localhost:5092`
 
 **OpenAI Edge TTS (local TTS):**
 

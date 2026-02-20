@@ -68,7 +68,7 @@ docker compose up -d
 | **postgres** | Long-term memory (pgvector) | 5432 |
 | **ollama** | LLM and embeddings (Qwen 3 8B, nomic-embed-text) | 11434 |
 | **ollama-setup** | Downloads Ollama models on first start, then exits | — |
-| **parakeet** | Speech-to-text (NVIDIA Parakeet) | 8888 |
+| **parakeet** | Speech-to-text (NVIDIA Parakeet) | 5092 |
 | **tts** | Text-to-speech (OpenAI Edge TTS) | 5050 |
 
 ## Set up your first agent
@@ -94,7 +94,7 @@ You need three backends — one for the LLM/embeddings, one for STT, one for TTS
 |-------|-------|
 | Name | `Parakeet` |
 | Type | `openai` |
-| URL | `http://parakeet:8888` |
+| URL | `http://parakeet:5092` |
 | API Key | *(leave empty)* |
 
 **Edge TTS (TTS)** — Backends → New:

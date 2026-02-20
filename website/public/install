@@ -1140,7 +1140,7 @@ install_binary() {
       box_empty
       box_line "  Run these commands:"
       box_empty
-      box_line "  ${CYAN}docker run -d -p 8888:8888 --name magec-stt \\${NC}"
+      box_line "  ${CYAN}docker run -d -p 5092:5092 --name magec-stt \\${NC}"
       box_line "  ${CYAN}  ghcr.io/achetronic/parakeet:latest${NC}"
       box_empty
       box_line "  ${CYAN}docker run -d -p 5050:5050 --name magec-tts \\${NC}"
@@ -1159,7 +1159,7 @@ install_binary() {
       box_empty
       box_line "  Then run:"
       box_empty
-      box_line "  ${CYAN}docker run -d -p 8888:8888 ghcr.io/achetronic/parakeet:latest${NC}"
+      box_line "  ${CYAN}docker run -d -p 5092:5092 ghcr.io/achetronic/parakeet:latest${NC}"
       box_line "  ${CYAN}docker run -d -p 5050:5050 -e REQUIRE_API_KEY=False \\${NC}"
       box_line "  ${CYAN}  travisvn/openai-edge-tts:latest${NC}"
     fi
@@ -1466,10 +1466,10 @@ generate_store_json() {
   fi
 
   if [[ "$WANT_VOICE" == true ]]; then
-    local parakeet_url="http://localhost:8888"
+    local parakeet_url="http://localhost:5092"
     local tts_url="http://localhost:5050"
     if [[ "$INSTALL_METHOD" == "2" ]]; then
-      parakeet_url="http://parakeet:8888"
+      parakeet_url="http://parakeet:5092"
       tts_url="http://tts:5050"
     fi
     backend_entries+=("{\"id\":\"${parakeet_backend_id}\",\"name\":\"Parakeet (STT)\",\"type\":\"openai\",\"url\":\"${parakeet_url}\",\"apiKey\":\"\"}")
