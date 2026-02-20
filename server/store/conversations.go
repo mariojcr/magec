@@ -263,18 +263,34 @@ func (cs *ConversationStore) Get(id string, msgLimit, msgOffset int) (Conversati
 	return Conversation{}, 0, false
 }
 
-// Delete removes a conversation.
+// Delete removes a conversation and its paired perspective (user↔admin).
 func (cs *ConversationStore) Delete(id string) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	for i, c := range cs.conversations {
+	var sessionID, agentID string
+	found := false
+	for _, c := range cs.conversations {
 		if c.ID == id {
-			cs.conversations = append(cs.conversations[:i], cs.conversations[i+1:]...)
-			return cs.persist()
+			sessionID = c.SessionID
+			agentID = c.AgentID
+			found = true
+			break
 		}
 	}
-	return fmt.Errorf("conversation %q not found", id)
+	if !found {
+		return fmt.Errorf("conversation %q not found", id)
+	}
+
+	filtered := cs.conversations[:0]
+	for _, c := range cs.conversations {
+		if c.ID == id || (c.SessionID == sessionID && c.AgentID == agentID) {
+			continue
+		}
+		filtered = append(filtered, c)
+	}
+	cs.conversations = filtered
+	return cs.persist()
 }
 
 // Clear removes all conversations.

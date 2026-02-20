@@ -1139,8 +1139,8 @@ paths:
       - conversations
   /conversations/{id}:
     delete:
-      description: Deletes a conversation audit log by ID. Does not affect the ADK
-        session.
+      description: Deletes a conversation audit log by ID together with its paired
+        perspective (user↔admin). Does not affect the ADK session.
       parameters:
       - description: Conversation ID
         in: path

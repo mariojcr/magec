@@ -78,9 +78,9 @@ func (h *Handler) getConversation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// deleteConversation removes a conversation audit log.
+// deleteConversation removes a conversation audit log and its paired perspective.
 // @Summary      Delete conversation
-// @Description  Deletes a conversation audit log by ID. Does not affect the ADK session.
+// @Description  Deletes a conversation audit log by ID together with its paired perspective (user↔admin). Does not affect the ADK session.
 // @Tags         conversations
 // @Param        id  path  string  true  "Conversation ID"
 // @Success      204

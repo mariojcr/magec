@@ -1198,7 +1198,7 @@ const docTemplate = `{
                         "AdminAuth": []
                     }
                 ],
-                "description": "Deletes a conversation audit log by ID. Does not affect the ADK session.",
+                "description": "Deletes a conversation audit log by ID together with its paired perspective (user↔admin). Does not affect the ADK session.",
                 "tags": [
                     "conversations"
                 ],
