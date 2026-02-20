@@ -20,7 +20,7 @@ import (
 // @Success      200  {file}    binary  "Backup archive"
 // @Failure      500  {object}  ErrorResponse
 // @Security     AdminAuth
-// @Router       /backup [get]
+// @Router       /settings/backup [get]
 func (h *Handler) backupDownload(w http.ResponseWriter, r *http.Request) {
 	dataDir := h.store.DataDir()
 	if dataDir == "" {
@@ -87,7 +87,7 @@ func (h *Handler) backupDownload(w http.ResponseWriter, r *http.Request) {
 // @Failure      400   {object}  ErrorResponse
 // @Failure      500   {object}  ErrorResponse
 // @Security     AdminAuth
-// @Router       /restore [post]
+// @Router       /settings/restore [post]
 func (h *Handler) backupRestore(w http.ResponseWriter, r *http.Request) {
 	dataDir := h.store.DataDir()
 	if dataDir == "" {

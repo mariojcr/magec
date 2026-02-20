@@ -144,8 +144,8 @@ func (h *Handler) buildRouter() *mux.Router {
 	r.HandleFunc("/conversations/{id}/reset-session", h.resetConversationSession).Methods("POST")
 
 	// Backup & Restore
-	r.HandleFunc("/backup", h.backupDownload).Methods("GET")
-	r.HandleFunc("/restore", h.backupRestore).Methods("POST")
+	r.HandleFunc("/settings/backup", h.backupDownload).Methods("GET")
+	r.HandleFunc("/settings/restore", h.backupRestore).Methods("POST")
 
 	return r
 }

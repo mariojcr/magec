@@ -4,7 +4,7 @@ const BASE = '/api/v1/admin'
 
 export const backupApi = {
   async download() {
-    const res = await fetch(`${BASE}/backup`, { headers: getAuthHeaders() })
+    const res = await fetch(`${BASE}/settings/backup`, { headers: getAuthHeaders() })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       throw new Error(data.error || `HTTP ${res.status}`)
@@ -22,7 +22,7 @@ export const backupApi = {
   },
 
   async restore(file) {
-    const res = await fetch(`${BASE}/restore`, {
+    const res = await fetch(`${BASE}/settings/restore`, {
       method: 'POST',
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/gzip' },
       body: file,

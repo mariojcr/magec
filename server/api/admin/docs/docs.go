@@ -548,37 +548,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup": {
-            "get": {
-                "security": [
-                    {
-                        "AdminAuth": []
-                    }
-                ],
-                "description": "Streams a .tar.gz archive containing the entire data directory (store.json, conversations.json, skills files).",
-                "produces": [
-                    "application/gzip"
-                ],
-                "tags": [
-                    "backup"
-                ],
-                "summary": "Download backup",
-                "responses": {
-                    "200": {
-                        "description": "Backup archive",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/admin.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/clients": {
             "get": {
                 "security": [
@@ -2056,63 +2025,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore": {
-            "post": {
-                "security": [
-                    {
-                        "AdminAuth": []
-                    }
-                ],
-                "description": "Accepts a .tar.gz archive (max 500MB) and atomically replaces the entire data directory. The archive must contain a valid store.json at the root level. After extraction, both the main store and conversation store are reloaded in memory.",
-                "consumes": [
-                    "application/gzip"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "backup"
-                ],
-                "summary": "Restore from backup",
-                "parameters": [
-                    {
-                        "description": "Backup .tar.gz archive",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "status: restored",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/admin.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/admin.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/secrets": {
             "get": {
                 "security": [
@@ -2375,6 +2287,94 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/store.Settings"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settings/backup": {
+            "get": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Streams a .tar.gz archive containing the entire data directory (store.json, conversations.json, skills files).",
+                "produces": [
+                    "application/gzip"
+                ],
+                "tags": [
+                    "backup"
+                ],
+                "summary": "Download backup",
+                "responses": {
+                    "200": {
+                        "description": "Backup archive",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/admin.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/settings/restore": {
+            "post": {
+                "security": [
+                    {
+                        "AdminAuth": []
+                    }
+                ],
+                "description": "Accepts a .tar.gz archive (max 500MB) and atomically replaces the entire data directory. The archive must contain a valid store.json at the root level. After extraction, both the main store and conversation store are reloaded in memory.",
+                "consumes": [
+                    "application/gzip"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "backup"
+                ],
+                "summary": "Restore from backup",
+                "parameters": [
+                    {
+                        "description": "Backup .tar.gz archive",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "status: restored",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "400": {
