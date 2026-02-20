@@ -62,7 +62,9 @@ This is the management API that powers the Admin UI. Full CRUD for every resourc
 
 No authentication required. In production, restrict access to this port (bind to localhost, firewall, or VPN).
 
-Every resource follows the same REST pattern (`GET`, `POST`, `PUT`, `DELETE`), plus type-specific extras like health checks for memory providers, token regeneration for clients, and MCP server linking for agents. The Swagger UI has it all.
+Every resource follows the same REST pattern (`GET`, `POST`, `PUT`, `DELETE`), plus type-specific extras like health checks for memory providers, token regeneration for clients, and MCP server linking for agents.
+
+It also includes **backup and restore** endpoints — download a full `.tar.gz` snapshot of all data, or upload one to atomically replace everything. The Swagger UI has it all.
 
 {{< callout type="info" >}}
 Both Swagger UIs are fully interactive — you can execute requests directly from the browser without writing any code. This is the best way to explore the API.

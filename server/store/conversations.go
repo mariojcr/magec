@@ -309,6 +309,19 @@ func (cs *ConversationStore) Count() int {
 	return len(cs.conversations)
 }
 
+// Reload re-reads conversations from disk, replacing all in-memory data.
+func (cs *ConversationStore) Reload() error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.conversations = []Conversation{}
+	if cs.filePath != "" {
+		if _, err := os.Stat(cs.filePath); err == nil {
+			return cs.loadFromDisk()
+		}
+	}
+	return nil
+}
+
 // persist writes conversations to disk as formatted JSON.
 func (cs *ConversationStore) persist() error {
 	if cs.filePath == "" {

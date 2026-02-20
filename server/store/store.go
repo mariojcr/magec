@@ -73,6 +73,11 @@ func (s *Store) OnChange() <-chan struct{} {
 	return ch
 }
 
+// DataDir returns the directory containing the store file and related data.
+func (s *Store) DataDir() string {
+	return filepath.Dir(s.filePath)
+}
+
 // Data returns a copy of the current (expanded) store data for runtime use.
 func (s *Store) Data() StoreData {
 	s.mu.RLock()
@@ -86,6 +91,13 @@ func (s *Store) RawData() StoreData {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.rawData
+}
+
+// Reload re-reads the store file from disk, replacing all in-memory data.
+func (s *Store) Reload() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.loadFromDisk()
 }
 
 // expandStruct takes any struct, marshals it to JSON, expands environment

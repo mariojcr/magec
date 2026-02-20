@@ -89,6 +89,7 @@ const sections = {
   commands:  { label: 'Commands',     icon: 'command',   color: 'indigo',    group: 'Agents' },
   clients:   { label: 'Clients',      icon: 'phone',     color: 'lava',      group: 'Connections' },
   conversations: { label: 'Conversations', icon: 'chat', color: 'teal',      group: 'Audit' },
+  settings:      { label: 'Settings',      icon: 'automation', color: 'blue', group: 'System' },
 }
 
 const section = computed(() => sections[props.activeTab] || sections.backends)
@@ -105,6 +106,8 @@ const sectionIconBg = computed(() => {
     teal: 'bg-teal-500/15',
     lava: 'bg-lava-500/15',
     amber: 'bg-amber-500/15',
+    arena: 'bg-arena-500/15',
+    blue: 'bg-blue-500/15',
   }
   return map[section.value.color] || map.sol
 })
@@ -121,6 +124,8 @@ const sectionIconText = computed(() => {
     teal: 'text-teal-400',
     lava: 'text-lava-400',
     amber: 'text-amber-400',
+    arena: 'text-arena-400',
+    blue: 'text-blue-400',
   }
   return map[section.value.color] || map.sol
 })

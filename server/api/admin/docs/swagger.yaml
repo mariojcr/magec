@@ -1919,6 +1919,65 @@ paths:
       summary: Update settings
       tags:
       - settings
+  /settings/backup:
+    get:
+      description: Streams a .tar.gz archive containing the entire data directory
+        (store.json, conversations.json, skills files).
+      produces:
+      - application/gzip
+      responses:
+        "200":
+          description: Backup archive
+          schema:
+            type: file
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Download backup
+      tags:
+      - backup
+  /settings/restore:
+    post:
+      consumes:
+      - application/gzip
+      description: Accepts a .tar.gz archive (max 500MB) and atomically replaces the
+        entire data directory. The archive must contain a valid store.json at the
+        root level. After extraction, both the main store and conversation store are
+        reloaded in memory.
+      parameters:
+      - description: Backup .tar.gz archive
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            type: integer
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: restored'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/admin.ErrorResponse'
+      security:
+      - AdminAuth: []
+      summary: Restore from backup
+      tags:
+      - backup
   /skills:
     get:
       description: Returns all configured skills
