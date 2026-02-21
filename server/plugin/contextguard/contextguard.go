@@ -45,12 +45,15 @@ const (
 )
 
 const (
-	// stateKeySummary is the session state key where the running conversation
-	// summary is stored between requests.
-	stateKeySummary = "__context_guard_summary"
-	// stateKeySummarizedAt records the token count at which the last
-	// summarization was triggered, useful for debugging.
-	stateKeySummarizedAt = "__context_guard_summarized_at"
+	// stateKeyPrefixSummary is the prefix for the per-agent session state key
+	// where the running conversation summary is stored between requests.
+	stateKeyPrefixSummary = "__context_guard_summary_"
+	// stateKeyPrefixSummarizedAt is the prefix for the per-agent diagnostic
+	// key recording the token count at which summarization was triggered.
+	stateKeyPrefixSummarizedAt = "__context_guard_summarized_at_"
+	// stateKeyPrefixContentsAtCompaction is the prefix for the per-agent key
+	// that records the total number of Content entries at last compaction.
+	stateKeyPrefixContentsAtCompaction = "__context_guard_contents_at_compaction_"
 
 	// largeContextWindowThreshold is the boundary (in tokens) between
 	// "small" and "large" context windows, matching Crush's constant.
@@ -208,7 +211,8 @@ func (g *contextGuard) beforeModel(ctx agent.CallbackContext, req *model.LLMRequ
 // loadSummary reads the running conversation summary from session state.
 // Returns an empty string if no summary has been stored yet.
 func loadSummary(ctx agent.CallbackContext) string {
-	val, err := ctx.State().Get(stateKeySummary)
+	key := stateKeyPrefixSummary + ctx.AgentName()
+	val, err := ctx.State().Get(key)
 	if err != nil {
 		return ""
 	}
@@ -220,11 +224,42 @@ func loadSummary(ctx agent.CallbackContext) string {
 // state. Errors are logged but not propagated — failing to persist should
 // not block the request.
 func persistSummary(ctx agent.CallbackContext, summary string, tokenCount int) {
-	if err := ctx.State().Set(stateKeySummary, summary); err != nil {
+	keySummary := stateKeyPrefixSummary + ctx.AgentName()
+	keySummarizedAt := stateKeyPrefixSummarizedAt + ctx.AgentName()
+	if err := ctx.State().Set(keySummary, summary); err != nil {
 		slog.Warn("ContextGuard: failed to persist summary", "error", err)
 	}
-	if err := ctx.State().Set(stateKeySummarizedAt, tokenCount); err != nil {
+	if err := ctx.State().Set(keySummarizedAt, tokenCount); err != nil {
 		slog.Warn("ContextGuard: failed to persist token count", "error", err)
+	}
+}
+
+// loadContentsAtCompaction reads the Content count recorded at the last
+// compaction. Returns 0 if no compaction has happened yet.
+func loadContentsAtCompaction(ctx agent.CallbackContext) int {
+	key := stateKeyPrefixContentsAtCompaction + ctx.AgentName()
+	val, err := ctx.State().Get(key)
+	if err != nil {
+		return 0
+	}
+	if val == nil {
+		return 0
+	}
+	switch v := val.(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	}
+	return 0
+}
+
+// persistContentsAtCompaction records the total Content count at which
+// compaction was performed, so the next call can compute turns since then.
+func persistContentsAtCompaction(ctx agent.CallbackContext, count int) {
+	key := stateKeyPrefixContentsAtCompaction + ctx.AgentName()
+	if err := ctx.State().Set(key, count); err != nil {
+		slog.Warn("ContextGuard: failed to persist contents count", "error", err)
 	}
 }
 

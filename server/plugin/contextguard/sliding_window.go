@@ -12,20 +12,25 @@ import (
 )
 
 // slidingWindowStrategy implements turn-count-based compaction. When the
-// number of Content entries in the request exceeds maxTurns, the oldest
-// entries beyond the limit are summarized using the agent's LLM and
-// replaced with a single summary message.
+// number of new Content entries since the last compaction exceeds maxTurns,
+// all but a small recent window (30% of maxTurns, minimum 3) are summarized
+// and replaced with a single summary message sent to the LLM.
 //
-// This is a preventive strategy: it fires periodically based on turn count
-// rather than waiting for the context window to fill up. The buffer for
-// dynamic word limits is still derived from the model's context window
-// using the same two-tier logic as the threshold strategy.
+// The session's stored events are never mutated (the ADK session service is
+// append-only). Instead, the strategy tracks how many Contents existed at
+// the last compaction and only counts new turns beyond that point. This
+// prevents re-summarizing on every request.
 type slidingWindowStrategy struct {
 	registry *contextwindow.Registry
 	llm      model.LLM
 	maxTurns int
 	mu       sync.Mutex
 }
+
+// recentKeepRatio is the fraction of maxTurns kept as literal recent messages
+// after compaction. The rest is summarized. A minimum of 3 is enforced so the
+// agent always has immediate context (at least one full exchange + one message).
+const recentKeepRatio = 0.30
 
 // newSlidingWindowStrategy creates a sliding window strategy for a single agent.
 func newSlidingWindowStrategy(registry *contextwindow.Registry, llm model.LLM, maxTurns int) *slidingWindowStrategy {
@@ -41,31 +46,38 @@ func (s *slidingWindowStrategy) Name() string {
 	return StrategySlidingWindow
 }
 
-// Compact checks whether the number of Content entries exceeds maxTurns.
-// If so, it splits the conversation: everything beyond maxTurns from the
-// end is summarized, and req.Contents is rewritten as
-// [summary + last maxTurns entries].
+// Compact counts Content entries that arrived after the last compaction.
+// If that count exceeds maxTurns, it summarizes all old entries and keeps
+// only a small recent window. Otherwise it injects the existing summary
+// (if any) and returns without touching the conversation.
 func (s *slidingWindowStrategy) Compact(ctx agent.CallbackContext, req *model.LLMRequest) error {
 	existingSummary := loadSummary(ctx)
-	if existingSummary != "" {
-		injectSummary(req, existingSummary)
-	}
+	contentsAtLastCompaction := loadContentsAtCompaction(ctx)
 
-	if len(req.Contents) <= s.maxTurns {
+	totalContents := len(req.Contents)
+	turnsSinceCompaction := totalContents - contentsAtLastCompaction
+
+	if turnsSinceCompaction <= s.maxTurns {
+		if existingSummary != "" {
+			injectSummary(req, existingSummary)
+		}
 		return nil
 	}
 
 	slog.Info("ContextGuard [sliding_window]: turn limit exceeded, summarizing",
 		"agent", ctx.AgentName(),
 		"session", ctx.SessionID(),
-		"turns", len(req.Contents),
+		"totalContents", totalContents,
+		"contentsAtLastCompaction", contentsAtLastCompaction,
+		"turnsSinceCompaction", turnsSinceCompaction,
 		"maxTurns", s.maxTurns,
 	)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	splitIdx := safeSplitIndex(req.Contents, len(req.Contents)-s.maxTurns)
+	recentKeep := max(3, s.maxTurns*30/100)
+	splitIdx := safeSplitIndex(req.Contents, len(req.Contents)-recentKeep)
 	oldContents := req.Contents[:splitIdx]
 	recentContents := req.Contents[splitIdx:]
 
@@ -74,11 +86,24 @@ func (s *slidingWindowStrategy) Compact(ctx agent.CallbackContext, req *model.LL
 
 	summary, err := summarize(ctx, s.llm, oldContents, existingSummary, buffer)
 	if err != nil {
+		slog.Error("ContextGuard [sliding_window]: summarization FAILED",
+			"agent", ctx.AgentName(),
+			"session", ctx.SessionID(),
+			"error", err,
+		)
 		return fmt.Errorf("summarization failed: %w", err)
 	}
 
+	slog.Info("ContextGuard [sliding_window]: summarization succeeded, compressing conversation",
+		"agent", ctx.AgentName(),
+		"session", ctx.SessionID(),
+		"summaryLen", len(summary),
+	)
+
 	tokenEstimate := estimateContentTokens(oldContents)
 	persistSummary(ctx, summary, tokenEstimate)
+	persistContentsAtCompaction(ctx, totalContents)
+
 	replaceSummary(req, summary, recentContents)
 
 	slog.Info("ContextGuard [sliding_window]: conversation compressed",
@@ -87,6 +112,7 @@ func (s *slidingWindowStrategy) Compact(ctx agent.CallbackContext, req *model.LL
 		"oldMessages", len(oldContents),
 		"recentMessages", len(recentContents),
 		"newTokenEstimate", estimateTokens(req),
+		"watermarkWritten", totalContents,
 	)
 
 	return nil
