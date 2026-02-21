@@ -164,7 +164,7 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 		threadTS = ev.TimeStamp
 	}
 
-	if c.handleBotCommand(ev.User, ev.Channel, text) {
+	if c.handleBotCommand(ev.User, ev.Channel, text, threadTS) {
 		return
 	}
 
@@ -200,11 +200,11 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 
-	if c.handleBotCommand(ev.User, ev.Channel, text) {
+	threadTS := ev.ThreadTimeStamp
+
+	if c.handleBotCommand(ev.User, ev.Channel, text, threadTS) {
 		return
 	}
-
-	threadTS := ev.ThreadTimeStamp
 
 	c.logger.Info("Slack DM received", "user", ev.User, "channel", ev.Channel, "text", text)
 	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, ev.TimeStamp, event.TeamID, false)
@@ -288,7 +288,7 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 	return false
 }
 
-func (c *Client) handleBotCommand(userID, channelID, text string) bool {
+func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool {
 	lower := strings.ToLower(strings.TrimSpace(text))
 
 	if !strings.HasPrefix(lower, "!") {
@@ -305,7 +305,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			"• `!reset` — Reset the conversation session\n" +
 			"• `!responsemode` — Show or change the response mode\n" +
 			"• `!responsemode <mode>` — Set response mode (`text`, `voice`, `mirror`, `both`, `reset`)"
-		c.postMessage(channelID, helpText, "")
+		c.postMessage(channelID, helpText, threadTS)
 		return true
 	}
 
@@ -329,7 +329,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			agentList += fmt.Sprintf("%s%s\n", marker, label)
 		}
 		msg := fmt.Sprintf("*Active agent:* %s\n\n*Available agents:*\n%s\nUsage: `!agent <id>`", currentLabel, agentList)
-		c.postMessage(channelID, msg, "")
+		c.postMessage(channelID, msg, threadTS)
 		return true
 	}
 
@@ -347,7 +347,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			for _, a := range c.agents {
 				ids = append(ids, "`"+a.ID+"`")
 			}
-			c.postMessage(channelID, fmt.Sprintf("Unknown agent `%s`. Available: %s", agentID, strings.Join(ids, ", ")), "")
+			c.postMessage(channelID, fmt.Sprintf("Unknown agent `%s`. Available: %s", agentID, strings.Join(ids, ", ")), threadTS)
 			return true
 		}
 		c.setActiveAgentID(channelID, agentID)
@@ -357,7 +357,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			label = agent.Name
 		}
 		c.logger.Info("Slack agent switched", "channel", channelID, "agent", agentID)
-		c.postMessage(channelID, fmt.Sprintf("Switched to agent *%s* (`%s`)", label, agentID), "")
+		c.postMessage(channelID, fmt.Sprintf("Switched to agent *%s* (`%s`)", label, agentID), threadTS)
 		return true
 	}
 
@@ -373,7 +373,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		}
 		status += "\n*Options:* `text`, `voice`, `mirror`, `both`, `reset`"
 
-		c.postMessage(channelID, status, "")
+		c.postMessage(channelID, status, threadTS)
 		return true
 	}
 
@@ -382,7 +382,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		sessionID := c.buildSessionID(channelID, "")
 		if err := c.deleteSession(agentID, sessionID); err != nil {
 			c.logger.Error("Failed to delete session", "error", err)
-			c.postMessage(channelID, "Failed to reset session.", "")
+			c.postMessage(channelID, "Failed to reset session.", threadTS)
 			return true
 		}
 		c.logger.Info("Session reset", "channel", channelID, "agent", agentID, "session", sessionID)
@@ -391,19 +391,19 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		if agent != nil && agent.Name != "" {
 			label = agent.Name
 		}
-		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), "")
+		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), threadTS)
 		return true
 	}
 
 	if strings.HasPrefix(lower, "responsemode ") {
 		arg := strings.TrimSpace(text[13:])
-		return c.handleResponseModeCommand(channelID, arg)
+		return c.handleResponseModeCommand(channelID, arg, threadTS)
 	}
 
 	return false
 }
 
-func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
+func (c *Client) handleResponseModeCommand(channelID, arg, threadTS string) bool {
 	validModes := []string{ResponseModeText, ResponseModeVoice, ResponseModeMirror, ResponseModeBoth}
 
 	if arg == "reset" {
@@ -413,12 +413,12 @@ func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
 		c.logger.Info("Response mode override cleared",
 			"config_mode", c.clientDef.Config.Slack.ResponseMode,
 		)
-		c.postMessage(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Slack.ResponseMode), "")
+		c.postMessage(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Slack.ResponseMode), threadTS)
 		return true
 	}
 
 	if !slices.Contains(validModes, arg) {
-		c.postMessage(channelID, fmt.Sprintf("Invalid mode `%s`. Valid options: `text`, `voice`, `mirror`, `both`, `reset`", arg), "")
+		c.postMessage(channelID, fmt.Sprintf("Invalid mode `%s`. Valid options: `text`, `voice`, `mirror`, `both`, `reset`", arg), threadTS)
 		return true
 	}
 
@@ -427,7 +427,7 @@ func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
 	c.responseMu.Unlock()
 
 	c.logger.Info("Response mode overridden", "new_mode", arg)
-	c.postMessage(channelID, fmt.Sprintf("Response mode set to `%s` (until restart)", arg), "")
+	c.postMessage(channelID, fmt.Sprintf("Response mode set to `%s` (until restart)", arg), threadTS)
 	return true
 }
 
@@ -828,18 +828,7 @@ func (c *Client) addReaction(emoji string, ref slackapi.ItemRef) {
 	}
 }
 
-func (c *Client) removeReaction(emoji string, ref slackapi.ItemRef) {
-	if err := c.api.RemoveReaction(emoji, ref); err != nil {
-		c.logger.Debug("Failed to remove reaction", "emoji", emoji, "error", err)
-	}
-}
-
 func (c *Client) setReaction(emoji string, ref slackapi.ItemRef) {
-	for _, old := range []string{"eyes", "brain", "white_check_mark", "x"} {
-		if old != emoji {
-			c.removeReaction(old, ref)
-		}
-	}
 	c.addReaction(emoji, ref)
 }
 
