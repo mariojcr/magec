@@ -43,6 +43,8 @@ const (
 	ResponseModeVoice  = "voice"
 	ResponseModeMirror = "mirror"
 	ResponseModeBoth   = "both"
+
+	progressTimeout = 30 * time.Second
 )
 
 // AgentInfo is a lightweight reference to an agent that the Telegram client
@@ -362,7 +364,6 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		return nil
 	}
 
-	// Check permissions
 	if !c.isAllowed(msg.From.ID, msg.Chat.ID) {
 		c.logger.Debug("Unauthorized access attempt",
 			"user_id", msg.From.ID,
@@ -377,23 +378,54 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		"text", msg.Text,
 	)
 
-	// Send typing indicator
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👀")
+
 	_ = ctx.Bot().SendChatAction(ctx, &telego.SendChatActionParams{
 		ChatID: tu.ID(msg.Chat.ID),
 		Action: telego.ChatActionTyping,
 	})
 
-	// Call agent
-	response, err := c.callAgent(msg, msg.Text)
-	if err != nil {
-		c.logger.Error("Failed to call agent", "error", err)
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "🧠")
+
+	progressTimer := time.AfterFunc(progressTimeout, func() {
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
-			Text:   "Sorry, I encountered an error processing your request.",
+			Text:   "Still working on it, this may take a moment...",
+		})
+	})
+
+	typingDone := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(4 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-typingDone:
+				return
+			case <-ticker.C:
+				_ = ctx.Bot().SendChatAction(ctx, &telego.SendChatActionParams{
+					ChatID: tu.ID(msg.Chat.ID),
+					Action: telego.ChatActionTyping,
+				})
+			}
+		}
+	}()
+
+	response, err := c.callAgent(msg, msg.Text)
+	close(typingDone)
+	progressTimer.Stop()
+
+	if err != nil {
+		c.logger.Error("Failed to call agent", "error", err)
+		c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👎")
+		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(msg.Chat.ID),
+			Text:   fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)),
 		})
 		return nil
 	}
 
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👍")
 	c.sendResponse(ctx, msg.Chat.ID, response, false)
 
 	return nil
@@ -407,7 +439,6 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		return nil
 	}
 
-	// Check permissions
 	if !c.isAllowed(msg.From.ID, msg.Chat.ID) {
 		return nil
 	}
@@ -418,32 +449,41 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		"duration", msg.Voice.Duration,
 	)
 
-	// Send typing indicator
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👀")
+
 	_ = ctx.Bot().SendChatAction(ctx, &telego.SendChatActionParams{
 		ChatID: tu.ID(msg.Chat.ID),
 		Action: telego.ChatActionTyping,
 	})
 
-	// Download voice file
 	file, err := ctx.Bot().GetFile(ctx, &telego.GetFileParams{FileID: msg.Voice.FileID})
 	if err != nil {
 		c.logger.Error("Failed to get voice file", "error", err)
+		c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👎")
+		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(msg.Chat.ID),
+			Text:   "Failed to download your voice message. Please try again.",
+		})
 		return nil
 	}
 
-	// Download file content
 	fileURL := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", c.clientDef.Config.Telegram.BotToken, file.FilePath)
 	audioData, err := c.downloadFile(fileURL)
 	if err != nil {
 		c.logger.Error("Failed to download voice file", "error", err)
+		c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👎")
+		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(msg.Chat.ID),
+			Text:   "Failed to download your voice message. Please try again.",
+		})
 		return nil
 	}
 
-	// Transcribe audio
 	agentID := c.getActiveAgentID(msg.Chat.ID)
 	text, err := c.transcribeAudio(audioData, file.FilePath, agentID)
 	if err != nil {
 		c.logger.Error("Failed to transcribe audio", "error", err)
+		c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👎")
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
 			Text:   "Sorry, I couldn't transcribe your voice message.",
@@ -453,17 +493,47 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 
 	c.logger.Info("Transcribed voice", "text", text)
 
-	// Call agent with transcribed text
-	response, err := c.callAgent(msg, text)
-	if err != nil {
-		c.logger.Error("Failed to call agent", "error", err)
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "🧠")
+
+	progressTimer := time.AfterFunc(progressTimeout, func() {
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
-			Text:   "Sorry, I encountered an error processing your request.",
+			Text:   "Still working on it, this may take a moment...",
+		})
+	})
+
+	typingDone := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(4 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-typingDone:
+				return
+			case <-ticker.C:
+				_ = ctx.Bot().SendChatAction(ctx, &telego.SendChatActionParams{
+					ChatID: tu.ID(msg.Chat.ID),
+					Action: telego.ChatActionTyping,
+				})
+			}
+		}
+	}()
+
+	response, err := c.callAgent(msg, text)
+	close(typingDone)
+	progressTimer.Stop()
+
+	if err != nil {
+		c.logger.Error("Failed to call agent", "error", err)
+		c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👎")
+		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(msg.Chat.ID),
+			Text:   fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)),
 		})
 		return nil
 	}
 
+	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👍")
 	c.sendResponse(ctx, msg.Chat.ID, response, true)
 
 	return nil
@@ -760,7 +830,6 @@ func (c *Client) callAgent(msg telego.Message, message string) (string, error) {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Call agent
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
@@ -1019,4 +1088,34 @@ func (c *Client) generateTTS(text string, agentID string) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
+}
+
+func (c *Client) setReaction(ctx context.Context, chatID int64, messageID int, emoji string) {
+	var reaction []telego.ReactionType
+	if emoji != "" {
+		reaction = []telego.ReactionType{
+			&telego.ReactionTypeEmoji{Type: "emoji", Emoji: emoji},
+		}
+	}
+	err := c.bot.SetMessageReaction(ctx, &telego.SetMessageReactionParams{
+		ChatID:    tu.ID(chatID),
+		MessageID: messageID,
+		Reaction:  reaction,
+	})
+	if err != nil {
+		c.logger.Debug("Failed to set reaction", "emoji", emoji, "error", err)
+	}
+}
+
+func sanitizeError(err error) string {
+	msg := err.Error()
+	if len(msg) > 200 {
+		msg = msg[:200] + "..."
+	}
+	for _, secret := range []string{"Bearer ", "bot", "token"} {
+		if strings.Contains(strings.ToLower(msg), strings.ToLower(secret)) {
+			return "an internal error occurred"
+		}
+	}
+	return msg
 }

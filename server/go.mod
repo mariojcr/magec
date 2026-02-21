@@ -3,7 +3,8 @@ module github.com/achetronic/magec/server
 go 1.25.5
 
 require (
-	github.com/achetronic/adk-utils-go v0.2.1
+	github.com/a2aproject/a2a-go v0.3.3
+	github.com/achetronic/adk-utils-go v0.2.2
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/google/jsonschema-go v0.3.0
 	github.com/google/uuid v1.6.0
@@ -13,9 +14,11 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/mymmrac/telego v1.5.1
 	github.com/redis/go-redis/v9 v9.17.2
+	github.com/slack-go/slack v0.17.3
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.6
 	github.com/yalue/onnxruntime_go v1.25.0
+	golang.org/x/crypto v0.46.0
 	google.golang.org/adk v0.4.0
 	google.golang.org/genai v1.40.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -26,7 +29,6 @@ require (
 	cloud.google.com/go/auth v0.17.0 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/a2aproject/a2a-go v0.3.3 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.19.0 // indirect
 	github.com/awalterschulze/gographviz v2.0.3+incompatible // indirect
@@ -57,7 +59,6 @@ require (
 	github.com/openai/openai-go/v3 v3.16.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/slack-go/slack v0.17.3 // indirect
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -76,7 +77,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.32.0 // indirect

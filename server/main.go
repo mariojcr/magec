@@ -158,8 +158,8 @@ func main() {
 	executor.SetConversationStore(convoStore)
 
 	httpMux := http.NewServeMux()
-	// Chain: Client ← RecorderUser ← FlowFilter ← RecorderAdmin ← SessionStateSeed ← ADK
-	seeded := middleware.SessionStateSeed(agentRouter, dataStore)
+	// Chain: Client ← RecorderUser ← FlowFilter ← RecorderAdmin ← SessionEnsure ← SessionStateSeed ← ADK
+	seeded := middleware.SessionEnsure(middleware.SessionStateSeed(agentRouter, dataStore))
 	adminRecorded := middleware.ConversationRecorder(
 		middleware.ConversationRecorderSSE(seeded, executor, dataStore, "admin"),
 		executor, dataStore, "admin",

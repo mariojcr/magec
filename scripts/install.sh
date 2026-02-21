@@ -91,6 +91,12 @@ step_header() {
   echo
 }
 
+# ── YAML helpers ─────────────────────────────────────────────────────────────
+
+yaml_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"
+}
+
 # ── Input helpers ───────────────────────────────────────────────────────────
 
 ask() {
@@ -556,91 +562,144 @@ ask "Folder name" "$INSTALL_DIR"
 INSTALL_DIR="$REPLY"
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  DETECT EXISTING INSTALLATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+SKIP_DATA=false
+SKIP_CONFIG=false
+
+if [[ -d "${INSTALL_DIR}/data" ]] || [[ -f "${INSTALL_DIR}/config.yaml" ]]; then
+  cls
+
+  (( local_step++ ))
+  step_header "$local_step" "Existing installation detected"
+
+  box_top
+  box_empty
+  box_line "  ${YELLOW}Existing Magec data found${NC}" "" "center"
+  box_empty
+  box_sep
+  box_empty
+  if [[ -d "${INSTALL_DIR}/data" ]]; then
+    box_line "  A ${BOLD}data/${NC} folder exists in ${CYAN}${INSTALL_DIR}/${NC}."
+    box_line "  It contains your agents, backends, secrets,"
+    box_line "  conversations, and other configuration."
+    box_empty
+  fi
+  if [[ -f "${INSTALL_DIR}/config.yaml" ]]; then
+    box_line "  A ${BOLD}config.yaml${NC} exists with your admin password,"
+    box_line "  encryption key, and other settings."
+    box_empty
+  fi
+  box_sep
+  box_empty
+  box_line "  ${RED}Overwriting will permanently delete this data.${NC}"
+  box_empty
+  box_bottom
+  echo
+
+  choose \
+    "Keep my data and config (recommended)" \
+    "Overwrite everything (data will be lost)"
+
+  if [[ "$REPLY" == "1" ]]; then
+    SKIP_DATA=true
+    SKIP_CONFIG=true
+    ok "Your existing installation will be preserved"
+  else
+    warn "Existing data will be overwritten"
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  STEP — ADMIN PASSWORD
 # ═══════════════════════════════════════════════════════════════════════════
 
 ADMIN_PASSWORD=""
-
-(( local_step++ ))
-cls
-step_header "$local_step" "Protect the Admin Panel"
-
-box_top
-box_empty
-box_line "  The Admin Panel lets you manage agents, backends,"
-box_line "  API keys, and everything else in Magec."
-box_empty
-box_sep
-box_empty
-box_line "  Setting a password will protect the Admin API"
-box_line "  and the web panel — no one can access them"
-box_line "  without logging in first."
-box_empty
-box_line "  ${DIM}Without a password, anyone on the network can${NC}"
-box_line "  ${DIM}change your configuration.${NC}"
-box_empty
-box_sep
-box_empty
-box_line "  ${DIM}Leave blank to skip (not recommended for servers).${NC}"
-box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
-box_line "  ${CYAN}MAGEC_ADMIN_PASSWORD${NC}"
-box_empty
-box_bottom
-echo
-
-printf "  ${CYAN}▸${NC} Admin password (input hidden): "
-read -rs REPLY < /dev/tty
-echo
-ADMIN_PASSWORD="$REPLY"
-
-if [[ -n "$ADMIN_PASSWORD" ]]; then
-  ok "Password set"
-else
-  info "No password — Admin Panel will be open"
-fi
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  STEP — ENCRYPTION KEY
-# ═══════════════════════════════════════════════════════════════════════════
-
 ENCRYPTION_KEY=""
 
-(( local_step++ ))
-cls
-step_header "$local_step" "Encrypt your secrets"
+if ! $SKIP_CONFIG; then
 
-box_top
-box_empty
-box_line "  Magec can store sensitive data like API keys"
-box_line "  for cloud providers (OpenAI, Anthropic, etc.)."
-box_empty
-box_sep
-box_empty
-box_line "  An encryption key protects these secrets on disk."
-box_line "  Without it, they are stored as plain text in"
-box_line "  ${CYAN}data/store.json${NC}."
-box_empty
-box_line "  ${DIM}This key is independent from the admin password,${NC}"
-box_line "  ${DIM}so you can rotate one without affecting the other.${NC}"
-box_empty
-box_sep
-box_empty
-box_line "  ${DIM}Leave blank to skip (secrets stored unencrypted).${NC}"
-box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
-box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY${NC}"
-box_empty
-box_bottom
-echo
+  (( local_step++ ))
+  cls
+  step_header "$local_step" "Protect the Admin Panel"
 
-printf "  ${CYAN}▸${NC} Encryption key (input hidden): "
-read -rs REPLY < /dev/tty
-echo
-ENCRYPTION_KEY="$REPLY"
+  box_top
+  box_empty
+  box_line "  The Admin Panel lets you manage agents, backends,"
+  box_line "  API keys, and everything else in Magec."
+  box_empty
+  box_sep
+  box_empty
+  box_line "  Setting a password will protect the Admin API"
+  box_line "  and the web panel — no one can access them"
+  box_line "  without logging in first."
+  box_empty
+  box_line "  ${DIM}Without a password, anyone on the network can${NC}"
+  box_line "  ${DIM}change your configuration.${NC}"
+  box_empty
+  box_sep
+  box_empty
+  box_line "  ${DIM}Leave blank to skip (not recommended for servers).${NC}"
+  box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
+  box_line "  ${CYAN}MAGEC_ADMIN_PASSWORD${NC}"
+  box_empty
+  box_bottom
+  echo
 
-if [[ -n "$ENCRYPTION_KEY" ]]; then
-  ok "Encryption key set"
-else
-  info "No encryption — secrets will be stored in plain text"
+  printf "  ${CYAN}▸${NC} Admin password (input hidden): "
+  read -rs REPLY < /dev/tty
+  echo
+  ADMIN_PASSWORD="$REPLY"
+
+  if [[ -n "$ADMIN_PASSWORD" ]]; then
+    ok "Password set"
+  else
+    info "No password — Admin Panel will be open"
+  fi
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  STEP — ENCRYPTION KEY
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  (( local_step++ ))
+  cls
+  step_header "$local_step" "Encrypt your secrets"
+
+  box_top
+  box_empty
+  box_line "  Magec can store sensitive data like API keys"
+  box_line "  for cloud providers (OpenAI, Anthropic, etc.)."
+  box_empty
+  box_sep
+  box_empty
+  box_line "  An encryption key protects these secrets on disk."
+  box_line "  Without it, they are stored as plain text in"
+  box_line "  ${CYAN}data/store.json${NC}."
+  box_empty
+  box_line "  ${DIM}This key is independent from the admin password,${NC}"
+  box_line "  ${DIM}so you can rotate one without affecting the other.${NC}"
+  box_empty
+  box_sep
+  box_empty
+  box_line "  ${DIM}Leave blank to skip (secrets stored unencrypted).${NC}"
+  box_line "  ${DIM}You can set it later in config.yaml or via:${NC}"
+  box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY${NC}"
+  box_empty
+  box_bottom
+  echo
+
+  printf "  ${CYAN}▸${NC} Encryption key (input hidden): "
+  read -rs REPLY < /dev/tty
+  echo
+  ENCRYPTION_KEY="$REPLY"
+
+  if [[ -n "$ENCRYPTION_KEY" ]]; then
+    ok "Encryption key set"
+  else
+    info "No encryption — secrets will be stored in plain text"
+  fi
+
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -678,12 +737,20 @@ if [[ "$INSTALL_METHOD" == "2" ]] && $GPU; then
   box_line "  ${BOLD}GPU:${NC}               NVIDIA"
 fi
 box_line "  ${BOLD}Folder:${NC}            $INSTALL_DIR/"
-pass_label="${GREEN}Set${NC}"
-[[ -z "$ADMIN_PASSWORD" ]] && pass_label="${YELLOW}None (open)${NC}"
-box_line "  ${BOLD}Admin password:${NC}    $pass_label"
-enc_label="${GREEN}Set${NC}"
-[[ -z "$ENCRYPTION_KEY" ]] && enc_label="${YELLOW}None (plain text)${NC}"
-box_line "  ${BOLD}Encryption key:${NC}    $enc_label"
+if $SKIP_CONFIG; then
+  box_line "  ${BOLD}Admin password:${NC}    ${GREEN}Kept existing${NC}"
+  box_line "  ${BOLD}Encryption key:${NC}    ${GREEN}Kept existing${NC}"
+else
+  pass_label="${GREEN}Set${NC}"
+  [[ -z "$ADMIN_PASSWORD" ]] && pass_label="${YELLOW}None (open)${NC}"
+  box_line "  ${BOLD}Admin password:${NC}    $pass_label"
+  enc_label="${GREEN}Set${NC}"
+  [[ -z "$ENCRYPTION_KEY" ]] && enc_label="${YELLOW}None (plain text)${NC}"
+  box_line "  ${BOLD}Encryption key:${NC}    $enc_label"
+fi
+if $SKIP_DATA; then
+  box_line "  ${BOLD}Data:${NC}              ${GREEN}Kept existing${NC}"
+fi
 box_empty
 box_bottom
 echo
@@ -1251,8 +1318,16 @@ install_binary() {
 
   echo
   info "Creating configuration files..."
-  generate_config_yaml
-  generate_store_json
+  if ! $SKIP_CONFIG; then
+    generate_config_yaml
+  else
+    ok "config.yaml (kept existing)"
+  fi
+  if ! $SKIP_DATA; then
+    generate_store_json
+  else
+    ok "data/store.json (kept existing)"
+  fi
 
   print_success
 }
@@ -1383,8 +1458,16 @@ install_containers() {
 
   info "Creating configuration files..."
   generate_docker_compose
-  generate_config_yaml
-  generate_store_json
+  if ! $SKIP_CONFIG; then
+    generate_config_yaml
+  else
+    ok "config.yaml (kept existing)"
+  fi
+  if ! $SKIP_DATA; then
+    generate_store_json
+  else
+    ok "data/store.json (kept existing)"
+  fi
 
   ok "All files created"
 
@@ -1411,11 +1494,11 @@ generate_config_yaml() {
     onnx_line="  onnxLibraryPath: ${ONNX_LIB_PATH}"
   fi
 
-  local admin_pass_value='${MAGEC_ADMIN_PASSWORD}'
-  [[ -n "$ADMIN_PASSWORD" ]] && admin_pass_value="$ADMIN_PASSWORD"
+  local admin_pass_value="$(yaml_quote '${MAGEC_ADMIN_PASSWORD}')"
+  [[ -n "$ADMIN_PASSWORD" ]] && admin_pass_value="$(yaml_quote "$ADMIN_PASSWORD")"
 
-  local enc_key_value='${MAGEC_ENCRYPTION_KEY}'
-  [[ -n "$ENCRYPTION_KEY" ]] && enc_key_value="$ENCRYPTION_KEY"
+  local enc_key_value="$(yaml_quote '${MAGEC_ENCRYPTION_KEY}')"
+  [[ -n "$ENCRYPTION_KEY" ]] && enc_key_value="$(yaml_quote "$ENCRYPTION_KEY")"
 
   cat > config.yaml <<YAML
 server:
@@ -1753,7 +1836,13 @@ EOF
     box_empty
   fi
 
-  if [[ -n "$ADMIN_PASSWORD" ]]; then
+  if $SKIP_CONFIG; then
+    box_sep
+    box_empty
+    box_line "  ${GREEN}Config preserved${NC} — your admin password and"
+    box_line "  encryption key are unchanged in config.yaml."
+    box_empty
+  elif [[ -n "$ADMIN_PASSWORD" ]]; then
     box_sep
     box_empty
     box_line "  ${BOLD}Admin password:${NC}  ${CYAN}${ADMIN_PASSWORD}${NC}"
@@ -1770,21 +1859,23 @@ EOF
     box_empty
   fi
 
-  if [[ -n "$ENCRYPTION_KEY" ]]; then
-    box_sep
-    box_empty
-    box_line "  ${BOLD}Encryption key:${NC}  ${CYAN}${ENCRYPTION_KEY}${NC}"
-    box_empty
-    box_line "  ${DIM}Used to encrypt API keys and secrets on disk.${NC}"
-    box_line "  ${DIM}Saved in config.yaml → server.encryptionKey${NC}"
-    box_empty
-  else
-    box_sep
-    box_empty
-    box_line "  ${YELLOW}No encryption key set.${NC} Secrets stored in plain text."
-    box_line "  ${DIM}Set one later in config.yaml or via env var:${NC}"
-    box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY=yourkey${NC}"
-    box_empty
+  if ! $SKIP_CONFIG; then
+    if [[ -n "$ENCRYPTION_KEY" ]]; then
+      box_sep
+      box_empty
+      box_line "  ${BOLD}Encryption key:${NC}  ${CYAN}${ENCRYPTION_KEY}${NC}"
+      box_empty
+      box_line "  ${DIM}Used to encrypt API keys and secrets on disk.${NC}"
+      box_line "  ${DIM}Saved in config.yaml → server.encryptionKey${NC}"
+      box_empty
+    else
+      box_sep
+      box_empty
+      box_line "  ${YELLOW}No encryption key set.${NC} Secrets stored in plain text."
+      box_line "  ${DIM}Set one later in config.yaml or via env var:${NC}"
+      box_line "  ${CYAN}MAGEC_ENCRYPTION_KEY=yourkey${NC}"
+      box_empty
+    fi
   fi
 
   if [[ "$INSTALL_METHOD" == "1" ]]; then
