@@ -92,12 +92,17 @@ func (v *VAD) SetOnSpeechEnd(callback func()) {
 
 // Load initializes the ONNX model
 func (v *VAD) Load() error {
-	var err error
+	opts, err := newLightSessionOptions()
+	if err != nil {
+		return fmt.Errorf("failed to create session options: %w", err)
+	}
+	defer opts.Destroy()
+
 	v.session, err = ort.NewDynamicAdvancedSessionWithONNXData(
 		v.config.ModelData,
 		[]string{"input", "sr", "h", "c"},
 		[]string{"output", "hn", "cn"},
-		nil,
+		opts,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to load VAD model: %w", err)
