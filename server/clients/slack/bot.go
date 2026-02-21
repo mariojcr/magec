@@ -27,6 +27,8 @@ const (
 	ResponseModeVoice  = "voice"
 	ResponseModeMirror = "mirror"
 	ResponseModeBoth   = "both"
+
+	progressTimeout = 30 * time.Second
 )
 
 type AgentInfo struct {
@@ -162,12 +164,12 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 		threadTS = ev.TimeStamp
 	}
 
-	if c.handleBotCommand(ev.User, ev.Channel, text) {
+	if c.handleBotCommand(ev.User, ev.Channel, text, threadTS) {
 		return
 	}
 
 	c.logger.Info("Slack mention received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "channel", text, threadTS, event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "channel", text, threadTS, ev.TimeStamp, event.TeamID, false)
 }
 
 func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
@@ -198,14 +200,14 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 
-	if c.handleBotCommand(ev.User, ev.Channel, text) {
+	threadTS := ev.ThreadTimeStamp
+
+	if c.handleBotCommand(ev.User, ev.Channel, text, threadTS) {
 		return
 	}
 
-	threadTS := ev.ThreadTimeStamp
-
 	c.logger.Info("Slack DM received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, ev.TimeStamp, event.TeamID, false)
 }
 
 func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bool {
@@ -280,13 +282,13 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 
 		c.logger.Info("Transcribed audio clip", "text", text)
 
-		c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, teamID, true)
+		c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, ev.TimeStamp, teamID, true)
 		return true
 	}
 	return false
 }
 
-func (c *Client) handleBotCommand(userID, channelID, text string) bool {
+func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool {
 	lower := strings.ToLower(strings.TrimSpace(text))
 
 	if !strings.HasPrefix(lower, "!") {
@@ -303,7 +305,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			"• `!reset` — Reset the conversation session\n" +
 			"• `!responsemode` — Show or change the response mode\n" +
 			"• `!responsemode <mode>` — Set response mode (`text`, `voice`, `mirror`, `both`, `reset`)"
-		c.postMessage(channelID, helpText, "")
+		c.postMessage(channelID, helpText, threadTS)
 		return true
 	}
 
@@ -327,7 +329,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			agentList += fmt.Sprintf("%s%s\n", marker, label)
 		}
 		msg := fmt.Sprintf("*Active agent:* %s\n\n*Available agents:*\n%s\nUsage: `!agent <id>`", currentLabel, agentList)
-		c.postMessage(channelID, msg, "")
+		c.postMessage(channelID, msg, threadTS)
 		return true
 	}
 
@@ -345,7 +347,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			for _, a := range c.agents {
 				ids = append(ids, "`"+a.ID+"`")
 			}
-			c.postMessage(channelID, fmt.Sprintf("Unknown agent `%s`. Available: %s", agentID, strings.Join(ids, ", ")), "")
+			c.postMessage(channelID, fmt.Sprintf("Unknown agent `%s`. Available: %s", agentID, strings.Join(ids, ", ")), threadTS)
 			return true
 		}
 		c.setActiveAgentID(channelID, agentID)
@@ -355,7 +357,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 			label = agent.Name
 		}
 		c.logger.Info("Slack agent switched", "channel", channelID, "agent", agentID)
-		c.postMessage(channelID, fmt.Sprintf("Switched to agent *%s* (`%s`)", label, agentID), "")
+		c.postMessage(channelID, fmt.Sprintf("Switched to agent *%s* (`%s`)", label, agentID), threadTS)
 		return true
 	}
 
@@ -371,7 +373,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		}
 		status += "\n*Options:* `text`, `voice`, `mirror`, `both`, `reset`"
 
-		c.postMessage(channelID, status, "")
+		c.postMessage(channelID, status, threadTS)
 		return true
 	}
 
@@ -380,7 +382,7 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		sessionID := c.buildSessionID(channelID, "")
 		if err := c.deleteSession(agentID, sessionID); err != nil {
 			c.logger.Error("Failed to delete session", "error", err)
-			c.postMessage(channelID, "Failed to reset session.", "")
+			c.postMessage(channelID, "Failed to reset session.", threadTS)
 			return true
 		}
 		c.logger.Info("Session reset", "channel", channelID, "agent", agentID, "session", sessionID)
@@ -389,19 +391,19 @@ func (c *Client) handleBotCommand(userID, channelID, text string) bool {
 		if agent != nil && agent.Name != "" {
 			label = agent.Name
 		}
-		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), "")
+		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), threadTS)
 		return true
 	}
 
 	if strings.HasPrefix(lower, "responsemode ") {
 		arg := strings.TrimSpace(text[13:])
-		return c.handleResponseModeCommand(channelID, arg)
+		return c.handleResponseModeCommand(channelID, arg, threadTS)
 	}
 
 	return false
 }
 
-func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
+func (c *Client) handleResponseModeCommand(channelID, arg, threadTS string) bool {
 	validModes := []string{ResponseModeText, ResponseModeVoice, ResponseModeMirror, ResponseModeBoth}
 
 	if arg == "reset" {
@@ -411,12 +413,12 @@ func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
 		c.logger.Info("Response mode override cleared",
 			"config_mode", c.clientDef.Config.Slack.ResponseMode,
 		)
-		c.postMessage(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Slack.ResponseMode), "")
+		c.postMessage(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Slack.ResponseMode), threadTS)
 		return true
 	}
 
 	if !slices.Contains(validModes, arg) {
-		c.postMessage(channelID, fmt.Sprintf("Invalid mode `%s`. Valid options: `text`, `voice`, `mirror`, `both`, `reset`", arg), "")
+		c.postMessage(channelID, fmt.Sprintf("Invalid mode `%s`. Valid options: `text`, `voice`, `mirror`, `both`, `reset`", arg), threadTS)
 		return true
 	}
 
@@ -425,7 +427,7 @@ func (c *Client) handleResponseModeCommand(channelID, arg string) bool {
 	c.responseMu.Unlock()
 
 	c.logger.Info("Response mode overridden", "new_mode", arg)
-	c.postMessage(channelID, fmt.Sprintf("Response mode set to `%s` (until restart)", arg), "")
+	c.postMessage(channelID, fmt.Sprintf("Response mode set to `%s` (until restart)", arg), threadTS)
 	return true
 }
 
@@ -472,7 +474,10 @@ func (c *Client) deleteSession(agentID, sessionID string) error {
 	return nil
 }
 
-func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, teamID string, inputWasVoice bool) {
+func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, messageTS, teamID string, inputWasVoice bool) {
+	msgRef := slackapi.NewRefToMessage(channelID, messageTS)
+	c.addReaction("eyes", msgRef)
+
 	agentID := c.getActiveAgentID(channelID)
 	sessionID := c.buildSessionID(channelID, threadTS)
 
@@ -498,8 +503,16 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		c.logger.Error("Failed to marshal request", "error", err)
+		c.setReaction("x", msgRef)
 		return
 	}
+
+	c.setReaction("brain", msgRef)
+
+	progressTimer := time.AfterFunc(progressTimeout, func() {
+		c.postMessage(channelID, "Still working on it, this may take a moment...", threadTS)
+	})
+	defer progressTimer.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
@@ -507,6 +520,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))
 	if err != nil {
 		c.logger.Error("Failed to create request", "error", err)
+		c.setReaction("x", msgRef)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -515,7 +529,8 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
-		c.postMessage(channelID, "Sorry, I encountered an error processing your request.", threadTS)
+		c.setReaction("x", msgRef)
+		c.postMessage(channelID, fmt.Sprintf("Failed to reach the agent: %s", sanitizeError(err)), threadTS)
 		return
 	}
 	defer resp.Body.Close()
@@ -523,15 +538,21 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		c.logger.Error("Agent returned error", "status", resp.StatusCode, "body", string(body))
-		c.postMessage(channelID, "Sorry, I encountered an error processing your request.", threadTS)
+		c.setReaction("x", msgRef)
+		c.postMessage(channelID, fmt.Sprintf("Agent returned an error (status %d). Please try again.", resp.StatusCode), threadTS)
 		return
 	}
 
 	var events []map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
 		c.logger.Error("Failed to decode response", "error", err)
+		c.setReaction("x", msgRef)
+		c.postMessage(channelID, "Failed to parse the agent response. Please try again.", threadTS)
 		return
 	}
+
+	progressTimer.Stop()
+	c.setReaction("white_check_mark", msgRef)
 
 	responseText := c.extractResponseText(events)
 	c.sendResponse(channelID, responseText, threadTS, inputWasVoice)
@@ -799,6 +820,29 @@ func (c *Client) postMessage(channelID, text, threadTS string) {
 	if err != nil {
 		c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
 	}
+}
+
+func (c *Client) addReaction(emoji string, ref slackapi.ItemRef) {
+	if err := c.api.AddReaction(emoji, ref); err != nil {
+		c.logger.Debug("Failed to add reaction", "emoji", emoji, "error", err)
+	}
+}
+
+func (c *Client) setReaction(emoji string, ref slackapi.ItemRef) {
+	c.addReaction(emoji, ref)
+}
+
+func sanitizeError(err error) string {
+	msg := err.Error()
+	if len(msg) > 200 {
+		msg = msg[:200] + "..."
+	}
+	for _, secret := range []string{"Bearer ", "xoxb-", "xapp-", "bot", "token"} {
+		if strings.Contains(strings.ToLower(msg), strings.ToLower(secret)) {
+			return "an internal error occurred"
+		}
+	}
+	return msg
 }
 
 func (c *Client) setAuthHeader(req *http.Request) {
