@@ -10,7 +10,7 @@ models:
     name: Oye Magec
     file: oye-magec.onnx
     phrase: Oye Magec
-    threshold: 0.5
+    threshold: 0.15
     annotations:
       language: es
       trained_with: openwakeword
@@ -23,7 +23,7 @@ models:
     name: Magec
     file: magec.onnx
     phrase: Magec
-    threshold: 0.3
+    threshold: 0.1
     annotations:
       language: es
       trained_with: openwakeword

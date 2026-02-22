@@ -27,6 +27,10 @@ import (
 	ort "github.com/yalue/onnxruntime_go"
 )
 
+// MelStep is the number of new audio samples (at 16 kHz) between successive
+// mel-spectrogram frames.  OpenWakeWord uses a 10 ms step, i.e. 160 samples.
+const melStepSamples = 160
+
 // Global ONNX Runtime initialization (must only happen once)
 var (
 	ortInitOnce sync.Once
@@ -55,14 +59,13 @@ func newLightSessionOptions() (*ort.SessionOptions, error) {
 }
 
 const (
-	TargetSampleRate     = 16000
-	MelBins              = 32
-	EmbeddingSize        = 96
-	MelWindowSize        = 76
-	MelWindowStep        = 8
-	WakeWordFeatures     = 16
-	DefaultCooldownMs    = 2000
-	ProcessStepSamples   = 3200 // ~200ms of new audio before re-running inference
+	TargetSampleRate  = 16000
+	MelBins           = 32
+	EmbeddingSize     = 96
+	MelWindowSize     = 76
+	MelWindowStep     = 8
+	WakeWordFeatures  = 16
+	DefaultCooldownMs = 2000
 )
 
 // ModelConfig represents a wake word model configuration
@@ -95,10 +98,10 @@ type Detector struct {
 	wakeWordSessions map[string]*wakeWordModel
 	activeModelID    string
 
-	audioBuffer         []int16
-	newSamplesSinceLast int // samples added since last processBuffer
-	lastDetectionTime   time.Time
-	mu                  sync.Mutex
+	audioBuffer       []int16
+	processedSamples  int
+	lastDetectionTime time.Time
+	mu                sync.Mutex
 
 	// Callbacks
 	onDetected func(modelID string)
@@ -234,19 +237,25 @@ func (d *Detector) ProcessAudio(samples []int16) error {
 
 	// Add to buffer
 	d.audioBuffer = append(d.audioBuffer, samples...)
-	d.newSamplesSinceLast += len(samples)
 
 	// Keep max ~5 seconds of audio
 	maxAudioLength := TargetSampleRate * 5
 	if len(d.audioBuffer) > maxAudioLength {
-		d.audioBuffer = d.audioBuffer[len(d.audioBuffer)-maxAudioLength:]
+		excess := len(d.audioBuffer) - maxAudioLength
+		d.audioBuffer = d.audioBuffer[excess:]
+		d.processedSamples -= excess
+		if d.processedSamples < 0 {
+			d.processedSamples = 0
+		}
 	}
 
-	// Process when we have enough audio (at least 2 seconds) AND
-	// enough new samples since last processing to avoid running
-	// inference on every incoming frame.
+	// Run inference whenever there are enough new samples to produce at
+	// least one new mel-spectrogram frame (160 samples = 10 ms at 16 kHz).
+	// This keeps detection latency as low as the model allows while still
+	// avoiding redundant re-computation on identical audio.
 	minSamples := TargetSampleRate * 2
-	if len(d.audioBuffer) >= minSamples && d.newSamplesSinceLast >= ProcessStepSamples {
+	newSamples := len(d.audioBuffer) - d.processedSamples
+	if len(d.audioBuffer) >= minSamples && newSamples >= melStepSamples {
 		return d.processBuffer()
 	}
 
@@ -270,7 +279,7 @@ func (d *Detector) ProcessAudioFloat32(samples []float32) error {
 }
 
 func (d *Detector) processBuffer() error {
-	d.newSamplesSinceLast = 0
+	d.processedSamples = len(d.audioBuffer)
 
 	startTime := time.Now()
 
@@ -369,6 +378,7 @@ func (d *Detector) processBuffer() error {
 	if len(d.audioBuffer) > keepSamples {
 		d.audioBuffer = d.audioBuffer[len(d.audioBuffer)-keepSamples:]
 	}
+	d.processedSamples = len(d.audioBuffer)
 
 	return nil
 }
