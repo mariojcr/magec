@@ -17,6 +17,7 @@
 package voice
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math"
@@ -32,14 +33,36 @@ var (
 	ortInitErr  error
 )
 
+// newLightSessionOptions creates ONNX session options optimised for the small
+// models used in voice detection.  By default ONNX Runtime spawns as many
+// intra-op threads as there are CPU cores **for every session**.  With 4-5
+// concurrent sessions (mel, embedding, wakeword, VAD) this saturates the CPU.
+// These models are tiny, so a single thread per session is more than enough.
+func newLightSessionOptions() (*ort.SessionOptions, error) {
+	opts, err := ort.NewSessionOptions()
+	if err != nil {
+		return nil, err
+	}
+	if err := opts.SetIntraOpNumThreads(1); err != nil {
+		opts.Destroy()
+		return nil, err
+	}
+	if err := opts.SetInterOpNumThreads(1); err != nil {
+		opts.Destroy()
+		return nil, err
+	}
+	return opts, nil
+}
+
 const (
-	TargetSampleRate = 16000
-	MelBins          = 32
-	EmbeddingSize    = 96
-	MelWindowSize    = 76
-	MelWindowStep    = 8
-	WakeWordFeatures = 16
-	DefaultCooldownMs = 2000
+	TargetSampleRate     = 16000
+	MelBins              = 32
+	EmbeddingSize        = 96
+	MelWindowSize        = 76
+	MelWindowStep        = 8
+	WakeWordFeatures     = 16
+	DefaultCooldownMs    = 2000
+	ProcessStepSamples   = 3200 // ~200ms of new audio before re-running inference
 )
 
 // ModelConfig represents a wake word model configuration
@@ -72,10 +95,10 @@ type Detector struct {
 	wakeWordSessions map[string]*wakeWordModel
 	activeModelID    string
 
-	audioBuffer       []int16
-	lastDetectionTime time.Time
-	isProcessing      bool
-	mu                sync.Mutex
+	audioBuffer         []int16
+	newSamplesSinceLast int // samples added since last processBuffer
+	lastDetectionTime   time.Time
+	mu                  sync.Mutex
 
 	// Callbacks
 	onDetected func(modelID string)
@@ -141,14 +164,19 @@ func (d *Detector) Load() error {
 		return fmt.Errorf("failed to initialize ONNX Runtime: %w", ortInitErr)
 	}
 
-	var err error
+	// Create lightweight session options (1 thread per session)
+	opts, err := newLightSessionOptions()
+	if err != nil {
+		return fmt.Errorf("failed to create session options: %w", err)
+	}
+	defer opts.Destroy()
 
 	// Load melspectrogram model
 	d.melspecSession, err = ort.NewDynamicAdvancedSessionWithONNXData(
 		d.config.MelspecModelData,
 		[]string{"input"},
 		[]string{"output"},
-		nil,
+		opts,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to load melspec model: %w", err)
@@ -159,7 +187,7 @@ func (d *Detector) Load() error {
 		d.config.EmbeddingModelData,
 		[]string{"input_1"},
 		[]string{"conv2d_19"},
-		nil,
+		opts,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to load embedding model: %w", err)
@@ -171,7 +199,7 @@ func (d *Detector) Load() error {
 			modelCfg.Data,
 			[]string{"onnx::Flatten_0"},
 			[]string{"39"},
-			nil,
+			opts,
 		)
 		if err != nil {
 			d.logger.Warn("Failed to load wake word model", "model", modelCfg.ID, "error", err)
@@ -204,12 +232,9 @@ func (d *Detector) ProcessAudio(samples []int16) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	if d.isProcessing {
-		return nil
-	}
-
 	// Add to buffer
 	d.audioBuffer = append(d.audioBuffer, samples...)
+	d.newSamplesSinceLast += len(samples)
 
 	// Keep max ~5 seconds of audio
 	maxAudioLength := TargetSampleRate * 5
@@ -217,9 +242,11 @@ func (d *Detector) ProcessAudio(samples []int16) error {
 		d.audioBuffer = d.audioBuffer[len(d.audioBuffer)-maxAudioLength:]
 	}
 
-	// Process when we have enough audio (at least 2 seconds)
+	// Process when we have enough audio (at least 2 seconds) AND
+	// enough new samples since last processing to avoid running
+	// inference on every incoming frame.
 	minSamples := TargetSampleRate * 2
-	if len(d.audioBuffer) >= minSamples {
+	if len(d.audioBuffer) >= minSamples && d.newSamplesSinceLast >= ProcessStepSamples {
 		return d.processBuffer()
 	}
 
@@ -243,8 +270,7 @@ func (d *Detector) ProcessAudioFloat32(samples []float32) error {
 }
 
 func (d *Detector) processBuffer() error {
-	d.isProcessing = true
-	defer func() { d.isProcessing = false }()
+	d.newSamplesSinceLast = 0
 
 	startTime := time.Now()
 
@@ -254,22 +280,27 @@ func (d *Detector) processBuffer() error {
 		return fmt.Errorf("no active model")
 	}
 
-	// Calculate RMS for debugging
-	var sum float64
-	var maxVal int16
-	for _, s := range d.audioBuffer {
-		sum += float64(s) * float64(s)
-		if abs := int16(math.Abs(float64(s))); abs > maxVal {
-			maxVal = abs
+	if d.logger.Enabled(context.Background(), slog.LevelDebug) {
+		var sum float64
+		var maxVal int16
+		for _, s := range d.audioBuffer {
+			sum += float64(s) * float64(s)
+			abs := s
+			if abs < 0 {
+				abs = -abs
+			}
+			if abs > maxVal {
+				maxVal = abs
+			}
 		}
-	}
-	rms := math.Sqrt(sum / float64(len(d.audioBuffer)))
+		rms := math.Sqrt(sum / float64(len(d.audioBuffer)))
 
-	d.logger.Debug("Processing buffer",
-		"samples", len(d.audioBuffer),
-		"rms", int(rms),
-		"max", maxVal,
-	)
+		d.logger.Debug("Processing buffer",
+			"samples", len(d.audioBuffer),
+			"rms", int(rms),
+			"max", maxVal,
+		)
+	}
 
 	// Step 1: Compute melspectrogram
 	t1 := time.Now()
