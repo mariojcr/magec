@@ -2,6 +2,19 @@
 
 ## High Priority
 
+### Large Message Handling in Telegram and Slack
+
+**Problem**: No validation on inbound message size from Telegram/Slack, and outbound responses to Telegram may exceed the 4096-character message limit. Large inputs could cause excessive memory usage or unexpected behavior, and oversized responses will fail silently or get truncated by the API.
+
+**Solution**:
+- **Inbound**: Add a max input length check in both clients. Reject or truncate messages that exceed a reasonable threshold (e.g. 16K chars) with a user-friendly error.
+- **Outbound (Telegram)**: Split responses exceeding 4096 chars into multiple sequential messages. Preserve markdown formatting across splits where possible.
+- **Outbound (Slack)**: Slack's limit is ~40K per message block — less urgent but should still have a safety check.
+
+**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`
+
+---
+
 ### Multimodal File/Image Support in Clients
 
 **Problem**: Telegram and Slack clients only handle text and voice messages. Users sending images, documents, PDFs, or other files get silently ignored.
@@ -44,6 +57,101 @@
 
 ---
 
+### Improve Drag-and-Drop UX in Visual Flow Editor
+
+The visual flow editor's drag-and-drop experience needs polish. Improve feedback, snapping, reordering smoothness, and overall usability when building flows visually.
+
+**Modify**: `frontend/admin-ui/` (flow editor components)
+
+---
+
+### Line Breaks in Voice UI Text Chat
+
+**Problem**: The text input in the Voice UI doesn't support multi-line messages. Pressing Enter sends the message immediately with no way to insert a line break.
+
+**Solution**: Support Shift+Enter (or similar) for inserting line breaks. Switch input from `<input>` to `<textarea>` (or equivalent) with auto-resize behavior. Enter sends, Shift+Enter adds newline.
+
+**Modify**: `frontend/voice-ui/`
+
+---
+
+### Tool Execution Visibility in Voice UI
+
+**Problem**: When the agent executes tools during a conversation, the user has no visibility into what's happening behind the scenes. This creates a black-box experience that erodes trust.
+
+**Solution**: Show tool calls and their results in the chat timeline — collapsible blocks showing tool name, input, and output. Users can see what the agent did without it cluttering the main conversation flow.
+
+**Modify**: `frontend/voice-ui/`, potentially `server/api/user/` if tool events aren't already exposed in the response
+
+---
+
+### File Upload Support in Voice UI Text Chat
+
+**Problem**: Users can only send text and voice from the Voice UI. There's no way to attach files (images, PDFs, etc.) to a message from the web chat.
+
+**Solution**: Add a file attachment button to the text input area. Upload files, encode as base64, and send as `inlineData` parts alongside text in the `/run` request (same format as the Telegram/Slack multimodal support). Show file previews/thumbnails in the chat.
+
+**Modify**: `frontend/voice-ui/`, `server/api/user/handlers.go` (if multipart upload needed)
+
+---
+
+### Human-in-the-Loop Tool Confirmation
+
+**Problem**: MCP tools can perform sensitive actions (delete data, send emails, execute code). There's no way to require human approval before execution.
+
+**Solution**: Use ADK v0.4.0 `toolconfirmation` protocol. Wrap selected tools with `ctx.RequestConfirmation()` so they pause and ask the user before executing.
+
+**Design decisions**:
+- **Confirmation list lives on the agent, not on the MCP server**. A tool may be dangerous for a public-facing agent but fine for an internal one. The MCP is a shared resource — marking tools there would force the same policy on all agents.
+- **Agent config**: new field `toolConfirmation: ["delete_record", "send_email", "execute_*"]` — list of tool names/globs that require confirmation for this agent.
+- **Wrapper in `buildToolsets()`**: after loading MCP tools, wrap those matching `toolConfirmation` patterns with a confirmation layer that calls `ctx.RequestConfirmation(hint, payload)` before delegating to the real tool.
+- **Admin UI**: agent form gains a "Tools requiring confirmation" section — multi-select or free-text with glob support.
+
+**Client changes (all must migrate from `/run` to `/run_sse`)**:
+- The server already serves `/run_sse` via `adkrest.NewHandler`, and middleware (recorder, flow filter) already supports SSE.
+- **Telegram**: listen for `adk_request_confirmation` SSE events, show inline keyboard (Approve/Reject), send `FunctionResponse` back.
+- **Slack**: show interactive block with buttons, handle callback.
+- **Voice UI**: show collapsible confirmation card in chat timeline with Approve/Reject buttons.
+- **Executor** (`server/clients/executor.go`): auto-approve or skip (cron/webhook triggers can't wait for a human).
+
+**Protocol flow**:
+1. Tool's `Run()` calls `ctx.RequestConfirmation(hint, payload)` → returns nil, pausing execution
+2. ADK emits `FunctionCall` event with name `adk_request_confirmation` via SSE
+3. Client shows confirmation prompt to user (tool name, hint, args)
+4. User approves/rejects → client sends `FunctionResponse` with `{confirmed: true/false}`
+5. Tool reads `ctx.ToolConfirmation().Confirmed` and proceeds or aborts
+
+See `.agents/ADK_TOOLS.md` for protocol details.
+
+**Modify**: `server/agent/agent.go` (wrapper in `buildToolsets`), `server/store/types.go` (agent config field), `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `server/clients/executor.go`, `frontend/voice-ui/`, `frontend/admin-ui/`
+
+---
+
+### Artifact Management Toolset
+
+**Problem**: ADK has artifact storage (versioned, session-scoped) and REST endpoints for clients to download them, but the LLM has no way to create, read, list, or delete artifacts. Without tools that call `ctx.SaveArtifact()` / `ctx.LoadArtifact()`, the artifact system is dead weight.
+
+**Solution**: Build a base toolset with four Go-native tools using `functiontool`:
+- `save_artifact(name, content, mimeType)` — saves content as a versioned artifact in the session
+- `load_artifact(name)` — reads an artifact (latest version) back into context
+- `list_artifacts()` — lists all artifacts in the current session
+- `delete_artifact(name)` — removes an artifact
+
+**Use cases**:
+- LLM generates a report/export → `save_artifact()` → user downloads via Voice UI / Telegram / Slack using existing ADK GET endpoints
+- Flow pipelines: step 1 produces data → `save_artifact()`, step 2 reads → `load_artifact()` and transforms
+- Combined with a filesystem MCP: `load_artifact()` → process → `write_file()` to persist externally, or `read_file()` → `save_artifact()` to make available for download
+
+**Design**:
+- Configurable per agent (not all agents need it) — toggle in agent config, similar to memory tools
+- Sandboxed by session — no security risk, no file system access
+- ADK handles versioning and storage automatically
+- Replaces `loadartifactstool` from ADK (read-only) with a complete CRUD toolset
+
+**Modify**: `server/agent/agent.go` (register toolset in `buildToolsets`), new file `server/agent/tools/artifacts.go`, `server/store/types.go` (agent config toggle), `frontend/admin-ui/` (agent form toggle)
+
+---
+
 ### TTS Real-Time Streaming Playback
 
 **Problem**: Current TTS waits for all audio chunks before playback. Noticeable delay.
@@ -51,14 +159,6 @@
 **Solution**: Incremental playback using Web Audio API — decode and schedule each chunk as it arrives.
 
 **Modify**: `frontend/voice-ui/src/lib/audio/OpenAITTS.js`
-
----
-
-### Human-in-the-Loop Tool Confirmation
-
-ADK v0.4.0 provides `toolconfirmation` — tools can request human approval. Currently blocked because all clients call `/run` synchronously. Needs SSE streaming switch, admin UI notification area, and Telegram inline keyboard.
-
-See `.agents/ADK_TOOLS.md` for details.
 
 ---
 
