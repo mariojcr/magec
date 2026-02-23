@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Client` entity unifies authentication/authorization for all access points: voice-ui tablets, Telegram bots, webhooks, cron jobs, and any future integration. Each client type declares its configuration via **JSON Schema**.
+The `Client` entity unifies authentication/authorization for all access points: voice-ui tablets, Telegram bots, Discord bots, webhooks, cron jobs, and any future integration. Each client type declares its configuration via **JSON Schema**.
 
 ## Current State (Implemented)
 
@@ -12,6 +12,7 @@ The `Client` entity unifies authentication/authorization for all access points: 
 |------|--------------|----------|
 | `direct` | `{}` (empty) | Voice-UI tablets, apps — token-only auth |
 | `telegram` | `botToken`, `allowedUsers`, `allowedChats`, `responseMode` | Telegram bot |
+| `discord` | `botToken`, `allowedUsers`, `allowedChannels`, `responseMode` | Discord bot (Gateway WebSocket) |
 | `slack` | `botToken`, `appToken`, `allowedUsers`, `allowedChannels`, `responseMode` | Slack bot (Socket Mode) |
 | `cron` | `schedule`, `commandId` | Scheduled automation |
 | `webhook` | `passthrough` XOR `commandId` (via `oneOf`) | HTTP endpoint for integrations |
@@ -47,6 +48,13 @@ type TelegramClientConfig struct {
 type SlackClientConfig struct {
     BotToken        string   `json:"botToken"`
     AppToken        string   `json:"appToken"`
+    AllowedUsers    []string `json:"allowedUsers"`
+    AllowedChannels []string `json:"allowedChannels"`
+    ResponseMode    string   `json:"responseMode"`
+}
+
+type DiscordClientConfig struct {
+    BotToken        string   `json:"botToken"`
     AllowedUsers    []string `json:"allowedUsers"`
     AllowedChannels []string `json:"allowedChannels"`
     ResponseMode    string   `json:"responseMode"`
@@ -114,6 +122,26 @@ type WebhookClientConfig struct {
       "allowedUsers": ["U01ABCDEF"],
       "allowedChannels": [],
       "responseMode": "mirror"
+    }
+  }
+}
+```
+
+**Discord bot:**
+```json
+{
+  "id": "uuid-v4",
+  "name": "team-discord",
+  "type": "discord",
+  "token": "mgc_ddd...",
+  "allowedAgents": ["agent-uuid-1"],
+  "enabled": true,
+  "config": {
+    "discord": {
+      "botToken": "MTIz...",
+      "allowedUsers": ["123456789012345678"],
+      "allowedChannels": [],
+      "responseMode": "text"
     }
   }
 }
@@ -188,6 +216,9 @@ server/clients/
 ├── telegram/
 │   ├── spec.go          — Telegram provider (JSON Schema with x-format, enum)
 │   └── bot.go           — Telegram bot (long polling, voice, emoji reactions)
+├── discord/
+│   ├── spec.go          — Discord provider (JSON Schema with x-format, enum)
+│   └── bot.go           — Discord bot (Gateway WebSocket, voice, reactions, ! commands)
 ├── slack/
 │   ├── spec.go          — Slack provider (JSON Schema with x-format, enum, array)
 │   └── bot.go           — Slack bot (Socket Mode, audio clips, ! commands)
@@ -367,7 +398,7 @@ On `loadFromDisk()`, these migrations run in order (all idempotent):
 
 ## Future (out of scope)
 
-- **Discord provider** — `server/clients/discord/`
+- ~~**Discord provider**~~ ✅ — Implemented. See `server/clients/discord/`
 - **WhatsApp provider** — `server/clients/whatsapp/`
 - **Memory provider migration to JSON Schema** — `server/memory/` still uses FieldSpec
 - **Enrollment** — `open` / `closed` / `approval` modes for user self-registration
@@ -484,6 +515,7 @@ Shared utility package for message validation and splitting. Both Telegram and S
 | Client | Inbound | Outbound |
 |--------|---------|----------|
 | **Telegram** | `handleMessage()` validates `msg.Text`; `handleVoice()` validates transcribed text | `sendResponse()` splits via `SplitMessage(text, 4096)`, sends chunks sequentially |
+| **Discord** | `handleTextMessage()` validates text; `handleVoice()` validates transcribed text | `sendResponse()` splits via `SplitMessage(text, 2000)`, sends chunks sequentially |
 | **Slack** | `processMessage()` validates text (covers DMs + audio clips) | `postMessage()` splits via `SplitMessage(text, 39000)`, posts chunks sequentially |
 | **Voice UI** | No validation (browser input is bounded) | No splitting (browser has no render limit) |
 | **Executor** | No validation (prompts are from commands/webhooks, admin-controlled) | No splitting (returns string to HTTP caller) |
@@ -503,6 +535,7 @@ When an LLM uses `save_artifact` during a `/run` call, clients automatically del
 | Client | Method | Details |
 |--------|--------|---------|
 | **Telegram** | `ctx.Bot().SendDocument()` with `tu.FileFromReader()` | Artifact name used as filename |
+| **Discord** | `s.ChannelMessageSendComplex()` with `discordgo.File` | Artifact name used as filename |
 | **Slack** | `c.api.UploadFileV2()` | Artifact name as filename + title, respects thread |
 | **Voice UI** | Not yet implemented | Would need download button in UI |
 

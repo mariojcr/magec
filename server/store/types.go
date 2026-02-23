@@ -119,11 +119,12 @@ type TelegramClientConfig struct {
 }
 
 // DiscordClientConfig holds Discord bot settings for a client.
+// Uses the Discord Gateway (WebSocket) — no public URL needed.
 type DiscordClientConfig struct {
 	BotToken        string   `json:"botToken,omitempty" yaml:"botToken,omitempty"`
-	GuildID         string   `json:"guildId,omitempty" yaml:"guildId,omitempty"`
 	AllowedUsers    []string `json:"allowedUsers,omitempty" yaml:"allowedUsers,omitempty"`
 	AllowedChannels []string `json:"allowedChannels,omitempty" yaml:"allowedChannels,omitempty"`
+	ResponseMode    string   `json:"responseMode,omitempty" yaml:"responseMode,omitempty"`
 }
 
 // SlackClientConfig holds Slack bot settings for a client.

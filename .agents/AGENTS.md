@@ -12,7 +12,7 @@ Self-hosted multi-agent AI platform with voice, visual workflows, and tool integ
 - **MCP tools**: Home Assistant, GitHub, databases, and hundreds more via Model Context Protocol. HTTP headers and TLS skip supported.
 - **Memory**: Session (Redis) + long-term semantic (PostgreSQL/pgvector).
 - **Voice**: Wake word, VAD, STT, TTS. All server-side via ONNX Runtime. Privacy-first.
-- **Clients**: Voice UI (PWA), Admin UI, Telegram, Slack, webhooks, cron, REST API.
+- **Clients**: Voice UI (PWA), Admin UI, Telegram, Discord, Slack, webhooks, cron, REST API.
 - **A2A protocol**: Expose agents/flows as A2A-compatible endpoints for inter-agent communication.
 - **Context guard**: Automatic context window management with LLM-powered summarization.
 
@@ -22,6 +22,7 @@ Self-hosted multi-agent AI platform with voice, visual workflows, and tool integ
 |--------|------|-------------|
 | **Voice UI** | `direct` | Vue 3 PWA with voice/text chat, wake word detection, audio visualizer |
 | **Telegram** | `telegram` | Text and voice messages. Emoji reactions, per-chat agent switching, response modes |
+| **Discord** | `discord` | Gateway WebSocket (no public URL). DMs, @mentions, voice messages, reactions, ! commands |
 | **Slack** | `slack` | Socket Mode (WebSocket, no public URL). DMs, @mentions, audio clips. See `.agents/SLACK_CLIENT.md` |
 | **Webhook** | `webhook` | HTTP endpoint for external integrations (fixed command or passthrough prompt) |
 | **Cron** | `cron` | Scheduled task that fires a command against agents on a schedule |
@@ -78,6 +79,7 @@ magec/
 │   │   ├── executor.go         # RunClient() — executes commands against all allowedAgents
 │   │   ├── direct/spec.go      # Direct provider (empty schema)
 │   │   ├── telegram/           # Telegram bot (spec.go + bot.go)
+│   │   ├── discord/            # Discord Gateway bot (spec.go + bot.go)
 │   │   ├── slack/              # Slack Socket Mode bot (spec.go + bot.go)
 │   │   ├── webhook/            # Webhook handler (spec.go + handler.go)
 │   │   └── cron/               # Cron scheduler (spec.go + cron.go + scheduler.go)
@@ -308,6 +310,7 @@ GPU section commented out by default. Users who want cloud providers create diff
 - `github.com/gorilla/mux` — HTTP router (v1.8.1)
 - `github.com/gorilla/websocket` — WebSocket for voice handler (v1.5.3)
 - `github.com/mymmrac/telego` — Telegram bot API (v1.5.1)
+- `github.com/bwmarrin/discordgo` — Discord bot API + Gateway WebSocket (v0.29.0)
 - `github.com/slack-go/slack` — Slack API + Socket Mode (v0.17.3)
 - `github.com/yalue/onnxruntime_go` — ONNX runtime for voice models (v1.25.0)
 - `golang.org/x/crypto` — PBKDF2 for secret encryption (v0.46.0)
@@ -325,7 +328,7 @@ GPU section commented out by default. Users who want cloud providers create diff
 2. **Voice detection is server-side**: All ONNX inference (wake word + VAD) via WebSocket.
 3. **Memory is optional**: Without Redis/PostgreSQL, sessions are in-memory and long-term memory is disabled.
 4. **PWA over HTTP**: Requires Chrome flag for non-localhost addresses.
-5. **Telegram voice**: Requires TTS backend configured. ffmpeg required in container.
+5. **Telegram/Discord voice**: Requires TTS backend configured. ffmpeg required in container.
 6. **Parakeet/Edge TTS URLs**: Do NOT include `/v1` — Magec auto-appends it.
 7. **Edge TTS auth**: Use `REQUIRE_API_KEY=False` env var, no API key needed in backend config.
 8. **JSON Schema extensions**: `x-entity` (entity select), `x-format: password`, `x-placeholder`. Frontend renders dynamically.
@@ -338,7 +341,7 @@ GPU section commented out by default. Users who want cloud providers create diff
 15. **A2A agent card endpoints bypass client auth**: `.well-known/agent-card.json` paths are exempted from `ClientAuth` middleware so external agents can discover cards.
 16. **ContextGuard `safeSplitIndex`**: When splitting conversation history for summarization, the split point is adjusted to avoid orphaning Anthropic `tool_result` blocks.
 17. **Store env var expansion**: All store fields support `${VAR}` syntax. Secrets are injected as env vars (`os.Setenv`) before the store is expanded, so secrets can be referenced in backend URLs, bot tokens, etc.
-18. **Voice API routes always registered**: STT/TTS proxy endpoints are available regardless of Voice UI toggle, since Telegram/Slack clients need them.
+18. **Voice API routes always registered**: STT/TTS proxy endpoints are available regardless of Voice UI toggle, since Telegram/Discord/Slack clients need them.
 
 ## Testing
 

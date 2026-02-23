@@ -89,7 +89,7 @@ See all screenshots in the [documentation](https://achetronic.github.io/magec/do
 - [x] Slack client
 - [x] Context window management — automatic summarization when approaching token limits (experimental)
 - [x] Expose agents and flows with A2a (Agent-to-agent) protocol
-- [ ] Discord client
+- [x] Discord client
 
 ## Documentation
 

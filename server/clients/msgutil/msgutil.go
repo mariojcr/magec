@@ -7,6 +7,7 @@ import (
 
 const (
 	TelegramMaxMessageLength = 4096
+	DiscordMaxMessageLength  = 2000
 	SlackMaxMessageLength    = 39000
 
 	DefaultMaxInputLength = 16000

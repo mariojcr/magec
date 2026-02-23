@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 550">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#1a1a1d"/>
@@ -22,12 +22,12 @@
   </defs>
 
   <!-- Background -->
-  <rect width="960" height="540" fill="url(#bgGrad)"/>
+  <rect width="960" height="550" fill="url(#bgGrad)"/>
 
   <!-- ═══════════════ CLIENTS (Left) ═══════════════ -->
   <g transform="translate(30, 45)">
-    <rect x="0" y="0" width="150" height="450" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
-    <rect x="0" y="0" width="150" height="450" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
+    <rect x="0" y="0" width="150" height="460" rx="16" fill="#212125" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="150" height="460" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
     <text x="75" y="28" text-anchor="middle" fill="#38bcd8" font-family="system-ui, sans-serif" font-size="12" font-weight="600">Clients</text>
 
     <g transform="translate(15, 42)">
@@ -73,20 +73,20 @@
       <text x="70" y="25" text-anchor="middle" fill="#d6d3d1" font-family="system-ui, sans-serif" font-size="11" font-weight="500">REST API</text>
     </g>
 
-    <!-- Coming soon -->
-    <g transform="translate(15, 408)">
-      <rect x="0" y="0" width="120" height="32" rx="8" fill="#2a2a2f" stroke="#3d3d44" stroke-dasharray="3,2"/>
-      <text x="60" y="20" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="9">Discord</text>
+    <g transform="translate(15, 406)">
+      <rect x="0" y="0" width="120" height="42" rx="10" fill="#2a2a2f"/>
+      <circle cx="20" cy="21" r="8" fill="#5865F2" opacity="0.3"/>
+      <text x="70" y="25" text-anchor="middle" fill="#d6d3d1" font-family="system-ui, sans-serif" font-size="11" font-weight="500">Discord</text>
     </g>
   </g>
 
   <!-- Arrow: Clients → Server -->
-  <path d="M 190 250 L 240 250" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.5"/>
-  <circle cx="240" cy="250" r="3" fill="#fbbf24" opacity="0.7"/>
+  <path d="M 190 260 L 240 260" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.5"/>
+  <circle cx="240" cy="260" r="3" fill="#fbbf24" opacity="0.7"/>
 
   <!-- ═══════════════ MAGEC SERVER (Center) ═══════════════ -->
   <g transform="translate(250, 45)">
-    <rect x="0" y="0" width="340" height="380" rx="20" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="340" height="380" rx="20" fill="#212125" filter="url(#shadow)"/>
     <rect x="0" y="0" width="340" height="380" rx="20" fill="none" stroke="url(#sunGrad)" stroke-width="2"/>
 
     <!-- Sun logo + title -->
@@ -99,7 +99,7 @@
     <g transform="translate(15, 88)">
       <rect x="0" y="0" width="310" height="45" rx="12" fill="#2a2a2f"/>
       <text x="155" y="18" text-anchor="middle" fill="#a78bfa" font-family="system-ui, sans-serif" font-size="11" font-weight="600">Agents</text>
-      <text x="155" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">Several agents · Each with its own config</text>
+      <text x="155" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">Several agents · Skills · Per-agent config</text>
     </g>
 
     <!-- Flows -->
@@ -118,7 +118,7 @@
     <g transform="translate(173, 200)">
       <rect x="0" y="0" width="152" height="45" rx="10" fill="#2a2a2f"/>
       <text x="76" y="18" text-anchor="middle" fill="#4ade80" font-family="system-ui, sans-serif" font-size="10" font-weight="600">Security</text>
-      <text x="76" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">API Tokens</text>
+      <text x="76" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">API Tokens · Encrypted Secrets</text>
     </g>
 
     <g transform="translate(15, 255)">
@@ -129,7 +129,7 @@
     <g transform="translate(173, 255)">
       <rect x="0" y="0" width="152" height="45" rx="10" fill="#2a2a2f"/>
       <text x="76" y="18" text-anchor="middle" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="10" font-weight="600">Store</text>
-      <text x="76" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">Simple JSON + ${ENV_VARS}. Easy.</text>
+      <text x="76" y="35" text-anchor="middle" fill="#78716c" font-family="system-ui, sans-serif" font-size="9">JSON · Auto ${ENV_VARS}</text>
     </g>
 
     <!-- Ports bar -->
@@ -153,7 +153,7 @@
 
   <!-- ═══════════════ AI BACKENDS (Top Right) ═══════════════ -->
   <g transform="translate(670, 45)">
-    <rect x="0" y="0" width="250" height="210" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="250" height="210" rx="16" fill="#212125" filter="url(#shadow)"/>
     <rect x="0" y="0" width="250" height="210" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
     <text x="125" y="28" text-anchor="middle" fill="#a78bfa" font-family="system-ui, sans-serif" font-size="12" font-weight="600">AI Backends</text>
 
@@ -178,7 +178,7 @@
 
   <!-- ═══════════════ MCP TOOLS (Bottom Right) ═══════════════ -->
   <g transform="translate(670, 280)">
-    <rect x="0" y="0" width="250" height="215" rx="16" fill="url(#cardGrad)" filter="url(#shadow)"/>
+    <rect x="0" y="0" width="250" height="215" rx="16" fill="#212125" filter="url(#shadow)"/>
     <rect x="0" y="0" width="250" height="215" rx="16" fill="none" stroke="#3d3d44" stroke-width="1"/>
     <text x="125" y="28" text-anchor="middle" fill="#4ade80" font-family="system-ui, sans-serif" font-size="12" font-weight="600">MCP Tools</text>
 
@@ -202,5 +202,5 @@
   </g>
 
   <!-- Bottom tagline -->
-  <text x="480" y="525" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="11">Self-hosted · Multi-agent · Multi-provider · Your AI, your rules</text>
+  <text x="480" y="535" text-anchor="middle" fill="#52525b" font-family="system-ui, sans-serif" font-size="11">Self-hosted · Multi-agent · Multi-provider · Your AI, your rules</text>
 </svg>

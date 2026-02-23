@@ -78,13 +78,78 @@ The visual flow editor's drag-and-drop experience needs polish. Improve feedback
 
 ---
 
-### Tool Execution Visibility in Voice UI
+### Tool Execution Visibility in Clients
 
 **Problem**: When the agent executes tools during a conversation, the user has no visibility into what's happening behind the scenes. This creates a black-box experience that erodes trust.
 
-**Solution**: Show tool calls and their results in the chat timeline — collapsible blocks showing tool name, input, and output. Users can see what the agent did without it cluttering the main conversation flow.
+**Solution**: Show tool calls and their results as collapsible/summarized blocks so users can see what the agent did without cluttering the main conversation flow. Each client adapts to its platform's formatting capabilities.
 
-**Modify**: `frontend/voice-ui/`, potentially `server/api/user/` if tool events aren't already exposed in the response
+**Platform collapsible support**:
+
+| Client | Collapsible nativo | Mecanismo |
+|--------|-------------------|-----------|
+| **Telegram** | **Yes** | `<blockquote expandable>...</blockquote>` (HTML parse mode) — collapsed by default, user taps to expand |
+| **Slack** | **No** | No collapsible blocks in mrkdwn or Block Kit. Show a short summary line like `🔧 Tool: search_memory (completed)` without full details |
+| **Voice UI** | **Yes** | Custom Vue component — `<details>/<summary>` or click/tap collapsible block |
+
+**Implementation per client**:
+
+**Telegram** (`server/clients/telegram/bot.go`):
+- Switch from `Markdown` parse mode to `HTML` parse mode in `sendResponse()`
+- Extract tool call events from ADK response (already available as `functionCall`/`functionResponse` parts in the events array)
+- Before the main text response, send tool execution info wrapped in `<blockquote expandable>🔧 tool_name\n\nInput: ...\nOutput: ...</blockquote>`
+- Collapsed by default — user taps to see full tool details
+- If multiple tools were called, group them in a single expandable blockquote or send one per tool
+
+**Slack** (`server/clients/slack/bot.go`):
+- No native collapsible support — use a compact summary format
+- Before or above the main response text, add a line per tool: `🔧 *tool_name* — completed` (mrkdwn bold)
+- Optionally use a Slack `context` block (smaller, muted text) for tool summaries if switching to Block Kit messaging
+- Full tool input/output not shown (Slack has no way to hide it behind a toggle)
+
+**Voice UI** (`frontend/voice-ui/src/components/ChatMessage.vue`):
+- Add a new message type or section for tool calls in the chat timeline
+- Render as a collapsible block: header shows `🔧 tool_name`, body (hidden by default) shows input args and output
+- Style: muted colors (`bg-piedra-800`, `text-arena-500`), click to expand/collapse
+- Tool events are already present in the ADK `/run` response as `functionCall` and `functionResponse` parts — extract them in `AgentClient.js` `_extractResponses()`
+
+**ADK response events structure** (tool calls are already in the response):
+```json
+[
+  {
+    "author": "agent_name",
+    "content": {
+      "parts": [
+        {"functionCall": {"name": "search_memory", "args": {"query": "..."}}}
+      ]
+    }
+  },
+  {
+    "author": "agent_name",
+    "content": {
+      "parts": [
+        {"functionResponse": {"name": "search_memory", "response": {"result": "..."}}}
+      ]
+    }
+  },
+  {
+    "author": "agent_name",
+    "content": {
+      "parts": [
+        {"text": "Here is the final answer..."}
+      ]
+    }
+  }
+]
+```
+
+**Key decisions**:
+- Tool visibility is **per-client** — each client renders what its platform allows
+- Telegram and Voice UI get full collapsible details; Slack gets a compact summary
+- Tool info is sent **alongside** the response, not as a separate message (except Telegram where it may be a preceding message with expandable blockquote)
+- No server changes needed — tool events are already in the ADK `/run` response; clients just need to extract and render them
+
+**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `frontend/voice-ui/src/components/ChatMessage.vue`, `frontend/voice-ui/src/lib/api/AgentClient.js`
 
 ---
 

@@ -38,6 +38,7 @@ import (
 	user "github.com/achetronic/magec/server/api/user"
 	"github.com/achetronic/magec/server/clients"
 	"github.com/achetronic/magec/server/clients/cron"
+	discordclient "github.com/achetronic/magec/server/clients/discord"
 	slackclient "github.com/achetronic/magec/server/clients/slack"
 	"github.com/achetronic/magec/server/clients/telegram"
 	"github.com/achetronic/magec/server/clients/webhook"
@@ -56,6 +57,7 @@ import (
 
 	_ "github.com/achetronic/magec/server/api/admin/docs"
 	_ "github.com/achetronic/magec/server/clients/direct"
+	_ "github.com/achetronic/magec/server/clients/discord"
 	_ "github.com/achetronic/magec/server/clients/slack"
 	_ "github.com/achetronic/magec/server/memory/postgres"
 	_ "github.com/achetronic/magec/server/memory/redis"
@@ -284,7 +286,7 @@ func main() {
 	cronScheduler := cron.NewScheduler(executor, dataStore, slog.Default())
 	go cronScheduler.Start(ctx)
 
-	// Start Telegram and Slack clients (hot-reloaded on store changes)
+	// Start Telegram, Slack, and Discord clients (hot-reloaded on store changes)
 	cm := newClientManager(dataStore, cfg.Server.Port, slog.Default())
 	cm.start(ctx)
 
@@ -597,9 +599,9 @@ func (h *agentRouterHandler) rebuild(ctx context.Context, dataStore *store.Store
 func checkDependencies(cfg *config.Config) {
 	var missing []string
 
-	// ffmpeg — required for Telegram voice messages (OGG→WAV conversion)
+	// ffmpeg — required for Telegram/Discord voice messages (audio→WAV conversion)
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		missing = append(missing, "ffmpeg (required for Telegram voice messages)")
+		missing = append(missing, "ffmpeg (required for Telegram/Discord voice messages)")
 	}
 
 	// ONNX Runtime — required for voice UI (wake word + VAD detection)
@@ -678,7 +680,7 @@ func (m *clientManager) reconcile(ctx context.Context) {
 
 	desired := make(map[string]store.ClientDefinition)
 	for _, cl := range m.store.ListClients() {
-		if (cl.Type == "telegram" || cl.Type == "slack") && cl.Enabled && len(cl.AllowedAgents) > 0 {
+		if (cl.Type == "telegram" || cl.Type == "slack" || cl.Type == "discord") && cl.Enabled && len(cl.AllowedAgents) > 0 {
 			desired[cl.ID] = cl
 		}
 	}
@@ -709,6 +711,8 @@ func (m *clientManager) reconcile(ctx context.Context) {
 			m.startTelegram(ctx, cl)
 		case "slack":
 			m.startSlack(ctx, cl)
+		case "discord":
+			m.startDiscord(ctx, cl)
 		}
 	}
 }
@@ -806,4 +810,49 @@ func (m *clientManager) startSlack(ctx context.Context, cl store.ClientDefinitio
 	}(cl.Name)
 
 	m.logger.Info("Started Slack client", "client", cl.Name)
+}
+
+func (m *clientManager) startDiscord(ctx context.Context, cl store.ClientDefinition) {
+	if cl.Config.Discord == nil {
+		return
+	}
+
+	var agents []discordclient.AgentInfo
+	for _, agentID := range cl.AllowedAgents {
+		agentDef, ok := m.store.GetAgent(agentID)
+		if !ok {
+			if flowDef, ok := m.store.GetFlow(agentID); ok {
+				agents = append(agents, discordclient.AgentInfo{ID: agentID, Name: flowDef.Name})
+				continue
+			}
+			m.logger.Warn("Discord client references unknown agent", "client", cl.Name, "agent", agentID)
+			continue
+		}
+		agents = append(agents, discordclient.AgentInfo{ID: agentID, Name: agentDef.Name})
+	}
+
+	if len(agents) == 0 {
+		m.logger.Warn("Discord client has no valid agents", "client", cl.Name)
+		return
+	}
+
+	dcClient, err := discordclient.New(cl, m.agentURL, agents, m.logger)
+	if err != nil {
+		m.logger.Error("Failed to create Discord client", "client", cl.Name, "error", err)
+		return
+	}
+
+	clientCtx, cancel := context.WithCancel(ctx)
+	m.running[cl.ID] = &managedClient{stop: dcClient.Stop, cancel: cancel, hash: clientHash(cl)}
+
+	go func(name string) {
+		time.Sleep(500 * time.Millisecond)
+		if err := dcClient.Start(clientCtx); err != nil {
+			if clientCtx.Err() == nil {
+				m.logger.Error("Discord client error", "client", name, "error", err)
+			}
+		}
+	}(cl.Name)
+
+	m.logger.Info("Started Discord client", "client", cl.Name)
 }

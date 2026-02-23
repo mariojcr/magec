@@ -153,15 +153,20 @@ theme = 'magec'
     url = '/docs/slack/'
     weight = 4
   [[menu.docs]]
+    name = 'Discord'
+    parent = 'clients'
+    url = '/docs/discord/'
+    weight = 5
+  [[menu.docs]]
     name = 'Webhooks'
     parent = 'clients'
     url = '/docs/webhooks/'
-    weight = 5
+    weight = 6
   [[menu.docs]]
     name = 'Cron'
     parent = 'clients'
     url = '/docs/cron/'
-    weight = 6
+    weight = 7
 
   [[menu.docs]]
     identifier = 'reference'
