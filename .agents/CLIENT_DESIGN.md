@@ -177,15 +177,24 @@ type WebhookClientConfig struct {
 ### Architecture
 
 ```
-server/client/
-├── provider.go         — Provider interface, Schema type alias
-├── registry.go         — Global registry: Register(), ValidateConfig() with oneOf
-├── direct/direct.go    — Direct provider (empty schema)
-├── telegram/telegram.go — Telegram provider (JSON Schema with x-format, enum)
-├── slack/spec.go       — Slack provider (JSON Schema with x-format, enum, array)
-├── slack/bot.go        — Slack bot (Socket Mode, audio clips, ! commands)
-├── cron/cron.go        — Cron provider (JSON Schema with x-entity)
-└── webhook/webhook.go  — Webhook provider (JSON Schema with oneOf branches)
+server/clients/
+├── provider.go          — Provider interface, Schema type alias
+├── registry.go          — Global registry: Register(), ValidateConfig() with oneOf
+├── executor.go          — Shared execution logic (webhook + cron)
+├── direct/spec.go       — Direct provider (empty schema)
+├── telegram/
+│   ├── spec.go          — Telegram provider (JSON Schema with x-format, enum)
+│   └── bot.go           — Telegram bot (long polling, voice, emoji reactions)
+├── slack/
+│   ├── spec.go          — Slack provider (JSON Schema with x-format, enum, array)
+│   └── bot.go           — Slack bot (Socket Mode, audio clips, ! commands)
+├── cron/
+│   ├── spec.go          — Cron provider (JSON Schema with x-entity)
+│   ├── cron.go          — Cron runtime
+│   └── scheduler.go     — Cron scheduler
+└── webhook/
+    ├── spec.go          — Webhook provider (JSON Schema with oneOf branches)
+    └── handler.go       — Webhook HTTP handler
 ```
 
 ### Provider Interface
@@ -359,3 +368,84 @@ On `loadFromDisk()`, these migrations run in order (all idempotent):
 - **WhatsApp provider** — `server/clients/whatsapp/`
 - **Memory provider migration to JSON Schema** — `server/memory/` still uses FieldSpec
 - **Enrollment** — `open` / `closed` / `approval` modes for user self-registration
+
+## Multimodal File Support (pending implementation)
+
+### Overview
+
+Clients send user-uploaded files (images, documents, PDFs) as `inlineData` parts in the ADK `/run` request. The ADK and LLM backends handle them natively — no new endpoints or backend changes needed.
+
+### How it works
+
+```
+User sends photo in Telegram/Slack
+  → Client downloads file bytes from platform API
+  → Client encodes as base64
+  → Client sends to ADK /run as:
+    {"parts": [
+      {"text": "<!--MAGEC_META:...-->\nUser caption or empty"},
+      {"inlineData": {"mimeType": "image/jpeg", "data": "base64..."}}
+    ]}
+  → ADK deserializes to genai.Part{InlineData: &Blob{...}}
+  → LLM processes the file
+```
+
+### Telegram file types to handle
+
+| telego Field | Type | Notes |
+|---|---|---|
+| `Photo` | `[]PhotoSize` | Use last element (highest resolution). Has `FileID` |
+| `Document` | `*Document` | General file. Has `FileID`, `MIMEType` |
+| `Video` | `*Video` | Has `FileID`, `MIMEType` |
+| `Audio` | `*Audio` | Non-voice audio (.mp3). Has `FileID`, `MIMEType` |
+| `Animation` | `*Animation` | GIF. Has `FileID`, `MIMEType`. Also sets `Document` |
+| `VideoNote` | `*VideoNote` | Round video. Has `FileID` |
+| `Sticker` | `*Sticker` | Has `FileID`. Static or animated |
+| `Voice` | `*Voice` | Already handled (STT pipeline) — no change |
+| `Caption` | `string` | Text accompanying any media — goes as text part |
+
+All use `bot.GetFile(FileID)` → download URL → HTTP GET → raw bytes.
+
+### Slack file types to handle
+
+Files are in `ev.Message.Files` (type `[]slack.File`). Each has:
+- `Mimetype` — IANA MIME type
+- `Size` — file size in bytes
+- `URLPrivateDownload` / `URLPrivate` — download URL (requires Bearer token)
+- `Name`, `Title` — display names
+
+Currently only `audio/*` is handled (for STT). Need to add: `image/*`, `application/pdf`, and generic fallback.
+
+### Parts serialization
+
+Clients construct parts as raw `map[string]interface{}` (not `genai` types) since they serialize to JSON for the HTTP call to ADK. The change is from:
+
+```go
+"parts": []map[string]string{
+    {"text": fullMessage},
+}
+```
+
+To:
+
+```go
+"parts": []interface{}{
+    map[string]string{"text": metaContext},
+    map[string]interface{}{
+        "inlineData": map[string]interface{}{
+            "mimeType": mimeType,
+            "data":     base64EncodedBytes,
+        },
+    },
+}
+```
+
+If the message has a caption, it goes as the text part. If no caption, the text part contains only the MAGEC_META context.
+
+### File size validation
+
+20MB limit enforced before downloading. Telegram bot API limits files to 20MB anyway. For Slack, check `file.Size` before calling `downloadSlackFile()`.
+
+### A2A (future)
+
+A2A agent cards (`server/a2a/handler.go`) currently declare `DefaultInputModes: []string{"text/plain"}`. When A2A file support is added, include additional MIME types (`image/*`, `application/pdf`, etc.) and convert A2A `FilePart` → `genai.Part{InlineData}` in the executor.

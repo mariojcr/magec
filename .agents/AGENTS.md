@@ -12,15 +12,17 @@ Self-hosted multi-agent AI platform with voice, visual workflows, and tool integ
 - **MCP tools**: Home Assistant, GitHub, databases, and hundreds more via Model Context Protocol. HTTP headers and TLS skip supported.
 - **Memory**: Session (Redis) + long-term semantic (PostgreSQL/pgvector).
 - **Voice**: Wake word, VAD, STT, TTS. All server-side via ONNX Runtime. Privacy-first.
-- **Clients**: Voice UI (PWA), Admin UI, Telegram, webhooks, cron, REST API.
+- **Clients**: Voice UI (PWA), Admin UI, Telegram, Slack, webhooks, cron, REST API.
+- **A2A protocol**: Expose agents/flows as A2A-compatible endpoints for inter-agent communication.
+- **Context guard**: Automatic context window management with LLM-powered summarization.
 
 ### Clients
 
 | Client | Type | Description |
 |--------|------|-------------|
 | **Voice UI** | `direct` | Vue 3 PWA with voice/text chat, wake word detection, audio visualizer |
-| **Telegram** | `telegram` | Text and voice messages |
-| **Slack** | `slack` | Socket Mode (WebSocket, no public URL). DMs and @mentions. See `.agents/SLACK_CLIENT.md` |
+| **Telegram** | `telegram` | Text and voice messages. Emoji reactions, per-chat agent switching, response modes |
+| **Slack** | `slack` | Socket Mode (WebSocket, no public URL). DMs, @mentions, audio clips. See `.agents/SLACK_CLIENT.md` |
 | **Webhook** | `webhook` | HTTP endpoint for external integrations (fixed command or passthrough prompt) |
 | **Cron** | `cron` | Scheduled task that fires a command against agents on a schedule |
 
@@ -31,9 +33,9 @@ magec/
 ├── server/                     # Go backend
 │   ├── main.go                 # HTTP server (:8080 user + :8081 admin), routing, middleware
 │   ├── agent/
-│   │   ├── agent.go            # Multi-agent ADK setup, MCP transport, memory tools
+│   │   ├── agent.go            # Multi-agent ADK setup, MCP transport, memory tools, ContextGuard wiring
 │   │   ├── flow.go             # Flow→ADK workflow agent builder (sequential/parallel/loop)
-│   │   └── base_toolset.go     # Base tools
+│   │   └── base_toolset.go     # Base toolset (currently empty, placeholder for future tools)
 │   ├── api/
 │   │   ├── admin/              # Admin REST API (CRUD for all resources)
 │   │   │   ├── handler.go      # Router + helpers
@@ -42,18 +44,34 @@ magec/
 │   │   │   ├── clients.go      # Client CRUD + /types (JSON Schema) + token regen
 │   │   │   ├── commands.go     # Command CRUD
 │   │   │   ├── skills.go       # Skill CRUD + reference file upload/download/delete
-│   │   │   ├── memory.go       # Memory provider CRUD + health check + /types
+│   │   │   ├── memory.go       # Memory provider CRUD + ping + /types
+│   │   │   ├── secrets.go      # Secrets CRUD (encrypted at rest)
+│   │   │   ├── settings.go     # Global settings (session/longterm provider)
 │   │   │   ├── flows.go        # Flow CRUD + recursive validation
-│   │   │   ├── conversations.go # Conversation audit (list/get/delete/clear/stats/summary)
+│   │   │   ├── conversations.go # Conversation audit (list/get/delete/clear/stats/summary/pair/reset-session)
+│   │   │   ├── backup.go       # Backup/restore (tar.gz of data/ directory)
 │   │   │   └── docs/           # Generated swagger
 │   │   └── user/               # User-facing REST API
 │   │       ├── handlers.go     # Health, ClientInfo, Voice, Webhook swagger types
 │   │       ├── doc.go          # Swagger metadata
+│   │       ├── a2a_swagger.go  # A2A swagger documentation stubs
+│   │       ├── adk_swagger.go  # ADK REST API swagger documentation stubs
 │   │       └── docs/           # Generated swagger (userapi)
+│   ├── a2a/                   # A2A protocol handler
+│   │   └── handler.go          # Per-agent/flow JSON-RPC endpoints, agent cards, SSE streaming
+│   ├── plugin/                # ADK plugins
+│   │   └── contextguard/      # Context window management plugin
+│   │       ├── contextguard.go # BeforeModelCallback plugin, strategy dispatch, summary persistence
+│   │       ├── threshold.go    # Token-based strategy (estimates tokens, summarizes when near limit)
+│   │       └── sliding_window.go # Turn-count strategy (compacts after maxTurns content entries)
+│   ├── contextwindow/         # Remote model metadata registry
+│   │   └── contextwindow.go   # Fetches provider.json, caches context window sizes per model (6h refresh)
 │   ├── middleware/
-│   │   ├── middleware.go       # AccessLog (httpsnoop), CORS, ClientAuth
-│   │   ├── recorder.go         # ConversationRecorder (captures /run + /run_sse)
-│   │   └── flowfilter.go       # Flow response filtering by responseAgent
+│   │   ├── middleware.go       # AccessLog (httpsnoop), CORS, ClientAuth, AdminAuth (rate-limited)
+│   │   ├── recorder.go         # ConversationRecorder + ConversationRecorderSSE (dual-perspective)
+│   │   ├── flowfilter.go       # Flow response filtering by responseAgent
+│   │   ├── sessionensure.go    # Idempotent session creation (prevents overwriting ContextGuard state)
+│   │   └── sessionstate.go     # Seeds outputKey values into session state on creation
 │   ├── clients/                # Client type registry + runtime
 │   │   ├── provider.go         # Provider interface: Type(), DisplayName(), ConfigSchema()
 │   │   ├── registry.go         # Register(), ValidateConfig() with oneOf support
@@ -69,8 +87,9 @@ magec/
 │   │   ├── redis/redis.go      # Redis provider (session)
 │   │   └── postgres/postgres.go # Postgres provider (longterm, pgvector)
 │   ├── store/                  # In-memory store + JSON persistence
-│   │   ├── store.go            # Load/Save, CRUD, migration chain, OnChange()
+│   │   ├── store.go            # Load/Save, CRUD, migration chain, OnChange(), env var expansion
 │   │   ├── types.go            # All entity types (MCPServer includes Headers + Insecure)
+│   │   ├── crypto.go           # AES-256-GCM encryption/decryption for secrets (PBKDF2)
 │   │   └── conversations.go    # ConversationStore (data/conversations.json)
 │   ├── schema/validate.go      # JSON Schema validation (google/jsonschema-go)
 │   ├── config/config.go        # YAML config parsing (server + voice + log)
@@ -125,7 +144,6 @@ magec/
 │   ├── content/docs/           # Markdown docs (getting-started, install-*, configuration, etc.)
 │   └── themes/magec/           # Custom Hugo theme (layouts, css, js, shortcodes)
 ├── config.example.yaml
-├── RELEASE_NOTES.md
 ├── Makefile
 └── README.md
 ```
@@ -144,6 +162,9 @@ magec/
 | POST | `/api/v1/voice/{agentId}/transcription` | STT proxy (per-agent backend) |
 | WebSocket | `/api/v1/voice/events` | Voice events stream (wake word + VAD) |
 | GET | `/api/v1/client/info` | Client info (paired status, allowed agents with type/nested agents) |
+| POST | `/api/v1/a2a/{agentID}` | A2A JSON-RPC endpoint (per-agent/flow) |
+| GET | `/api/v1/a2a/.well-known/agent-card.json` | A2A global agent card discovery (all enabled agents) |
+| GET | `/api/v1/a2a/{agentID}/.well-known/agent-card.json` | A2A per-agent card (no auth required) |
 | GET | `/api/v1/health` | Health check |
 | GET | `/api/v1/swagger/` | Swagger UI |
 | GET | `/` | Voice UI static files |
@@ -153,7 +174,7 @@ magec/
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Admin UI static files |
-| GET | `/api/v1/admin/overview` | Dashboard: counts + agent summaries |
+| GET | `/api/v1/admin/auth/check` | Verify admin credentials (200 if valid) |
 | | **Backends** | CRUD: `/backends`, `/backends/{id}` |
 | | **Memory** | CRUD: `/memory`, `/memory/{id}`, `/memory/types`, `/memory/{id}/health` |
 | | **MCP Servers** | CRUD: `/mcps`, `/mcps/{id}` |
@@ -162,7 +183,10 @@ magec/
 | | **Clients** | CRUD: `/clients`, `/clients/{id}`, `/clients/types`, `/clients/{id}/regenerate-token` |
 | | **Commands** | CRUD: `/commands`, `/commands/{id}` |
 | | **Flows** | CRUD: `/flows`, `/flows/{id}` |
-| | **Conversations** | `/conversations`, `/conversations/{id}`, `/conversations/stats`, etc. |
+| | **Secrets** | CRUD: `/secrets`, `/secrets/{id}` (GET never returns value) |
+| | **Settings** | GET/PUT: `/settings` (global memory provider selection) |
+| | **Conversations** | `/conversations`, `/conversations/{id}`, `/conversations/clear`, `/conversations/stats`, `/conversations/{id}/summary`, `/conversations/{id}/pair`, `/conversations/{id}/reset-session` |
+| | **Backup** | GET `/settings/backup`, POST `/settings/restore` (tar.gz of data/) |
 
 ## Configuration
 
@@ -177,6 +201,7 @@ server:
   adminPort: 8081
   # adminPassword: ""  # Admin API auth (Bearer token)
   # encryptionKey: ""  # Encrypt secrets at rest (AES-256-GCM, independent from adminPassword)
+  # publicURL: ""       # Public URL for A2A agent cards (defaults to http://localhost:{port})
 
 voice:
   ui:
@@ -207,6 +232,13 @@ log:
 - **MCP headers/TLS**: `MCPServer` struct has `Headers map[string]string` and `Insecure bool`. `httpClientForMCP()` creates transport with optional `InsecureSkipVerify`
 - **Skill injection**: Skills are injected into the agent system prompt at build time. Instructions appended as `--- Skill: {name} ---`, reference file contents appended as `[Reference: {filename}]`. Files read from `data/skills/{skillId}/`
 - **Encryption key**: `server.encryptionKey` in config.yaml. Independent from `adminPassword`. Used to encrypt secrets at rest (AES-256-GCM, PBKDF2-derived)
+- **ContextGuard plugin**: ADK `plugin.Plugin` with `BeforeModelCallback`. Two strategies: `threshold` (token-based, summarizes when near context limit) and `sliding_window` (turn-count, compacts after maxTurns). Each agent summarizes with its own LLM. Summary persisted in session state
+- **Context window registry**: `server/contextwindow/` fetches model context sizes from remote `provider.json` (6h cache, 128k default fallback). Used by ContextGuard threshold strategy
+- **A2A protocol**: Agents/flows with `A2A.Enabled` get JSON-RPC endpoints via `a2a-go` + ADK `adka2a`. Agent cards auto-generated with capabilities and skills. SSE streaming for responses
+- **Dual-perspective conversation recording**: Middleware chains recorder twice: "admin" perspective (all events, before FlowResponseFilter) and "user" perspective (filtered, after). Each conversation has a `ParentID` linking the pair
+- **Store dual-copy pattern**: Store maintains `rawData` (unexpanded, with `${VAR}` refs) and `data` (env-expanded). API responses use raw data, runtime uses expanded. Secret values injected as env vars before expansion
+- **Session middleware**: `SessionEnsure` prevents overwriting existing sessions (protects ContextGuard summaries). `SessionStateSeed` injects empty outputKey values so flow agents don't fail on template vars
+- **Flow wrapAgent pattern**: Same agent can appear in multiple flow steps — `wrapAgent()` creates uniquely-named delegate agents to satisfy ADK's single-parent constraint
 
 ### Frontend Conventions (admin-ui)
 
@@ -217,7 +249,9 @@ log:
 - **JSON Schema form renderer**: `ClientDialog.vue` renders forms dynamically from `ConfigSchema()`
 - **Flow editor**: `FlowCanvas.vue` (pan/zoom/toolbar) + `FlowBlock.vue` (recursive, vuedraggable)
 - **Tailwind v4**: `@tailwindcss/vite` plugin, `@theme` directive for custom colors
-- **9 active tabs**: backends, memory, mcps, agents, skills, flows, commands, clients, conversations
+- **11 active tabs**: backends, memory, mcps, agents, flows, commands, skills, clients, secrets, conversations, settings
+- **Keyboard shortcuts**: `n` (new entity), `r` (refresh), `Cmd+K` (search palette)
+- **Settings view**: Global memory provider selection + backup/restore (tar.gz)
 
 ### Frontend Conventions (voice-ui)
 
@@ -267,11 +301,18 @@ GPU section commented out by default. Users who want cloud providers create diff
 
 **Go backend:**
 - `google.golang.org/adk` — Agent Development Kit (v0.4.0)
-- `github.com/achetronic/adk-utils-go` — ADK utilities (v0.2.0): providers, session, memory tools
-- `github.com/modelcontextprotocol/go-sdk` — MCP client
-- `github.com/yalue/onnxruntime_go` — ONNX runtime for voice models
-- `gopkg.in/yaml.v3` — YAML config parsing
+- `google.golang.org/genai` — Google GenAI SDK (v1.40.0)
+- `github.com/achetronic/adk-utils-go` — ADK utilities (v0.2.2): providers, session, memory tools
+- `github.com/a2aproject/a2a-go` — A2A protocol library (v0.3.3)
+- `github.com/modelcontextprotocol/go-sdk` — MCP client (v1.2.0)
+- `github.com/gorilla/mux` — HTTP router (v1.8.1)
+- `github.com/gorilla/websocket` — WebSocket for voice handler (v1.5.3)
+- `github.com/mymmrac/telego` — Telegram bot API (v1.5.1)
+- `github.com/slack-go/slack` — Slack API + Socket Mode (v0.17.3)
+- `github.com/yalue/onnxruntime_go` — ONNX runtime for voice models (v1.25.0)
+- `golang.org/x/crypto` — PBKDF2 for secret encryption (v0.46.0)
 - `github.com/felixge/httpsnoop` — Middleware metrics
+- `gopkg.in/yaml.v3` — YAML config parsing
 
 **Frontends:**
 - Vue 3, Vite 7.3, Tailwind CSS 4.1, Pinia 3
@@ -294,6 +335,10 @@ GPU section commented out by default. Users who want cloud providers create diff
 12. **Docker image includes default config.yaml**: Baked in at `/app/config.yaml`. Override with `-v`.
 13. **Git branch is `master`**, not `main`. All raw GitHub URLs use `master`.
 14. **Go 1.25+, Node 22+, Hugo v0.155+**.
+15. **A2A agent card endpoints bypass client auth**: `.well-known/agent-card.json` paths are exempted from `ClientAuth` middleware so external agents can discover cards.
+16. **ContextGuard `safeSplitIndex`**: When splitting conversation history for summarization, the split point is adjusted to avoid orphaning Anthropic `tool_result` blocks.
+17. **Store env var expansion**: All store fields support `${VAR}` syntax. Secrets are injected as env vars (`os.Setenv`) before the store is expanded, so secrets can be referenced in backend URLs, bot tokens, etc.
+18. **Voice API routes always registered**: STT/TTS proxy endpoints are available regardless of Voice UI toggle, since Telegram/Slack clients need them.
 
 ## Testing
 

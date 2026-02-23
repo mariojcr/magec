@@ -21,8 +21,11 @@
 | Agents | `sol` | `users` |
 | Flows | `rose` | `flow` |
 | Commands | `indigo` | `command` |
+| Skills | `cyan` | `skill` |
 | Clients | `lava` | `phone` |
+| Secrets | `amber` | `key` |
 | Conversations | `teal` | `chat` |
+| Settings | — | `settings` |
 
 Tinted backgrounds always `{color}-500/10` or `{color}-500/15`, text `{color}-300` or `{color}-400`.
 
@@ -44,7 +47,7 @@ Base classes: `bg-piedra-900 border border-piedra-700/50 rounded-xl p-4 transiti
 
 **DRY rule**: All entity list views use `<Card :color="entityColor">`. No view should duplicate hover border/shadow classes. Specialized cards (like `MemoryCard`) should wrap `Card` as their outer container rather than reimplementing the same `<div>` with duplicated styles.
 
-**Color map** (8 keys): `purple`, `green`, `atlantico`, `sol`, `rose`, `indigo`, `lava`, `teal` — matches the Entity Colors table above.
+**Color map** (10 keys): `purple`, `green`, `atlantico`, `sol`, `rose`, `indigo`, `cyan`, `lava`, `amber`, `teal` — matches the Entity Colors table above.
 
 ---
 

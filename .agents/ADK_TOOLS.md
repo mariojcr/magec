@@ -223,19 +223,19 @@ filtered := tool.FilterToolset(myToolset, func(ctx agent.ReadonlyContext, t tool
 
 ### Memory tools: `adk-utils-go` vs ADK official
 
-Magec currently uses custom memory tools from `adk-utils-go/tools/memory` (v0.1.7 in use, v0.2.0 available):
+Magec currently uses custom memory tools from `adk-utils-go/tools/memory` (v0.2.2 in use):
 
-| Tool | `adk-utils-go` v0.1.7 | `adk-utils-go` v0.2.0 | ADK official (`main`) |
+| Tool | `adk-utils-go` (current v0.2.2) | ADK official (`main`) |
 |------|----------------------|----------------------|----------------------|
-| **Search** | `search_memory` | `search_memory` (with entry IDs) | `loadmemorytool` (`load_memory`) |
-| **Save** | `save_to_memory` | `save_to_memory` | — (no equivalent) |
-| **Update** | — | `update_memory` (by entry ID) | — (no equivalent) |
-| **Delete** | — | `delete_memory` (by entry ID) | — (no equivalent) |
-| **Auto-preload** | — | — | `preloadmemorytool` (auto-injects memories) |
+| **Search** | `search_memory` (with entry IDs) | `loadmemorytool` (`load_memory`) |
+| **Save** | `save_to_memory` | — (no equivalent) |
+| **Update** | `update_memory` (by entry ID) | — (no equivalent) |
+| **Delete** | `delete_memory` (by entry ID) | — (no equivalent) |
+| **Auto-preload** | — | `preloadmemorytool` (auto-injects memories) |
 
-#### `adk-utils-go` v0.2.0 additions
+#### `adk-utils-go` v0.2.2 features
 
-The v0.2.0 introduces an `ExtendedMemoryService` interface (implemented by Postgres provider). When the memory service supports it, two extra tools are automatically registered:
+The current version includes an `ExtendedMemoryService` interface (implemented by Postgres provider). When the memory service supports it, two extra tools are automatically registered:
 
 - **`update_memory(id, content)`** — Updates an existing memory entry's content by ID. The ID comes from `search_memory` results (which now include `id` fields in v0.2.0)
 - **`delete_memory(id)`** — Permanently deletes a memory entry by ID
@@ -252,4 +252,4 @@ When ADK's memory tools reach a release tag:
 3. Keep `save_to_memory`, `update_memory`, and `delete_memory` from `adk-utils-go` (ADK has no save/update/delete equivalents)
 4. Remove the `memoryInstruction` constant and its "CRITICAL: At the START..." hack
 
-**Short-term action**: Upgrade Magec from `adk-utils-go` v0.1.7 to v0.2.0 to get `update_memory` and `delete_memory` for Postgres-backed agents
+**Short-term action**: Already on `adk-utils-go` v0.2.2 with `update_memory` and `delete_memory` available for Postgres-backed agents.

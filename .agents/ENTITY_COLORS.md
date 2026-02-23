@@ -23,7 +23,7 @@ Within the Clients section, badges differentiate client types:
 
 | Client Type | Badge Color | Description |
 |-------------|-------------|-------------|
-| `direct`, `telegram` | Lava (red) | Interactive clients |
+| `direct`, `telegram`, `slack` | Lava (red) | Interactive clients |
 | `cron`, `webhook` | Teal | Automation clients |
 
 ## Usage Pattern

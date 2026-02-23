@@ -11,6 +11,7 @@ Store (in-memory + JSON persistence → data/store.json)
 │   └── embedding: *BackendRef (longterm only, nil for session)
 ├── MCPServers[]        — reusable MCP servers (global)
 │   ├── endpoint, type (http|stdio), headers, insecure
+│   ├── command, args, env, workDir (stdio transport)
 │   └── systemPrompt
 ├── Skills[]            — reusable skill packs (instructions + reference files)
 │   ├── id, name, description, instructions
@@ -21,17 +22,22 @@ Store (in-memory + JSON persistence → data/store.json)
 │   ├── llm: {backend, model}
 │   ├── transcription: {backend, model}
 │   ├── tts: {backend, model, voice, speed}
-│   ├── memory: {session: "provider-id", longTerm: "provider-id"}
 │   ├── mcpServers: ["id1", "id2"]
-│   └── skills: ["id1", "id2"]
+│   ├── skills: ["id1", "id2"]
+│   ├── tags: ["tag1", "tag2"]
+│   ├── contextGuard: {enabled, strategy, maxTurns}
+│   └── a2a: {enabled}  — exposes agent via A2A protocol
 ├── Clients[]           — access points with token-based auth
 │   ├── id, name, type, token, allowedAgents, enabled
-│   └── config: {telegram?, cron?, webhook?}  — JSON Schema driven
+│   └── config: {telegram?, slack?, cron?, webhook?}  — JSON Schema driven
 ├── Commands[]          — reusable prompts
 │   ├── id, name, description, prompt
 ├── Flows[]             — multi-agent workflows
 │   ├── id, name, description
-│   └── root: FlowStep (recursive tree with responseAgent flag)
+│   ├── root: FlowStep (recursive tree with responseAgent flag)
+│   └── a2a: {enabled}  — exposes flow via A2A protocol
+├── Secrets[]           — encrypted key-value pairs for env var injection
+│   ├── id, name, key, value, description
 └── Settings            — global memory provider selection
     ├── sessionProvider, longTermProvider
 ```
@@ -103,7 +109,7 @@ Skill instructions and reference file contents are injected into the agent syste
 | GET/PUT/DELETE | `/clients/{id}` | Get / Update / Delete |
 | POST | `/clients/{id}/regenerate-token` | Regenerate auth token |
 
-Client types: `direct`, `telegram`, `cron`, `webhook`. See [CLIENT_DESIGN.md](CLIENT_DESIGN.md).
+Client types: `direct`, `telegram`, `slack`, `cron`, `webhook`. See [CLIENT_DESIGN.md](CLIENT_DESIGN.md).
 
 ### Commands
 
@@ -118,6 +124,44 @@ Client types: `direct`, `telegram`, `cron`, `webhook`. See [CLIENT_DESIGN.md](CL
 |--------|------|-------------|
 | GET/POST | `/flows` | List / Create |
 | GET/PUT/DELETE | `/flows/{id}` | Get / Update / Delete |
+
+### Secrets
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/POST | `/secrets` | List / Create (GET never returns `value`) |
+| GET/PUT/DELETE | `/secrets/{id}` | Get / Update / Delete (empty `value` on update preserves existing) |
+
+### Settings
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/PUT | `/settings` | Get / Update global settings (sessionProvider, longTermProvider) |
+
+### Conversations
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/conversations` | List (with filters: agent, source, client, perspective) |
+| GET | `/conversations/{id}` | Get conversation with full messages |
+| DELETE | `/conversations/{id}` | Delete conversation |
+| DELETE | `/conversations/clear` | Clear all conversations |
+| GET | `/conversations/stats` | Aggregated stats (by agent, source, time) |
+| PUT | `/conversations/{id}/summary` | Generate AI summary of conversation |
+| GET | `/conversations/{id}/pair` | Find paired perspective (admin↔user) |
+| POST | `/conversations/{id}/reset-session` | Delete ADK session for this conversation |
+
+### Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/auth/check` | Verify admin credentials (returns 200 if valid) |
+
+### Overview
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/overview` | Dashboard: agent counts + summaries |
 
 ### Webhook Endpoint (User API, port 8080)
 
@@ -151,6 +195,6 @@ All idempotent:
 
 ## Future Work
 
-- [ ] Admin API authentication
 - [ ] Database persistence instead of JSON
 - [ ] Multi-tenant (multiple users with their own agents)
+- [ ] Conversation `perspective` field documentation (dual admin/user recording)

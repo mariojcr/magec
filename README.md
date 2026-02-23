@@ -88,8 +88,8 @@ See all screenshots in the [documentation](https://achetronic.github.io/magec/do
 - [x] Secrets management (encrypted storage for API keys and sensitive credentials)
 - [x] Slack client
 - [x] Context window management — automatic summarization when approaching token limits (experimental)
+- [x] Expose agents and flows with A2a (Agent-to-agent) protocol
 - [ ] Discord client
-- [ ] Expose agents and flows with A2a (Agent-to-agent) protocol
 
 ## Documentation
 

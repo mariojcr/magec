@@ -297,6 +297,45 @@ Do not use `X-Admin-Password` custom header — use standard `Authorization: Bea
 
 ---
 
+## Remote A2A agents use ADK native remoteagent, not custom protocol
+
+**Date**: 2026-02-22
+**Status**: Decided (pending implementation)
+
+When connecting to remote A2A agents, magec uses ADK's `agent/remoteagent` package (`remoteagent.NewA2A()`) instead of implementing custom A2A client logic. This gives us:
+
+- Agent card discovery, `tasks/send`, SSE streaming — all handled by the library
+- Two composition modes for free: as tool (`agenttool.New(remote)`) for orchestration, or as sub-agent (transfer) for direct user interaction
+- Same entity pattern as MCPs: a `RemoteAgent` in the store with URL + credentials, referenced by agent ID
+
+The orchestrator agent (e.g. MetaMagecAgent) is a regular `AgentDefinition` with a system prompt and `remoteAgents` list. From a flow perspective, it's just another step — the flow doesn't know it delegates to remote A2A agents internally.
+
+**Do not**: Implement custom A2A client calls in `callAgent()` or `executor.go`. Do not bypass ADK's remoteagent — it handles protocol details, retries, and streaming.
+
+---
+
+## Multimodal files use inlineData, not fileData
+
+**Date**: 2026-02-22
+**Status**: Decided (pending implementation)
+
+When clients (Telegram, Slack) receive files from users, the files are sent to the ADK `/run` endpoint as `inlineData` (base64-encoded bytes + mimetype) in `newMessage.parts[]`, not as `fileData` (URI reference).
+
+**Reasoning**:
+- `fileData` with URI is a Gemini-specific concept (Google Files API). OpenAI and Anthropic do not support fetching from URIs — they expect content inline.
+- Magec supports all three backend types. `inlineData` is the common denominator that works everywhere.
+- Files from Telegram/Slack chats are typically small (photos, screenshots, short PDFs) — base64 overhead (~33%) is acceptable.
+- No external storage dependency (S3, MinIO) needed.
+
+**Size limit**: 20MB per file (Telegram bot API limit is 20MB, Gemini inline limit is 20MB, Anthropic is 5MB for images). Enforced client-side before download.
+
+**ADK already supports this**: `genai.Part{InlineData: &Blob{Data: []byte, MIMEType: string}}` deserializes natively from the JSON payload. Zero backend changes.
+
+**Do not**: Use `fileData` for client-uploaded files. Do not add object storage for this use case.
+If a future need arises for large files (>20MB), evaluate `fileData` with Gemini Files API as a Gemini-specific path, keeping `inlineData` as fallback for other backends.
+
+---
+
 ## Secrets with env var injection and encryption at rest (v0.2.0)
 
 **Date**: 2026-02-14

@@ -86,10 +86,22 @@ server/clients/slack/
 1. Receive event → extract user ID, channel ID, text
 2. Permission check: `isAllowed(userID, channelID)`
 3. Check for audio clips in `ev.Message.Files` (mimetype `audio/*`)
-4. Check for bot commands: `help`, `agent`, `responsemode`
+4. Check for bot commands: `!help`, `!agent`, `!reset`, `!responsemode`
 5. Build MAGEC_META with Slack context
 6. Call agent via internal HTTP API (`/api/v1/agent/run`)
 7. Respond based on response mode (text, voice, or both)
+
+### Emoji reactions
+
+Same pattern as Telegram: `eyes` (received) → `brain` (thinking) → `white_check_mark` (success) or `x` (failure).
+
+### Progress timeout
+
+30-second timer sends "Still working on it..." if the agent hasn't responded yet. Same pattern as Telegram.
+
+### Error sanitization
+
+Redacts `xoxb-` and `xapp-` tokens from error messages before showing to users.
 
 ### Voice message handling
 
@@ -146,11 +158,12 @@ When a user mentions the bot in a channel, the response is posted as a **thread 
 
 | Command | Description |
 |---------|-------------|
-| `help` | Show available commands |
-| `agent` | Show/switch active agent |
-| `agent <id>` | Switch to specific agent |
-| `responsemode` | Show current response mode |
-| `responsemode <mode>` | Set response mode (text/voice/mirror/both/reset) |
+| `!help` | Show available commands |
+| `!agent` | Show/switch active agent |
+| `!agent <id>` | Switch to specific agent |
+| `!reset` | Reset session (delete ADK session, start fresh) |
+| `!responsemode` | Show current response mode |
+| `!responsemode <mode>` | Set response mode (text/voice/mirror/both/reset) |
 
 ## Wiring (main.go)
 
@@ -184,4 +197,15 @@ Same pattern as Telegram:
 - **Slash commands** — would require HTTP endpoint, defeats Socket Mode purpose
 - **Interactive components** (buttons, modals) — future enhancement
 - **Video clips** — Slack has video clips but STT doesn't apply; future enhancement
-- **File uploads** — future enhancement via `loadartifactstool`
+
+## Multimodal File Support (pending implementation)
+
+Files from Slack users will be sent as `inlineData` parts in the ADK `/run` request. See `CLIENT_DESIGN.md` for full design.
+
+**Changes needed in `bot.go`**:
+- `handleAudioClip()` currently only processes `audio/*` files. Rename/refactor to `handleFiles()` and add handling for `image/*`, `application/pdf`, and generic mimetypes.
+- For non-audio files: download via `downloadSlackFile()`, encode base64, add as `inlineData` part.
+- `processMessage()`: change parts from `[]map[string]string` to `[]interface{}` to support mixed text+inlineData.
+- For `handleAppMention`: files may arrive differently than in DMs — verify `ev.Message.Files` availability in mention events.
+- File size: check `file.Size` < 20MB before downloading.
+- `ev.Text` alongside files becomes the caption/text part.

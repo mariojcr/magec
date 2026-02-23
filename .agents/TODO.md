@@ -2,12 +2,45 @@
 
 ## High Priority
 
-### ~~Infinite Conversation (ContextGuard)~~ (Implemented ✅)
+### Multimodal File/Image Support in Clients
 
-Implemented as an ADK `plugin.Plugin` with `BeforeModelCallback`. Each agent uses its own LLM for summarization (matching user expectations on quality). Context window data fetched from Crush provider.json, refreshed every 6h, 128k default fallback. Threshold at 75%, recent window 20%. Summary persisted in `session.State`. LLM map rebuilt on every hot-reload.
+**Problem**: Telegram and Slack clients only handle text and voice messages. Users sending images, documents, PDFs, or other files get silently ignored.
 
-**New files**: `server/contextwindow/contextwindow.go`, `server/plugin/contextguard/contextguard.go`
-**Modified**: `server/main.go`, `server/agent/agent.go`
+**Solution**: Download files from Telegram/Slack, encode as base64, and send as `inlineData` parts alongside text in the ADK `/run` request. The ADK already supports `genai.Part{InlineData: &Blob{Data, MIMEType}}` — zero backend changes needed.
+
+**Telegram** (`server/clients/telegram/bot.go`):
+- Current state: only `Voice` (dedicated handler) and `Text` (predicate at ~line 171 requires `Text != ""` and `Voice == nil`). Everything else is silently dropped.
+- Add handler for `Document`, `Photo`, `Video`, `Audio`, `Animation`, `VideoNote`, `Sticker`. All have `FileID` → `bot.GetFile()` → download bytes.
+- `Photo` is `[]PhotoSize` — use last element (highest resolution) for its `FileID`.
+- `Caption` field accompanies media — include as `{"text": caption}` part alongside `{"inlineData": {...}}`.
+- `callAgent()` (~line 803): change `"parts": []map[string]string{{"text": ...}}` to `[]interface{}` to support both text and inlineData parts.
+
+**Slack** (`server/clients/slack/bot.go`):
+- Current state: `handleAudioClip()` (~line 213) processes `ev.Message.Files` but only `audio/*` mimetype. Other mimetypes silently skipped.
+- Add handling for `image/*`, `application/pdf`, and generic fallback for other types.
+- Files are on `ev.Message.Files` (type `[]slack.File`) with `Mimetype`, `Size`, `URLPrivateDownload`/`URLPrivate`.
+- Reuse existing `downloadSlackFile()` (~line 658) for all file types.
+- `processMessage()` (~line 477): same parts change as Telegram.
+- For `handleAppMention`: verify if files arrive via `AppMentionEvent` or need separate handling.
+
+**ADK payload format**:
+```json
+{
+  "parts": [
+    {"text": "<!--MAGEC_META:...-->\nCaption or question about the file"},
+    {"inlineData": {"mimeType": "image/png", "data": "<base64>"}}
+  ]
+}
+```
+
+**File size validation**: Add 20MB limit (denominator común: Gemini 20MB, OpenAI 20MB, Anthropic 5MB for images). Telegram API limits bots to 20MB anyway. Reject oversized files with user-friendly message.
+
+**LLM limitations**: GPT-4o/Claude/Gemini handle images and PDFs natively. For Word/Excel/CSV, the model may not support them — the user gets a natural "I can't process this format" response from the LLM itself.
+
+**A2A (future, non-blocking)**: `server/a2a/handler.go` declares `DefaultInputModes: []string{"text/plain"}`. When A2A file support is needed, add `"image/*"`, `"application/pdf"`, etc. The A2A handler converts `FilePart` → `genai.Part{InlineData}` before passing to ADK.
+
+**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`
+**No changes needed**: `server/agent/agent.go`, `server/api/user/handlers.go`, ADK library
 
 ---
 
@@ -21,17 +54,42 @@ Implemented as an ADK `plugin.Plugin` with `BeforeModelCallback`. Each agent use
 
 ---
 
-### Embed admin-ui and voice-ui into Go binary
+### Human-in-the-Loop Tool Confirmation
 
-**Problem**: Release tarballs only contain the binary. The UIs are not embedded, so standalone binaries can't serve them (Docker works because Dockerfile copies `dist/`).
+ADK v0.4.0 provides `toolconfirmation` — tools can request human approval. Currently blocked because all clients call `/run` synchronously. Needs SSE streaming switch, admin UI notification area, and Telegram inline keyboard.
 
-**Solution**: Use `//go:embed` for `admin-ui/dist/` and `voice-ui/dist/`. Replace `http.Dir(...)` with `http.FS(...)` in `main.go`. CI already runs Node.js before Go build.
-
-**Modify**: `server/main.go`, `server/frontend/embed.go`
+See `.agents/ADK_TOOLS.md` for details.
 
 ---
 
 ## Medium Priority
+
+### Composable Flows (flow-as-step)
+
+**Problem**: Flows can only reference agents in their steps. To build complex pipelines (e.g. a content pipeline that includes a review sub-pipeline), users have to flatten everything into a single flow, which becomes unwieldy.
+
+**Solution**: Allow a flow step to reference another flow ID, not just an agent ID. Since flows already compile to ADK agents (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) and register in `adkAgentMap`, a step pointing to a flow ID resolves to the sub-flow's compiled agent.
+
+**Key design decisions**:
+
+- **Compilation order**: Build flows in topological order (leaf flows first). Flows with no flow-dependencies compile first, then flows that reference them.
+- **Cycle detection**: Reject flow A → flow B → flow A at save time (admin API validation) and at compile time (`BuildFlowAgent`).
+- **responseAgent inheritance**: A step pointing to a sub-flow has a toggle: "inherit responseAgents" (default) or "silence" (step produces no public output). No partial override — inherit all or none. To change which agents are responseAgents, edit the sub-flow directly.
+- **Output key**: Sub-flow's output key passes through as the step's output, same as a regular agent step.
+- **UI**: Flow step agent selector shows both agents and flows (distinguished by `type` field). Cycle detection prevents selecting a flow that would create a circular dependency.
+
+**Implementation**:
+
+1. `BuildFlowAgent` (`server/agent/flow.go`): when resolving a step's agent ID, look in `adkAgentMap` which already contains both agents and compiled flows
+2. Add topological sort in `agent.go` `New()` before the flow compilation loop (~line 181)
+3. Add cycle detection: build dependency graph from flow steps, reject if cycle found
+4. `FlowStep` gains `InheritResponseAgents *bool` (default true). When false, the step's sub-flow responseAgents are excluded from the parent flow's `ResponseAgentIDs()`
+5. Admin API: validate no cycles on flow create/update
+6. Admin UI: flow step selector includes flows, visual indicator for flow vs agent
+
+**Modify**: `server/agent/flow.go`, `server/agent/agent.go`, `server/store/types.go`, `server/api/admin/flows.go`, `frontend/admin-ui/`
+
+---
 
 ### Refactor MemoryCard to use Card component
 
@@ -47,23 +105,107 @@ On mobile, microphone picks up speaker output and triggers wake word during TTS 
 
 ---
 
-### ~~Admin API Authentication~~ (v0.2.0 ✅)
-
-~~Port 8081 has no auth. Anyone with network access can modify everything.~~ **Implemented**: `server.adminPassword` in config, `AdminAuth` middleware with constant-time comparison and rate limiting, login screen in Admin UI.
-
----
-
 ### Move `response_format` Out of Clients
 
 TTS `response_format` (opus, mp3, wav) is hardcoded per client. Could be per-agent in `TTSRef`, per-client in config, or documented as client contract. **Decision**: TBD.
 
 ---
 
-### Human-in-the-Loop Tool Confirmation
+### Remote A2A Agents as Tools (orchestration mode)
 
-ADK v0.4.0 provides `toolconfirmation` — tools can request human approval. Currently blocked because all clients call `/run` synchronously. Needs SSE streaming switch, admin UI notification area, and Telegram inline keyboard.
+**Problem**: A user may have multiple A2A agents deployed across their network (e.g. researcher, architect, code reviewer). They want a local "header" agent (MetaMagecAgent) that can call those remote agents when it decides, consolidate their responses, and deliver a unified answer to the user.
 
-See `.agents/ADK_TOOLS.md` for details.
+**Solution**: Use ADK's `agent/remoteagent` + `tool/agenttool` to wrap each remote A2A agent as a tool callable by the orchestrator's LLM. The orchestrator maintains full control — it decides which remotes to call, can call multiple, and consolidates before responding.
+
+**How it works**:
+```
+User → MetaMagecAgent (LLM + remote agent tools)
+           ├── ask_architect("design this system") → A2A call → response
+           ├── ask_researcher("find prior art")    → A2A call → response
+           └── LLM consolidates both → responds to user
+```
+
+**ADK native support** (already available in v0.4.0):
+```go
+import (
+    "google.golang.org/adk/agent/remoteagent"
+    "google.golang.org/adk/tool/agenttool"
+)
+
+remote, _ := remoteagent.NewA2A(remoteagent.A2AConfig{
+    Name:            "architect",
+    AgentCardSource: "http://architect-agent:8080",
+})
+architectTool := agenttool.New(remote, nil)
+```
+
+**What to implement in magec**:
+1. New entity `RemoteAgent` in the store: `{id, name, agentCardURL, credentials}`
+2. In `buildToolsets()` (`server/agent/agent.go`): for each remote agent configured on the agent, create `remoteagent.NewA2A()` + `agenttool.New()` and add to toolsets
+3. Agent config: new field `remoteAgents []string` (list of RemoteAgent IDs), similar to how `mcpServers` works
+4. Admin UI: section for managing remote agents (CRUD), agent form gains a "Remote Agents" multi-select like MCPs
+5. System prompt guidance: the orchestrator agent's prompt should describe what each remote agent does so the LLM knows when to use them
+
+**Characteristics**:
+- Orchestrator always keeps control
+- Can call multiple remotes per turn
+- Can compare, filter, reformulate remote responses
+- User always talks to the orchestrator, never directly to remotes
+- Works as a flow step — the flow doesn't know or care that it uses remote agents internally
+
+**Modify**: `server/agent/agent.go`, `server/store/types.go`, `server/api/admin/`, `frontend/admin-ui/`
+
+---
+
+### Remote A2A Agents as Sub-agents (transfer mode)
+
+**Problem**: In some cases, a remote A2A agent needs to interact directly with the user — ask clarifying questions, iterate on a solution, have a multi-turn conversation — without the orchestrator in the middle adding latency and losing context.
+
+**Solution**: Use ADK's `agent/remoteagent` to create the remote as a proper sub-agent. The orchestrator's LLM can "transfer" the conversation to the remote agent. The remote then talks directly with the user until it's done, then control returns to the orchestrator.
+
+**How it works**:
+```
+User → MetaMagecAgent: "I need a system architecture"
+  MetaMagecAgent → transfer to architect
+    User ↔ Architect (direct multi-turn conversation)
+    Architect: "done, here's the design"
+  ← control returns to MetaMagecAgent
+MetaMagecAgent → continues with next step
+```
+
+**ADK native support**:
+```go
+remote, _ := remoteagent.NewA2A(remoteagent.A2AConfig{
+    Name:            "architect",
+    AgentCardSource: "http://architect-agent:8080",
+})
+// Pass as sub-agent directly, no agenttool wrapper
+orchestrator, _ := llmagent.New(llmagent.Config{
+    SubAgents: []agent.Agent{remote},
+    // ...
+})
+```
+
+**Characteristics**:
+- Remote gets full conversation context and direct user interaction
+- No orchestrator latency/tokens in the middle during the transfer
+- Remote can use all its own tools and personality
+- Orchestrator loses visibility during the transfer
+- One transfer at a time (can't talk to two remotes simultaneously)
+- Better for deep specialization tasks that need multi-turn interaction
+
+**When to use which**:
+
+| Scenario | Use |
+|---|---|
+| "Ask the researcher for X and the architect for Y, then combine" | Tool mode |
+| "Hand this off to the architect, let them work it out with the user" | Transfer mode |
+| Quick factual queries to remotes | Tool mode |
+| Complex tasks needing clarification/iteration | Transfer mode |
+
+**Implementation**: Same `RemoteAgent` entity as tool mode. The agent config would specify per-remote whether it's a tool or sub-agent (or both — ADK allows it). Can be implemented after tool mode as an incremental addition.
+
+**Modify**: Same files as tool mode, plus sub-agent wiring in `agent.go`
 
 ---
 
@@ -82,12 +224,6 @@ ADK supports agents as tools — orchestrator decides at runtime which specialis
 ---
 
 ## Low Priority
-
-### ~~Credential Management from Admin UI~~ (v0.2.0 ✅)
-
-~~Credentials are in plain text in `data/store.json`.~~ **Implemented**: Secrets entity with CRUD API, AES-256-GCM encryption at rest (derived from `server.encryptionKey`, independent from `adminPassword`), env var injection before `ExpandEnv()`, Admin UI section for managing secrets.
-
----
 
 ### More TTS Voices Configuration UI
 
