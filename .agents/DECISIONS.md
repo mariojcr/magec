@@ -361,3 +361,29 @@ the existing value.
 and recreate. Non-secret entities remain intact.
 
 **Do not**: Return secret values in GET responses. Do not store secrets in config.yaml.
+
+---
+
+## Message size validation and splitting via shared msgutil package
+
+**Date**: 2026-02-23
+**Status**: Implemented
+
+Large inbound messages and oversized outbound responses are handled by a shared utility package `server/clients/msgutil/`. Both Telegram and Slack clients import it — the logic is DRY and testable, while clients remain decoupled from each other and from the ADK API.
+
+**Inbound validation**: `ValidateInputLength(text, maxLen)` truncates messages exceeding 16K runes (unicode-safe) and appends `[message truncated]`. Applied in both clients before calling the agent.
+
+**Outbound splitting**: `SplitMessage(text, maxLen)` breaks responses into platform-safe chunks. Split priority: paragraph boundaries (`\n\n`) > line boundaries (`\n`) > word boundaries (space) > hard cut. Telegram uses 4096, Slack uses 39000.
+
+**Platform constants**:
+- `TelegramMaxMessageLength = 4096`
+- `SlackMaxMessageLength = 39000`
+- `DefaultMaxInputLength = 16000`
+
+**Where validation happens**:
+- Telegram: `handleMessage()` validates `msg.Text`, `handleVoice()` validates transcribed text — both before `callAgent()`
+- Slack: `processMessage()` validates `text` before building the request — covers both DMs and audio clips (which flow through `processMessage`)
+- Voice UI: no splitting needed (browser has no render limit)
+- Executor: no splitting needed (returns string to HTTP caller)
+
+**Do not**: Validate or split inside `callAgent()` / the ADK request path. Keep it at the client entry/exit points so each client controls its own limits. Do not add platform-specific logic to the shared package — it only provides generic split/validate functions with configurable limits.

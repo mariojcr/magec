@@ -1,19 +1,12 @@
 # Magec - TODO
 
-## High Priority
+## ~~Large Message Handling in Telegram and Slack~~ ✅
 
-### Large Message Handling in Telegram and Slack
-
-**Problem**: No validation on inbound message size from Telegram/Slack, and outbound responses to Telegram may exceed the 4096-character message limit. Large inputs could cause excessive memory usage or unexpected behavior, and oversized responses will fail silently or get truncated by the API.
-
-**Solution**:
-- **Inbound**: Add a max input length check in both clients. Reject or truncate messages that exceed a reasonable threshold (e.g. 16K chars) with a user-friendly error.
-- **Outbound (Telegram)**: Split responses exceeding 4096 chars into multiple sequential messages. Preserve markdown formatting across splits where possible.
-- **Outbound (Slack)**: Slack's limit is ~40K per message block — less urgent but should still have a safety check.
-
-**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`
+Implemented. See `server/clients/msgutil/` package.
 
 ---
+
+## High Priority
 
 ### Multimodal File/Image Support in Clients
 

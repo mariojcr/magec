@@ -181,6 +181,9 @@ server/clients/
 ├── provider.go          — Provider interface, Schema type alias
 ├── registry.go          — Global registry: Register(), ValidateConfig() with oneOf
 ├── executor.go          — Shared execution logic (webhook + cron)
+├── msgutil/
+│   ├── msgutil.go       — Shared message validation and splitting utilities
+│   └── msgutil_test.go  — Tests for validation and splitting
 ├── direct/spec.go       — Direct provider (empty schema)
 ├── telegram/
 │   ├── spec.go          — Telegram provider (JSON Schema with x-format, enum)
@@ -449,3 +452,38 @@ If the message has a caption, it goes as the text part. If no caption, the text 
 ### A2A (future)
 
 A2A agent cards (`server/a2a/handler.go`) currently declare `DefaultInputModes: []string{"text/plain"}`. When A2A file support is added, include additional MIME types (`image/*`, `application/pdf`, etc.) and convert A2A `FilePart` → `genai.Part{InlineData}` in the executor.
+
+## Message Size Handling (Implemented)
+
+### Package: `server/clients/msgutil/`
+
+Shared utility package for message validation and splitting. Both Telegram and Slack clients import it. Clients stay decoupled — each calls the utility with its own platform limits.
+
+### Constants
+
+| Constant | Value | Usage |
+|----------|-------|-------|
+| `TelegramMaxMessageLength` | 4096 | Telegram API limit per message |
+| `SlackMaxMessageLength` | 39000 | Slack API limit per message block |
+| `DefaultMaxInputLength` | 16000 | Max inbound user message length |
+
+### Functions
+
+**`ValidateInputLength(text string, maxLen int) (string, bool)`**
+- Truncates at `maxLen` runes (unicode-safe), appends `\n\n[message truncated]`
+- Returns the (possibly truncated) text and whether truncation occurred
+- Applied at client entry points before calling the agent
+
+**`SplitMessage(text string, maxLen int) []string`**
+- Splits into chunks respecting `maxLen` runes per chunk
+- Split priority: paragraph (`\n\n`) > line (`\n`) > word (space) > hard cut
+- Returns `[]string` — all chunks non-empty, within limit
+
+### Where it's applied
+
+| Client | Inbound | Outbound |
+|--------|---------|----------|
+| **Telegram** | `handleMessage()` validates `msg.Text`; `handleVoice()` validates transcribed text | `sendResponse()` splits via `SplitMessage(text, 4096)`, sends chunks sequentially |
+| **Slack** | `processMessage()` validates text (covers DMs + audio clips) | `postMessage()` splits via `SplitMessage(text, 39000)`, posts chunks sequentially |
+| **Voice UI** | No validation (browser input is bounded) | No splitting (browser has no render limit) |
+| **Executor** | No validation (prompts are from commands/webhooks, admin-controlled) | No splitting (returns string to HTTP caller) |

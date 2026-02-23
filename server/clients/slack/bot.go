@@ -19,6 +19,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
 
+	"github.com/achetronic/magec/server/clients/msgutil"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -485,8 +486,16 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
 	}
 
+	validatedText, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Inbound message truncated",
+			"channel", channelID,
+			"original_len", len([]rune(text)),
+		)
+	}
+
 	meta := c.buildMessageContext(userID, channelID, channelType, threadTS, teamID)
-	fullMessage := meta + text
+	fullMessage := meta + validatedText
 
 	reqBody := map[string]interface{}{
 		"appName":   agentID,
@@ -810,15 +819,19 @@ func (c *Client) buildMessageContext(userID, channelID, channelType, threadTS, t
 }
 
 func (c *Client) postMessage(channelID, text, threadTS string) {
-	opts := []slackapi.MsgOption{
-		slackapi.MsgOptionText(text, false),
-	}
-	if threadTS != "" {
-		opts = append(opts, slackapi.MsgOptionTS(threadTS))
-	}
-	_, _, err := c.api.PostMessage(channelID, opts...)
-	if err != nil {
-		c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
+	chunks := msgutil.SplitMessage(text, msgutil.SlackMaxMessageLength)
+	for _, chunk := range chunks {
+		opts := []slackapi.MsgOption{
+			slackapi.MsgOptionText(chunk, false),
+		}
+		if threadTS != "" {
+			opts = append(opts, slackapi.MsgOptionTS(threadTS))
+		}
+		_, _, err := c.api.PostMessage(channelID, opts...)
+		if err != nil {
+			c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
+			break
+		}
 	}
 }
 

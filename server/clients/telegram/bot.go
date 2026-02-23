@@ -32,6 +32,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 
+	"github.com/achetronic/magec/server/clients/msgutil"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -411,7 +412,15 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		}
 	}()
 
-	response, err := c.callAgent(msg, msg.Text)
+	inputText, truncated := msgutil.ValidateInputLength(msg.Text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Inbound message truncated",
+			"chat_id", msg.Chat.ID,
+			"original_len", len([]rune(msg.Text)),
+		)
+	}
+
+	response, err := c.callAgent(msg, inputText)
 	close(typingDone)
 	progressTimer.Stop()
 
@@ -519,7 +528,15 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		}
 	}()
 
-	response, err := c.callAgent(msg, text)
+	voiceInput, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Transcribed voice message truncated",
+			"chat_id", msg.Chat.ID,
+			"original_len", len([]rune(text)),
+		)
+	}
+
+	response, err := c.callAgent(msg, voiceInput)
 	close(typingDone)
 	progressTimer.Stop()
 
@@ -565,12 +582,16 @@ func (c *Client) sendResponse(ctx *th.Context, chatID int64, text string, inputW
 	}
 
 	if sendText {
-		_, err := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
-			ChatID: tu.ID(chatID),
-			Text:   text,
-		})
-		if err != nil {
-			c.logger.Error("Failed to send message", "error", err)
+		chunks := msgutil.SplitMessage(text, msgutil.TelegramMaxMessageLength)
+		for _, chunk := range chunks {
+			_, err := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+				ChatID: tu.ID(chatID),
+				Text:   chunk,
+			})
+			if err != nil {
+				c.logger.Error("Failed to send message", "error", err)
+				break
+			}
 		}
 	}
 
