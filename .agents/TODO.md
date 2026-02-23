@@ -10,7 +10,7 @@ Implemented. See `server/clients/msgutil/` package.
 
 ### Multimodal File/Image Support in Clients
 
-**Problem**: Telegram and Slack clients only handle text and voice messages. Users sending images, documents, PDFs, or other files get silently ignored.
+**Problem**: Telegram, Slack, and Discord clients only handle text and voice messages. Users sending images, documents, PDFs, or other files get silently ignored.
 
 **Solution**: Download files from Telegram/Slack, encode as base64, and send as `inlineData` parts alongside text in the ADK `/run` request. The ADK already supports `genai.Part{InlineData: &Blob{Data, MIMEType}}` — zero backend changes needed.
 
@@ -55,7 +55,12 @@ Implemented. See `server/clients/msgutil/` package.
 
 **A2A (future, non-blocking)**: `server/a2a/handler.go` declares `DefaultInputModes: []string{"text/plain"}`. When A2A file support is needed, add `"image/*"`, `"application/pdf"`, etc. The A2A handler converts `FilePart` → `genai.Part{InlineData}` before passing to ADK.
 
-**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`
+**Discord** (`server/clients/discord/bot.go`):
+- Same approach as Telegram/Slack: detect non-audio attachments via `m.Attachments`, download via `att.URL`, encode base64, send as `inlineData` parts.
+- Check `att.Size` < 5MB before downloading.
+- `m.Content` alongside attachments becomes the caption/text part.
+
+**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `server/clients/discord/bot.go`
 **No changes needed**: `server/agent/agent.go`, `server/api/user/handlers.go`, ADK library
 
 ---
@@ -149,7 +154,11 @@ The visual flow editor's drag-and-drop experience needs polish. Improve feedback
 - Tool info is sent **alongside** the response, not as a separate message (except Telegram where it may be a preceding message with expandable blockquote)
 - No server changes needed — tool events are already in the ADK `/run` response; clients just need to extract and render them
 
-**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `frontend/voice-ui/src/components/ChatMessage.vue`, `frontend/voice-ui/src/lib/api/AgentClient.js`
+**Discord** (`server/clients/discord/bot.go`):
+- Same as Telegram: use `<blockquote expandable>` equivalent if Discord supports it, otherwise compact summary like Slack.
+- Discord supports markdown but no native collapsible blocks — use a compact summary line per tool: `🔧 **tool_name** — completed`.
+
+**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `server/clients/discord/bot.go`, `frontend/voice-ui/src/components/ChatMessage.vue`, `frontend/voice-ui/src/lib/api/AgentClient.js`
 
 ---
 
@@ -197,7 +206,7 @@ See `.agents/ADK_TOOLS.md` for protocol details.
 
 ### ~~Artifact Management Toolset~~ ✅
 
-Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. Filesystem-backed via `adk-utils-go/artifact/filesystem` (persists across restarts). Clients (Telegram and Slack) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
+Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. Filesystem-backed via `adk-utils-go/artifact/filesystem` (persists across restarts). Clients (Telegram, Slack, and Discord) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
 
 ---
 
