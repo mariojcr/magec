@@ -3,6 +3,7 @@ package slack
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
 
+	"github.com/achetronic/magec/server/clients/msgutil"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -485,8 +487,18 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
 	}
 
+	artifactsBefore := c.listArtifacts(agentID, "default_user", sessionID)
+
+	validatedText, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Inbound message truncated",
+			"channel", channelID,
+			"original_len", len([]rune(text)),
+		)
+	}
+
 	meta := c.buildMessageContext(userID, channelID, channelType, threadTS, teamID)
-	fullMessage := meta + text
+	fullMessage := meta + validatedText
 
 	reqBody := map[string]interface{}{
 		"appName":   agentID,
@@ -556,6 +568,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 
 	responseText := c.extractResponseText(events)
 	c.sendResponse(channelID, responseText, threadTS, inputWasVoice)
+	c.sendNewArtifacts(channelID, threadTS, agentID, "default_user", sessionID, artifactsBefore)
 }
 
 func (c *Client) sendResponse(channelID, text, threadTS string, inputWasVoice bool) {
@@ -810,15 +823,19 @@ func (c *Client) buildMessageContext(userID, channelID, channelType, threadTS, t
 }
 
 func (c *Client) postMessage(channelID, text, threadTS string) {
-	opts := []slackapi.MsgOption{
-		slackapi.MsgOptionText(text, false),
-	}
-	if threadTS != "" {
-		opts = append(opts, slackapi.MsgOptionTS(threadTS))
-	}
-	_, _, err := c.api.PostMessage(channelID, opts...)
-	if err != nil {
-		c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
+	chunks := msgutil.SplitMessage(text, msgutil.SlackMaxMessageLength)
+	for _, chunk := range chunks {
+		opts := []slackapi.MsgOption{
+			slackapi.MsgOptionText(chunk, false),
+		}
+		if threadTS != "" {
+			opts = append(opts, slackapi.MsgOptionTS(threadTS))
+		}
+		_, _, err := c.api.PostMessage(channelID, opts...)
+		if err != nil {
+			c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
+			break
+		}
 	}
 }
 
@@ -843,6 +860,120 @@ func sanitizeError(err error) string {
 		}
 	}
 	return msg
+}
+
+func (c *Client) listArtifacts(agentID, userID, sessionID string) []string {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s/artifacts", c.agentURL, agentID, userID, sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		c.logger.Debug("Failed to create artifact list request", "error", err)
+		return nil
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.logger.Debug("Failed to list artifacts", "error", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var result []string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		c.logger.Debug("Failed to decode artifact list", "error", err)
+		return nil
+	}
+	return result
+}
+
+func (c *Client) downloadArtifact(agentID, userID, sessionID, name string) ([]byte, string, error) {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s/artifacts/%s", c.agentURL, agentID, userID, sessionID, name)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("artifact download returned status %d", resp.StatusCode)
+	}
+
+	var artifact struct {
+		Text       string `json:"text,omitempty"`
+		InlineData *struct {
+			MIMEType string `json:"mimeType"`
+			Data     string `json:"data"`
+		} `json:"inlineData,omitempty"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&artifact); err != nil {
+		return nil, "", fmt.Errorf("failed to decode artifact: %w", err)
+	}
+
+	if artifact.InlineData != nil {
+		data, err := base64.StdEncoding.DecodeString(artifact.InlineData.Data)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to decode artifact binary data: %w", err)
+		}
+		return data, artifact.InlineData.MIMEType, nil
+	}
+
+	return []byte(artifact.Text), "text/plain", nil
+}
+
+func (c *Client) sendNewArtifacts(channelID, threadTS, agentID, userID, sessionID string, before []string) {
+	after := c.listArtifacts(agentID, userID, sessionID)
+	if len(after) == 0 {
+		return
+	}
+
+	beforeSet := make(map[string]bool, len(before))
+	for _, name := range before {
+		beforeSet[name] = true
+	}
+
+	for _, name := range after {
+		if beforeSet[name] {
+			continue
+		}
+
+		data, _, err := c.downloadArtifact(agentID, userID, sessionID, name)
+		if err != nil {
+			c.logger.Error("Failed to download artifact", "name", name, "error", err)
+			continue
+		}
+
+		params := slackapi.UploadFileV2Parameters{
+			Channel:  channelID,
+			Filename: name,
+			FileSize: len(data),
+			Reader:   bytes.NewReader(data),
+			Title:    name,
+		}
+		if threadTS != "" {
+			params.ThreadTimestamp = threadTS
+		}
+
+		_, err = c.api.UploadFileV2(params)
+		if err != nil {
+			c.logger.Error("Failed to upload artifact", "name", name, "error", err)
+		}
+	}
 }
 
 func (c *Client) setAuthHeader(req *http.Request) {

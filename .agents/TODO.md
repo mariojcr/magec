@@ -1,25 +1,28 @@
 # Magec - TODO
 
-## High Priority
+## ~~Large Message Handling in Telegram and Slack~~ ✅
 
-### Large Message Handling in Telegram and Slack
-
-**Problem**: No validation on inbound message size from Telegram/Slack, and outbound responses to Telegram may exceed the 4096-character message limit. Large inputs could cause excessive memory usage or unexpected behavior, and oversized responses will fail silently or get truncated by the API.
-
-**Solution**:
-- **Inbound**: Add a max input length check in both clients. Reject or truncate messages that exceed a reasonable threshold (e.g. 16K chars) with a user-friendly error.
-- **Outbound (Telegram)**: Split responses exceeding 4096 chars into multiple sequential messages. Preserve markdown formatting across splits where possible.
-- **Outbound (Slack)**: Slack's limit is ~40K per message block — less urgent but should still have a safety check.
-
-**Modify**: `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`
+Implemented. See `server/clients/msgutil/` package.
 
 ---
+
+## High Priority
 
 ### Multimodal File/Image Support in Clients
 
 **Problem**: Telegram and Slack clients only handle text and voice messages. Users sending images, documents, PDFs, or other files get silently ignored.
 
 **Solution**: Download files from Telegram/Slack, encode as base64, and send as `inlineData` parts alongside text in the ADK `/run` request. The ADK already supports `genai.Part{InlineData: &Blob{Data, MIMEType}}` — zero backend changes needed.
+
+**Adapter support (adk-utils-go v0.3.1)**:
+- **Gemini**: passes all `InlineData` transparently to the API. Unsupported types are rejected by Google's API.
+- **OpenAI**: translates images (JPEG, PNG, GIF, WebP), audio (WAV, MP3, MPEG, WebM), and files (PDF, text/*). Unsupported types return an error.
+- **Anthropic**: translates images (JPEG, PNG, GIF, WebP), PDFs, and text documents (text/*). Unsupported types return an error.
+- All three adapters behave the same: if a MIME type can't be translated, the request fails. No silent drops.
+
+**File size limits**: 5MB per file, 10MB total per message, max 10 files per message. Validated client-side before download.
+
+**Supported types (denominator común)**: JPEG, PNG, GIF, WebP. PDF and text/* work on Gemini + Anthropic. Audio works on Gemini + OpenAI.
 
 **Telegram** (`server/clients/telegram/bot.go`):
 - Current state: only `Voice` (dedicated handler) and `Text` (predicate at ~line 171 requires `Text != ""` and `Voice == nil`). Everything else is silently dropped.
@@ -46,7 +49,7 @@
 }
 ```
 
-**File size validation**: Add 20MB limit (denominator común: Gemini 20MB, OpenAI 20MB, Anthropic 5MB for images). Telegram API limits bots to 20MB anyway. Reject oversized files with user-friendly message.
+**File size validation**: 5MB per file, 10MB total per message, max 10 files. Reject oversized files with user-friendly message.
 
 **LLM limitations**: GPT-4o/Claude/Gemini handle images and PDFs natively. For Word/Excel/CSV, the model may not support them — the user gets a natural "I can't process this format" response from the LLM itself.
 
@@ -127,28 +130,9 @@ See `.agents/ADK_TOOLS.md` for protocol details.
 
 ---
 
-### Artifact Management Toolset
+### ~~Artifact Management Toolset~~ ✅
 
-**Problem**: ADK has artifact storage (versioned, session-scoped) and REST endpoints for clients to download them, but the LLM has no way to create, read, list, or delete artifacts. Without tools that call `ctx.SaveArtifact()` / `ctx.LoadArtifact()`, the artifact system is dead weight.
-
-**Solution**: Build a base toolset with four Go-native tools using `functiontool`:
-- `save_artifact(name, content, mimeType)` — saves content as a versioned artifact in the session
-- `load_artifact(name)` — reads an artifact (latest version) back into context
-- `list_artifacts()` — lists all artifacts in the current session
-- `delete_artifact(name)` — removes an artifact
-
-**Use cases**:
-- LLM generates a report/export → `save_artifact()` → user downloads via Voice UI / Telegram / Slack using existing ADK GET endpoints
-- Flow pipelines: step 1 produces data → `save_artifact()`, step 2 reads → `load_artifact()` and transforms
-- Combined with a filesystem MCP: `load_artifact()` → process → `write_file()` to persist externally, or `read_file()` → `save_artifact()` to make available for download
-
-**Design**:
-- Configurable per agent (not all agents need it) — toggle in agent config, similar to memory tools
-- Sandboxed by session — no security risk, no file system access
-- ADK handles versioning and storage automatically
-- Replaces `loadartifactstool` from ADK (read-only) with a complete CRUD toolset
-
-**Modify**: `server/agent/agent.go` (register toolset in `buildToolsets`), new file `server/agent/tools/artifacts.go`, `server/store/types.go` (agent config toggle), `frontend/admin-ui/` (agent form toggle)
+Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. Filesystem-backed via `adk-utils-go/artifact/filesystem` (persists across restarts). Clients (Telegram and Slack) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
 
 ---
 

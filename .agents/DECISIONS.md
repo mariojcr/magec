@@ -361,3 +361,69 @@ the existing value.
 and recreate. Non-secret entities remain intact.
 
 **Do not**: Return secret values in GET responses. Do not store secrets in config.yaml.
+
+---
+
+## Message size validation and splitting via shared msgutil package
+
+**Date**: 2026-02-23
+**Status**: Implemented
+
+Large inbound messages and oversized outbound responses are handled by a shared utility package `server/clients/msgutil/`. Both Telegram and Slack clients import it — the logic is DRY and testable, while clients remain decoupled from each other and from the ADK API.
+
+**Inbound validation**: `ValidateInputLength(text, maxLen)` truncates messages exceeding 16K runes (unicode-safe) and appends `[message truncated]`. Applied in both clients before calling the agent.
+
+**Outbound splitting**: `SplitMessage(text, maxLen)` breaks responses into platform-safe chunks. Split priority: paragraph boundaries (`\n\n`) > line boundaries (`\n`) > word boundaries (space) > hard cut. Telegram uses 4096, Slack uses 39000.
+
+**Platform constants**:
+- `TelegramMaxMessageLength = 4096`
+- `SlackMaxMessageLength = 39000`
+- `DefaultMaxInputLength = 16000`
+
+**Where validation happens**:
+- Telegram: `handleMessage()` validates `msg.Text`, `handleVoice()` validates transcribed text — both before `callAgent()`
+- Slack: `processMessage()` validates `text` before building the request — covers both DMs and audio clips (which flow through `processMessage`)
+- Voice UI: no splitting needed (browser has no render limit)
+- Executor: no splitting needed (returns string to HTTP caller)
+
+**Do not**: Validate or split inside `callAgent()` / the ADK request path. Keep it at the client entry/exit points so each client controls its own limits. Do not add platform-specific logic to the shared package — it only provides generic split/validate functions with configurable limits.
+
+---
+
+## 17. Artifact Toolset — Universal via Base Toolset, No Delete
+
+**Date**: 2025-02-23
+
+All agents get the artifact toolset (save/load/list) unconditionally via `base_toolset.go`, not opt-in per agent. This avoids config complexity and ensures every agent can produce files for users.
+
+**No delete tool**: ADK's `agent.Artifacts` interface (exposed via `tool.Context`) has Save, Load, List, and LoadVersion — but no Delete. Delete exists only on `artifact.Service` directly. Rather than breaking the abstraction by passing the raw service into tools, we omit delete. Artifacts are versioned and session-scoped, so stale artifacts are naturally cleaned up when sessions expire.
+
+**Storage**: `adk-utils-go/artifact/filesystem` — filesystem-backed `artifact.Service` implementation. Stores artifacts as JSON at `data/artifacts/{appName}/{userID}/{sessionID}/{fileName}/{version}.json`. Supports versioning and user-scoped artifacts. Data persists across restarts.
+
+**Client delivery**: Telegram and Slack clients list artifacts before and after each `/run` call, diff the lists, and deliver new artifacts as file attachments (Telegram: `SendDocument`, Slack: `UploadFileV2`). Artifacts are always files, never inlined in chat text.
+
+**Files**: `server/agent/tools/artifacts/toolset.go` (toolset), `server/agent/base_toolset.go` (wiring), `server/agent/agent.go` (FilesystemService + launcher config), `server/clients/telegram/bot.go` and `server/clients/slack/bot.go` (delivery).
+
+---
+
+## 18. Multimodal Adapter Parity — Error on Unsupported Types
+
+**Date**: 2026-02-23
+
+When an adapter receives `genai.Part{InlineData}` with a MIME type it can't translate, it returns an error — **not** `nil` (silent drop). This matches Gemini's native behavior where unsupported types cause the API request to fail.
+
+**Rationale**: Silent drops are a bug — the user sends a file, the LLM never sees it, and nobody gets feedback. With errors, either the client validates beforehand (preferred) or the user sees an explicit failure. All three providers behave identically: unsupported = fail.
+
+**Supported types per adapter (adk-utils-go v0.3.1)**:
+
+| Type | Gemini | OpenAI | Anthropic |
+|---|---|---|---|
+| Images (JPEG, PNG, GIF, WebP) | ✅ (native) | ✅ (data URI) | ✅ (Base64ImageSource) |
+| PDF | ✅ (native) | ✅ (FileParam) | ✅ (Base64PDFSource) |
+| Text (text/*) | ✅ (native) | ✅ (FileParam) | ✅ (PlainTextSource) |
+| Audio (WAV, MP3, WebM) | ✅ (native) | ✅ (InputAudio) | ❌ error |
+| Video, other | ✅ (native) | ❌ error | ❌ error |
+
+**Do not**: Silently drop unsupported `InlineData` parts. Do not convert them to text descriptions. Return `fmt.Errorf("unsupported inline data MIME type for %s: %s")`.
+
+**Files**: `adk-utils-go/genai/openai/openai.go` (`convertInlineDataToPart`), `adk-utils-go/genai/anthropic/anthropic.go` (`convertInlineDataToBlock`).

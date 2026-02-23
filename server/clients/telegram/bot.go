@@ -17,6 +17,7 @@ package telegram
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,6 +33,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 
+	"github.com/achetronic/magec/server/clients/msgutil"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -411,7 +413,21 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		}
 	}()
 
-	response, err := c.callAgent(msg, msg.Text)
+	inputText, truncated := msgutil.ValidateInputLength(msg.Text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Inbound message truncated",
+			"chat_id", msg.Chat.ID,
+			"original_len", len([]rune(msg.Text)),
+		)
+	}
+
+	agentID := c.getActiveAgentID(msg.Chat.ID)
+	sessionID := c.buildSessionID(msg.Chat.ID, msg.MessageThreadID)
+	userIDStr := "default_user"
+
+	artifactsBefore := c.listArtifacts(agentID, userIDStr, sessionID)
+
+	response, err := c.callAgent(msg, inputText)
 	close(typingDone)
 	progressTimer.Stop()
 
@@ -427,6 +443,7 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 
 	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👍")
 	c.sendResponse(ctx, msg.Chat.ID, response, false)
+	c.sendNewArtifacts(ctx, msg.Chat.ID, agentID, userIDStr, sessionID, artifactsBefore)
 
 	return nil
 }
@@ -519,7 +536,20 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		}
 	}()
 
-	response, err := c.callAgent(msg, text)
+	voiceInput, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Transcribed voice message truncated",
+			"chat_id", msg.Chat.ID,
+			"original_len", len([]rune(text)),
+		)
+	}
+
+	sessionID := c.buildSessionID(msg.Chat.ID, msg.MessageThreadID)
+	userIDStr := "default_user"
+
+	artifactsBefore := c.listArtifacts(agentID, userIDStr, sessionID)
+
+	response, err := c.callAgent(msg, voiceInput)
 	close(typingDone)
 	progressTimer.Stop()
 
@@ -535,6 +565,7 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 
 	c.setReaction(ctx, msg.Chat.ID, msg.MessageID, "👍")
 	c.sendResponse(ctx, msg.Chat.ID, response, true)
+	c.sendNewArtifacts(ctx, msg.Chat.ID, agentID, userIDStr, sessionID, artifactsBefore)
 
 	return nil
 }
@@ -565,12 +596,16 @@ func (c *Client) sendResponse(ctx *th.Context, chatID int64, text string, inputW
 	}
 
 	if sendText {
-		_, err := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
-			ChatID: tu.ID(chatID),
-			Text:   text,
-		})
-		if err != nil {
-			c.logger.Error("Failed to send message", "error", err)
+		chunks := msgutil.SplitMessage(text, msgutil.TelegramMaxMessageLength)
+		for _, chunk := range chunks {
+			_, err := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+				ChatID: tu.ID(chatID),
+				Text:   chunk,
+			})
+			if err != nil {
+				c.logger.Error("Failed to send message", "error", err)
+				break
+			}
 		}
 	}
 
@@ -1118,4 +1153,110 @@ func sanitizeError(err error) string {
 		}
 	}
 	return msg
+}
+
+func (c *Client) listArtifacts(agentID, userID, sessionID string) []string {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s/artifacts", c.agentURL, agentID, userID, sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		c.logger.Debug("Failed to create artifact list request", "error", err)
+		return nil
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.logger.Debug("Failed to list artifacts", "error", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var result []string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		c.logger.Debug("Failed to decode artifact list", "error", err)
+		return nil
+	}
+	return result
+}
+
+func (c *Client) downloadArtifact(agentID, userID, sessionID, name string) ([]byte, string, error) {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s/artifacts/%s", c.agentURL, agentID, userID, sessionID, name)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("artifact download returned status %d", resp.StatusCode)
+	}
+
+	var artifact struct {
+		Text       string `json:"text,omitempty"`
+		InlineData *struct {
+			MIMEType string `json:"mimeType"`
+			Data     string `json:"data"`
+		} `json:"inlineData,omitempty"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&artifact); err != nil {
+		return nil, "", fmt.Errorf("failed to decode artifact: %w", err)
+	}
+
+	if artifact.InlineData != nil {
+		data, err := base64.StdEncoding.DecodeString(artifact.InlineData.Data)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to decode artifact binary data: %w", err)
+		}
+		return data, artifact.InlineData.MIMEType, nil
+	}
+
+	return []byte(artifact.Text), "text/plain", nil
+}
+
+func (c *Client) sendNewArtifacts(ctx *th.Context, chatID int64, agentID, userID, sessionID string, before []string) {
+	after := c.listArtifacts(agentID, userID, sessionID)
+	if len(after) == 0 {
+		return
+	}
+
+	beforeSet := make(map[string]bool, len(before))
+	for _, name := range before {
+		beforeSet[name] = true
+	}
+
+	for _, name := range after {
+		if beforeSet[name] {
+			continue
+		}
+
+		data, _, err := c.downloadArtifact(agentID, userID, sessionID, name)
+		if err != nil {
+			c.logger.Error("Failed to download artifact", "name", name, "error", err)
+			continue
+		}
+
+		_, err = ctx.Bot().SendDocument(ctx, &telego.SendDocumentParams{
+			ChatID:   tu.ID(chatID),
+			Document: tu.FileFromReader(bytes.NewReader(data), name),
+		})
+		if err != nil {
+			c.logger.Error("Failed to send artifact as document", "name", name, "error", err)
+		}
+	}
 }
