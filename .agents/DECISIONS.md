@@ -387,3 +387,19 @@ Large inbound messages and oversized outbound responses are handled by a shared 
 - Executor: no splitting needed (returns string to HTTP caller)
 
 **Do not**: Validate or split inside `callAgent()` / the ADK request path. Keep it at the client entry/exit points so each client controls its own limits. Do not add platform-specific logic to the shared package — it only provides generic split/validate functions with configurable limits.
+
+---
+
+## 17. Artifact Toolset — Universal via Base Toolset, No Delete
+
+**Date**: 2025-02-23
+
+All agents get the artifact toolset (save/load/list) unconditionally via `base_toolset.go`, not opt-in per agent. This avoids config complexity and ensures every agent can produce files for users.
+
+**No delete tool**: ADK's `agent.Artifacts` interface (exposed via `tool.Context`) has Save, Load, List, and LoadVersion — but no Delete. Delete exists only on `artifact.Service` directly. Rather than breaking the abstraction by passing the raw service into tools, we omit delete. Artifacts are versioned and session-scoped, so stale artifacts are naturally cleaned up when sessions expire.
+
+**Storage**: `artifact.InMemoryService()` — matches the existing session service pattern (in-memory default, Redis optional). Data does not survive restarts, which is acceptable since artifact delivery happens immediately after each `/run` response.
+
+**Client delivery**: Telegram and Slack clients list artifacts before and after each `/run` call, diff the lists, and deliver new artifacts as file attachments (Telegram: `SendDocument`, Slack: `UploadFileV2`). Artifacts are always files, never inlined in chat text.
+
+**Files**: `server/agent/tools/artifacts/toolset.go` (toolset), `server/agent/base_toolset.go` (wiring), `server/agent/agent.go` (InMemoryService + launcher config), `server/clients/telegram/bot.go` and `server/clients/slack/bot.go` (delivery).

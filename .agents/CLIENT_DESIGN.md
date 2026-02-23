@@ -487,3 +487,37 @@ Shared utility package for message validation and splitting. Both Telegram and S
 | **Slack** | `processMessage()` validates text (covers DMs + audio clips) | `postMessage()` splits via `SplitMessage(text, 39000)`, posts chunks sequentially |
 | **Voice UI** | No validation (browser input is bounded) | No splitting (browser has no render limit) |
 | **Executor** | No validation (prompts are from commands/webhooks, admin-controlled) | No splitting (returns string to HTTP caller) |
+
+---
+
+## Artifact Delivery
+
+When an LLM uses `save_artifact` during a `/run` call, clients automatically deliver the new artifact as a file attachment. The flow:
+
+1. **Before `/run`**: Client calls `GET /apps/{agent}/users/{user}/sessions/{session}/artifacts` to snapshot existing artifact names
+2. **After `/run`**: Client calls the same endpoint again and diffs the two lists
+3. **New artifacts**: Each new name is downloaded via `GET .../artifacts/{name}` and sent as a file
+
+### Delivery per client
+
+| Client | Method | Details |
+|--------|--------|---------|
+| **Telegram** | `ctx.Bot().SendDocument()` with `tu.FileFromReader()` | Artifact name used as filename |
+| **Slack** | `c.api.UploadFileV2()` | Artifact name as filename + title, respects thread |
+| **Voice UI** | Not yet implemented | Would need download button in UI |
+
+### Artifact REST response format
+
+The ADK artifact endpoint returns a `genai.Part` JSON:
+- **Text artifacts**: `{"text": "content..."}`
+- **Binary artifacts**: `{"inlineData": {"mimeType": "...", "data": "<base64>"}}`
+
+### Key files
+
+| File | Role |
+|------|------|
+| `server/agent/tools/artifacts/toolset.go` | Toolset with save/load/list tools |
+| `server/agent/base_toolset.go` | Wires artifact toolset into all agents |
+| `server/agent/agent.go` | Creates `artifact.InMemoryService()`, sets `launcherCfg.ArtifactService` |
+| `server/clients/telegram/bot.go` | `listArtifacts()`, `downloadArtifact()`, `sendNewArtifacts()` |
+| `server/clients/slack/bot.go` | Same three methods, adapted for Slack API |

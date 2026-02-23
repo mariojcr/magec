@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/a2aproject/a2a-go v0.3.3
-	github.com/achetronic/adk-utils-go v0.2.2
+	github.com/achetronic/adk-utils-go v0.3.0
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/google/jsonschema-go v0.3.0
 	github.com/google/uuid v1.6.0

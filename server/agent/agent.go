@@ -46,6 +46,7 @@ import (
 	memorypostgres "github.com/achetronic/adk-utils-go/memory/postgres"
 	sessionredis "github.com/achetronic/adk-utils-go/session/redis"
 	toolsmemory "github.com/achetronic/adk-utils-go/tools/memory"
+	artifactfs "github.com/achetronic/adk-utils-go/artifact/filesystem"
 
 	"github.com/achetronic/magec/server/config"
 	"github.com/achetronic/magec/server/contextwindow"
@@ -70,6 +71,14 @@ When a user asks you to remember something or asks about past information:
 3. Only say you don't have information if search_memory returns count: 0
 
 When a user shares preferences or important information, proactively save it to memory for future reference.`
+
+const artifactInstruction = `
+You have access to artifact tools for creating and managing files:
+- Use 'save_artifact' to save code, documents, data files, or any content that should be delivered as a downloadable file. Provide a filename (e.g. "report.md", "main.py", "data.csv"), the content, and optionally a mime_type. For binary content, set is_base64=true and provide base64-encoded data.
+- Use 'load_artifact' to retrieve a previously saved artifact by name.
+- Use 'list_artifacts' to see all artifacts in the current session.
+
+IMPORTANT: When generating code files, long documents, configuration files, scripts, or any substantial structured content, ALWAYS use save_artifact instead of pasting it in the chat. The artifact will be delivered to the user as a downloadable file automatically.`
 
 // Service wraps the ADK REST handler that serves all configured agents.
 // Incoming requests are routed to the correct agent by the appName field.
@@ -127,6 +136,13 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	// so each agent summarizes with its own model, matching user expectations.
 	// Rebuilt from scratch on every hot-reload (store change).
 	llmMap := make(map[string]model.LLM, len(agents))
+
+	artifactSvc, err := artifactfs.NewFilesystemService(artifactfs.FilesystemServiceConfig{
+		BasePath: filepath.Join("data", "artifacts"),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("artifact service: %w", err)
+	}
 
 	baseTset, err := newBaseToolset()
 	if err != nil {
@@ -195,8 +211,9 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	}
 
 	launcherCfg := &launcher.Config{
-		SessionService: sessionSvc,
-		AgentLoader:    loader,
+		SessionService:  sessionSvc,
+		AgentLoader:     loader,
+		ArtifactService: artifactSvc,
 	}
 	if memorySvc != nil {
 		launcherCfg.MemoryService = memorySvc
@@ -518,6 +535,8 @@ func buildInstruction(agentDef store.AgentDefinition, mcpServerMap map[string]st
 	if memorySvc != nil {
 		instruction += memoryInstruction
 	}
+
+	instruction += artifactInstruction
 
 	for _, mcpName := range agentDef.MCPServers {
 		if srv, ok := mcpServerMap[mcpName]; ok && srv.SystemPrompt != "" {

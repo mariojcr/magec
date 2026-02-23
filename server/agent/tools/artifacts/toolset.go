@@ -1,0 +1,189 @@
+package artifacts
+
+import (
+	"encoding/base64"
+	"fmt"
+
+	"google.golang.org/adk/agent"
+	"google.golang.org/adk/tool"
+	"google.golang.org/adk/tool/functiontool"
+	"google.golang.org/genai"
+)
+
+type Toolset struct {
+	tools []tool.Tool
+}
+
+func NewToolset() (*Toolset, error) {
+	ts := &Toolset{}
+
+	saveTool, err := functiontool.New(
+		functiontool.Config{
+			Name: "save_artifact",
+			Description: "Save a file artifact (code, documents, data, images, etc.) that will be delivered to the user as a downloadable file. " +
+				"Use this instead of pasting long code blocks or file contents directly in chat. " +
+				"For text content, provide it directly in the 'content' field. " +
+				"For binary content (images, PDFs, etc.), set 'is_base64' to true and provide base64-encoded data in 'content'. " +
+				"The artifact persists across sessions and can be retrieved later.",
+		},
+		ts.saveArtifact,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create save_artifact tool: %w", err)
+	}
+
+	loadTool, err := functiontool.New(
+		functiontool.Config{
+			Name:        "load_artifact",
+			Description: "Load a previously saved artifact by name. Returns the artifact content. Use list_artifacts first to see available artifacts.",
+		},
+		ts.loadArtifact,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create load_artifact tool: %w", err)
+	}
+
+	listTool, err := functiontool.New(
+		functiontool.Config{
+			Name:        "list_artifacts",
+			Description: "List all artifacts saved in the current session. Returns the filenames of all available artifacts.",
+		},
+		ts.listArtifacts,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create list_artifacts tool: %w", err)
+	}
+
+	ts.tools = []tool.Tool{saveTool, loadTool, listTool}
+	return ts, nil
+}
+
+func (ts *Toolset) Name() string {
+	return "artifact_toolset"
+}
+
+func (ts *Toolset) Tools(_ agent.ReadonlyContext) ([]tool.Tool, error) {
+	return ts.tools, nil
+}
+
+type SaveArgs struct {
+	Name     string `json:"name"`
+	Content  string `json:"content"`
+	MIMEType string `json:"mime_type,omitempty"`
+	IsBase64 bool   `json:"is_base64,omitempty"`
+}
+
+type SaveResult struct {
+	Success bool   `json:"success"`
+	Version int64  `json:"version"`
+	Message string `json:"message"`
+}
+
+func (ts *Toolset) saveArtifact(ctx tool.Context, args SaveArgs) (SaveResult, error) {
+	if args.Name == "" {
+		return SaveResult{Success: false, Message: "name is required"}, nil
+	}
+	if args.Content == "" {
+		return SaveResult{Success: false, Message: "content is required"}, nil
+	}
+
+	var part *genai.Part
+	if args.IsBase64 {
+		data, err := base64.StdEncoding.DecodeString(args.Content)
+		if err != nil {
+			return SaveResult{Success: false, Message: fmt.Sprintf("invalid base64 content: %v", err)}, nil
+		}
+		mimeType := args.MIMEType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+		part = &genai.Part{
+			InlineData: &genai.Blob{
+				MIMEType: mimeType,
+				Data:     data,
+			},
+		}
+	} else {
+		part = genai.NewPartFromText(args.Content)
+	}
+
+	resp, err := ctx.Artifacts().Save(ctx, args.Name, part)
+	if err != nil {
+		return SaveResult{Success: false, Message: fmt.Sprintf("failed to save: %v", err)}, nil
+	}
+
+	return SaveResult{
+		Success: true,
+		Version: resp.Version,
+		Message: fmt.Sprintf("Artifact '%s' saved (version %d). It will be delivered to the user as a file.", args.Name, resp.Version),
+	}, nil
+}
+
+type LoadArgs struct {
+	Name string `json:"name"`
+}
+
+type LoadResult struct {
+	Success  bool   `json:"success"`
+	Content  string `json:"content"`
+	MIMEType string `json:"mime_type,omitempty"`
+	IsBase64 bool   `json:"is_base64,omitempty"`
+	Message  string `json:"message"`
+}
+
+func (ts *Toolset) loadArtifact(ctx tool.Context, args LoadArgs) (LoadResult, error) {
+	if args.Name == "" {
+		return LoadResult{Success: false, Message: "name is required"}, nil
+	}
+
+	resp, err := ctx.Artifacts().Load(ctx, args.Name)
+	if err != nil {
+		return LoadResult{Success: false, Message: fmt.Sprintf("artifact not found: %v", err)}, nil
+	}
+
+	if resp.Part.Text != "" {
+		return LoadResult{
+			Success: true,
+			Content: resp.Part.Text,
+			Message: "Artifact loaded successfully",
+		}, nil
+	}
+
+	if resp.Part.InlineData != nil {
+		encoded := base64.StdEncoding.EncodeToString(resp.Part.InlineData.Data)
+		return LoadResult{
+			Success:  true,
+			Content:  encoded,
+			MIMEType: resp.Part.InlineData.MIMEType,
+			IsBase64: true,
+			Message:  "Binary artifact loaded successfully",
+		}, nil
+	}
+
+	return LoadResult{Success: false, Message: "artifact has no content"}, nil
+}
+
+type ListArgs struct{}
+
+type ListResult struct {
+	Success   bool     `json:"success"`
+	Artifacts []string `json:"artifacts"`
+	Count     int      `json:"count"`
+	Message   string   `json:"message"`
+}
+
+func (ts *Toolset) listArtifacts(ctx tool.Context, _ ListArgs) (ListResult, error) {
+	resp, err := ctx.Artifacts().List(ctx)
+	if err != nil {
+		return ListResult{Success: false, Message: fmt.Sprintf("failed to list artifacts: %v", err)}, nil
+	}
+
+	return ListResult{
+		Success:   true,
+		Artifacts: resp.FileNames,
+		Count:     len(resp.FileNames),
+		Message:   fmt.Sprintf("Found %d artifact(s)", len(resp.FileNames)),
+	}, nil
+}
+
+var _ tool.Toolset = (*Toolset)(nil)

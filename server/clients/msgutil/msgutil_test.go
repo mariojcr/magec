@@ -148,3 +148,88 @@ func TestSplitMessage_Unicode(t *testing.T) {
 		}
 	}
 }
+
+func TestSplitMessage_NoContentLoss(t *testing.T) {
+	part1 := "El comercio atlántico transformó las islas."
+	part2 := "Los aborígenes amazigh dejaron su huella."
+	text := part1 + "\n\n" + part2
+	chunks := SplitMessage(text, 50)
+
+	reconstructed := strings.Join(chunks, "\n\n")
+	if reconstructed != text {
+		t.Errorf("content mismatch:\noriginal:      %q\nreconstructed: %q", text, reconstructed)
+	}
+}
+
+func TestSplitMessage_LongParagraphsNoContentLoss(t *testing.T) {
+	var paragraphs []string
+	for i := 0; i < 5; i++ {
+		paragraphs = append(paragraphs, strings.Repeat("abcdefghij ", 400)) // ~4400 chars each
+	}
+	text := strings.Join(paragraphs, "\n\n")
+
+	chunks := SplitMessage(text, TelegramMaxMessageLength)
+
+	var totalRunes int
+	for i, chunk := range chunks {
+		runeCount := utf8.RuneCountInString(chunk)
+		if runeCount > TelegramMaxMessageLength {
+			t.Errorf("chunk %d exceeds limit: %d runes", i, runeCount)
+		}
+		totalRunes += runeCount
+	}
+
+	originalRunes := utf8.RuneCountInString(text)
+	separatorRunes := 0
+	for i := 0; i < len(chunks)-1; i++ {
+		separatorRunes += utf8.RuneCountInString("\n\n")
+	}
+
+	if totalRunes+separatorRunes < originalRunes-10 {
+		t.Errorf("significant content loss: original %d runes, reconstructed %d runes (with %d separator runes)",
+			originalRunes, totalRunes, separatorRunes)
+	}
+}
+
+func TestSplitMessage_SpanishTextNoTruncation(t *testing.T) {
+	text := `PRIMERA PARTE: LOS ORÍGENES Y LOS PUEBLOS ABORÍGENES
+
+Las Islas Canarias, ese archipiélago perdido en el Atlántico frente a las costas africanas, tienen una historia que se remonta a miles de años antes de que los europeos pusieran sus sucias botas conquistadoras en estas tierras.
+
+SEGUNDA PARTE: LA LLEGADA DE LOS EUROPEOS Y LA CONQUISTA
+
+Los europeos "redescubrieron" las Canarias en el siglo XIV, aunque hay referencias anteriores en textos clásicos.
+
+TERCERA PARTE: LA CANARIAS COLONIAL Y EL COMERCIO ATLÁNTICO
+
+Tras la conquista, las islas se reorganizaron completamente. El comercio atlántico fue clave para su desarrollo económico durante siglos.`
+
+	chunks := SplitMessage(text, 200)
+
+	reconstructed := ""
+	for i, chunk := range chunks {
+		if i > 0 {
+			reconstructed += "\n\n"
+		}
+		reconstructed += chunk
+	}
+
+	if !strings.Contains(reconstructed, "comercio atlántico") {
+		t.Error("lost 'comercio atlántico' during split")
+	}
+	if !strings.Contains(reconstructed, "PRIMERA") {
+		t.Error("lost 'PRIMERA' during split")
+	}
+	if !strings.Contains(reconstructed, "TERCERA") {
+		t.Error("lost 'TERCERA' during split")
+	}
+
+	for i, chunk := range chunks {
+		if utf8.RuneCountInString(chunk) > 200 {
+			t.Errorf("chunk %d exceeds limit: %d runes: %q", i, utf8.RuneCountInString(chunk), chunk[:50])
+		}
+		if strings.HasPrefix(chunk, "omercio") || strings.HasPrefix(chunk, "s de los") {
+			t.Errorf("chunk %d starts with truncated word: %q", i, chunk[:20])
+		}
+	}
+}

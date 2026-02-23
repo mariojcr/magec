@@ -47,17 +47,17 @@ func SplitMessage(text string, maxLen int) []string {
 		runes := []rune(remaining)
 		candidate := string(runes[:maxLen])
 
-		splitIdx := findSplitPoint(candidate)
-		chunk := strings.TrimRight(candidate[:splitIdx], " \n")
+		splitByteIdx := findSplitPoint(candidate)
+		chunk := strings.TrimRight(candidate[:splitByteIdx], " \n")
 		if chunk == "" {
 			chunk = candidate
-			splitIdx = len(candidate)
+			splitByteIdx = len(candidate)
 		}
 
 		chunks = append(chunks, chunk)
 
-		rest := remaining[len(string(runes[:splitIdx])):]
-		remaining = strings.TrimLeft(rest, "\n")
+		remaining = remaining[splitByteIdx:]
+		remaining = strings.TrimLeft(remaining, "\n")
 	}
 
 	return chunks

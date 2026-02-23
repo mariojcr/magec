@@ -120,28 +120,9 @@ See `.agents/ADK_TOOLS.md` for protocol details.
 
 ---
 
-### Artifact Management Toolset
+### ~~Artifact Management Toolset~~ ✅
 
-**Problem**: ADK has artifact storage (versioned, session-scoped) and REST endpoints for clients to download them, but the LLM has no way to create, read, list, or delete artifacts. Without tools that call `ctx.SaveArtifact()` / `ctx.LoadArtifact()`, the artifact system is dead weight.
-
-**Solution**: Build a base toolset with four Go-native tools using `functiontool`:
-- `save_artifact(name, content, mimeType)` — saves content as a versioned artifact in the session
-- `load_artifact(name)` — reads an artifact (latest version) back into context
-- `list_artifacts()` — lists all artifacts in the current session
-- `delete_artifact(name)` — removes an artifact
-
-**Use cases**:
-- LLM generates a report/export → `save_artifact()` → user downloads via Voice UI / Telegram / Slack using existing ADK GET endpoints
-- Flow pipelines: step 1 produces data → `save_artifact()`, step 2 reads → `load_artifact()` and transforms
-- Combined with a filesystem MCP: `load_artifact()` → process → `write_file()` to persist externally, or `read_file()` → `save_artifact()` to make available for download
-
-**Design**:
-- Configurable per agent (not all agents need it) — toggle in agent config, similar to memory tools
-- Sandboxed by session — no security risk, no file system access
-- ADK handles versioning and storage automatically
-- Replaces `loadartifactstool` from ADK (read-only) with a complete CRUD toolset
-
-**Modify**: `server/agent/agent.go` (register toolset in `buildToolsets`), new file `server/agent/tools/artifacts.go`, `server/store/types.go` (agent config toggle), `frontend/admin-ui/` (agent form toggle)
+Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. `artifact.InMemoryService()` set in launcher config. Clients (Telegram and Slack) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
 
 ---
 
