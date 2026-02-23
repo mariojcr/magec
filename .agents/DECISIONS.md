@@ -398,8 +398,32 @@ All agents get the artifact toolset (save/load/list) unconditionally via `base_t
 
 **No delete tool**: ADK's `agent.Artifacts` interface (exposed via `tool.Context`) has Save, Load, List, and LoadVersion — but no Delete. Delete exists only on `artifact.Service` directly. Rather than breaking the abstraction by passing the raw service into tools, we omit delete. Artifacts are versioned and session-scoped, so stale artifacts are naturally cleaned up when sessions expire.
 
-**Storage**: `artifact.InMemoryService()` — matches the existing session service pattern (in-memory default, Redis optional). Data does not survive restarts, which is acceptable since artifact delivery happens immediately after each `/run` response.
+**Storage**: `adk-utils-go/artifact/filesystem` — filesystem-backed `artifact.Service` implementation. Stores artifacts as JSON at `data/artifacts/{appName}/{userID}/{sessionID}/{fileName}/{version}.json`. Supports versioning and user-scoped artifacts. Data persists across restarts.
 
 **Client delivery**: Telegram and Slack clients list artifacts before and after each `/run` call, diff the lists, and deliver new artifacts as file attachments (Telegram: `SendDocument`, Slack: `UploadFileV2`). Artifacts are always files, never inlined in chat text.
 
-**Files**: `server/agent/tools/artifacts/toolset.go` (toolset), `server/agent/base_toolset.go` (wiring), `server/agent/agent.go` (InMemoryService + launcher config), `server/clients/telegram/bot.go` and `server/clients/slack/bot.go` (delivery).
+**Files**: `server/agent/tools/artifacts/toolset.go` (toolset), `server/agent/base_toolset.go` (wiring), `server/agent/agent.go` (FilesystemService + launcher config), `server/clients/telegram/bot.go` and `server/clients/slack/bot.go` (delivery).
+
+---
+
+## 18. Multimodal Adapter Parity — Error on Unsupported Types
+
+**Date**: 2026-02-23
+
+When an adapter receives `genai.Part{InlineData}` with a MIME type it can't translate, it returns an error — **not** `nil` (silent drop). This matches Gemini's native behavior where unsupported types cause the API request to fail.
+
+**Rationale**: Silent drops are a bug — the user sends a file, the LLM never sees it, and nobody gets feedback. With errors, either the client validates beforehand (preferred) or the user sees an explicit failure. All three providers behave identically: unsupported = fail.
+
+**Supported types per adapter (adk-utils-go v0.3.1)**:
+
+| Type | Gemini | OpenAI | Anthropic |
+|---|---|---|---|
+| Images (JPEG, PNG, GIF, WebP) | ✅ (native) | ✅ (data URI) | ✅ (Base64ImageSource) |
+| PDF | ✅ (native) | ✅ (FileParam) | ✅ (Base64PDFSource) |
+| Text (text/*) | ✅ (native) | ✅ (FileParam) | ✅ (PlainTextSource) |
+| Audio (WAV, MP3, WebM) | ✅ (native) | ✅ (InputAudio) | ❌ error |
+| Video, other | ✅ (native) | ❌ error | ❌ error |
+
+**Do not**: Silently drop unsupported `InlineData` parts. Do not convert them to text descriptions. Return `fmt.Errorf("unsupported inline data MIME type for %s: %s")`.
+
+**Files**: `adk-utils-go/genai/openai/openai.go` (`convertInlineDataToPart`), `adk-utils-go/genai/anthropic/anthropic.go` (`convertInlineDataToBlock`).

@@ -447,7 +447,7 @@ If the message has a caption, it goes as the text part. If no caption, the text 
 
 ### File size validation
 
-20MB limit enforced before downloading. Telegram bot API limits files to 20MB anyway. For Slack, check `file.Size` before calling `downloadSlackFile()`.
+5MB per file, 10MB total per message, max 10 files. Enforced client-side before downloading. Telegram bot API limits files to 20MB anyway. For Slack, check `file.Size` before calling `downloadSlackFile()`.
 
 ### A2A (future)
 
@@ -518,6 +518,6 @@ The ADK artifact endpoint returns a `genai.Part` JSON:
 |------|------|
 | `server/agent/tools/artifacts/toolset.go` | Toolset with save/load/list tools |
 | `server/agent/base_toolset.go` | Wires artifact toolset into all agents |
-| `server/agent/agent.go` | Creates `artifact.InMemoryService()`, sets `launcherCfg.ArtifactService` |
+| `server/agent/agent.go` | Creates `artifactfs.NewFilesystemService()`, sets `launcherCfg.ArtifactService` |
 | `server/clients/telegram/bot.go` | `listArtifacts()`, `downloadArtifact()`, `sendNewArtifacts()` |
 | `server/clients/slack/bot.go` | Same three methods, adapted for Slack API |

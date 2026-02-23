@@ -14,6 +14,16 @@ Implemented. See `server/clients/msgutil/` package.
 
 **Solution**: Download files from Telegram/Slack, encode as base64, and send as `inlineData` parts alongside text in the ADK `/run` request. The ADK already supports `genai.Part{InlineData: &Blob{Data, MIMEType}}` — zero backend changes needed.
 
+**Adapter support (adk-utils-go v0.3.1)**:
+- **Gemini**: passes all `InlineData` transparently to the API. Unsupported types are rejected by Google's API.
+- **OpenAI**: translates images (JPEG, PNG, GIF, WebP), audio (WAV, MP3, MPEG, WebM), and files (PDF, text/*). Unsupported types return an error.
+- **Anthropic**: translates images (JPEG, PNG, GIF, WebP), PDFs, and text documents (text/*). Unsupported types return an error.
+- All three adapters behave the same: if a MIME type can't be translated, the request fails. No silent drops.
+
+**File size limits**: 5MB per file, 10MB total per message, max 10 files per message. Validated client-side before download.
+
+**Supported types (denominator común)**: JPEG, PNG, GIF, WebP. PDF and text/* work on Gemini + Anthropic. Audio works on Gemini + OpenAI.
+
 **Telegram** (`server/clients/telegram/bot.go`):
 - Current state: only `Voice` (dedicated handler) and `Text` (predicate at ~line 171 requires `Text != ""` and `Voice == nil`). Everything else is silently dropped.
 - Add handler for `Document`, `Photo`, `Video`, `Audio`, `Animation`, `VideoNote`, `Sticker`. All have `FileID` → `bot.GetFile()` → download bytes.
@@ -39,7 +49,7 @@ Implemented. See `server/clients/msgutil/` package.
 }
 ```
 
-**File size validation**: Add 20MB limit (denominator común: Gemini 20MB, OpenAI 20MB, Anthropic 5MB for images). Telegram API limits bots to 20MB anyway. Reject oversized files with user-friendly message.
+**File size validation**: 5MB per file, 10MB total per message, max 10 files. Reject oversized files with user-friendly message.
 
 **LLM limitations**: GPT-4o/Claude/Gemini handle images and PDFs natively. For Word/Excel/CSV, the model may not support them — the user gets a natural "I can't process this format" response from the LLM itself.
 
@@ -122,7 +132,7 @@ See `.agents/ADK_TOOLS.md` for protocol details.
 
 ### ~~Artifact Management Toolset~~ ✅
 
-Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. `artifact.InMemoryService()` set in launcher config. Clients (Telegram and Slack) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
+Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_artifact`, `load_artifact`, and `list_artifacts` tools via `functiontool.New`. Supports text and base64 binary content. Wired into `base_toolset.go` so all agents get it. Filesystem-backed via `adk-utils-go/artifact/filesystem` (persists across restarts). Clients (Telegram and Slack) auto-deliver new artifacts as file attachments after each `/run` response using before/after diff of the artifact list REST endpoint.
 
 ---
 
