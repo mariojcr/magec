@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/achetronic/magec/server/clients/msgutil"
 	"github.com/achetronic/magec/server/store"
 	"github.com/google/uuid"
 )
@@ -131,11 +132,12 @@ func (e *Executor) callAgent(ctx context.Context, agentID, prompt, token string,
 	callCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(callCtx, "POST", e.agentURL+"/run", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(callCtx, "POST", e.agentURL+"/run_sse", bytes.NewReader(jsonBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -151,17 +153,37 @@ func (e *Executor) callAgent(ctx context.Context, agentID, prompt, token string,
 		return "", fmt.Errorf("agent returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var events []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+	filterSet := make(map[string]bool, len(responseFilter))
+	for _, id := range responseFilter {
+		filterSet[id] = true
 	}
+	hasFilter := len(filterSet) > 0
 
-	e.logger.Info("ADK response received", "events", len(events), "filterAgents", len(responseFilter))
+	var parts []string
+	msgutil.ParseSSEStream(resp.Body, func(evt msgutil.SSEEvent) {
+		if evt.Type == msgutil.SSEEventText {
+			if hasFilter && !filterSet[evt.Author] {
+				return
+			}
+			if evt.Text != "" {
+				parts = append(parts, evt.Text)
+			}
+		}
+	})
 
-	responseText := extractResponseText(events, responseFilter)
-	e.logger.Info("Response extracted", "responseLen", len(responseText))
+	e.logger.Info("ADK SSE response received", "textParts", len(parts), "filterAgents", len(responseFilter))
 
-	return responseText, nil
+	if len(parts) == 0 {
+		return "(no response)", nil
+	}
+	if len(parts) == 1 {
+		return parts[0], nil
+	}
+	result := parts[0]
+	for _, p := range parts[1:] {
+		result += "\n---\n" + p
+	}
+	return result, nil
 }
 
 func (e *Executor) ensureSession(ctx context.Context, agentID, userID, sessionID, token string) error {
@@ -192,58 +214,6 @@ func (e *Executor) ensureSession(ctx context.Context, agentID, userID, sessionID
 	return nil
 }
 
-// extractResponseText extracts text from ADK events. If responseFilter is
-// non-empty, only events authored by those agent IDs are included. Otherwise
-// all events with text content contribute to the result.
-func extractResponseText(events []map[string]interface{}, responseFilter []string) string {
-	filterSet := make(map[string]bool, len(responseFilter))
-	for _, id := range responseFilter {
-		filterSet[id] = true
-	}
-	hasFilter := len(filterSet) > 0
-
-	var parts []string
-	for _, event := range events {
-		if hasFilter {
-			author, _ := event["author"].(string)
-			if !filterSet[author] {
-				continue
-			}
-		}
-		content, ok := event["content"].(map[string]interface{})
-		if !ok {
-			continue
-		}
-		contentParts, ok := content["parts"].([]interface{})
-		if !ok {
-			continue
-		}
-		var eventText string
-		for _, part := range contentParts {
-			partMap, ok := part.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			if text, ok := partMap["text"].(string); ok {
-				eventText += text
-			}
-		}
-		if eventText != "" {
-			parts = append(parts, eventText)
-		}
-	}
-	if len(parts) == 0 {
-		return "(no response)"
-	}
-	if len(parts) == 1 {
-		return parts[0]
-	}
-	result := parts[0]
-	for _, p := range parts[1:] {
-		result += "\n---\n" + p
-	}
-	return result
-}
 
 // LogExternalConversation records a conversation from an external source (e.g. telegram, voice-ui).
 func (e *Executor) LogExternalConversation(agentID, userID, sessionID, source, clientID, prompt, perspective string, events []map[string]interface{}) {

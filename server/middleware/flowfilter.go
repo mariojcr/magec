@@ -84,6 +84,10 @@ func (f *filteringSSEWriter) Flush() {
 	}
 }
 
+func (f *filteringSSEWriter) Unwrap() http.ResponseWriter {
+	return f.ResponseWriter
+}
+
 // sessionGetRe matches GET /…/apps/{appName}/users/{userId}/sessions/{sessionId}
 var sessionGetRe = regexp.MustCompile(`/apps/([^/]+)/users/[^/]+/sessions/[^/]+$`)
 

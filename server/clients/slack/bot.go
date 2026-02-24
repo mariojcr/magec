@@ -29,8 +29,6 @@ const (
 	ResponseModeVoice  = "voice"
 	ResponseModeMirror = "mirror"
 	ResponseModeBoth   = "both"
-
-	progressTimeout = 30 * time.Second
 )
 
 type AgentInfo struct {
@@ -53,6 +51,9 @@ type Client struct {
 
 	responseMu           sync.RWMutex
 	responseModeOverride string
+
+	showToolsMu sync.RWMutex
+	showTools   bool
 
 	botUserID string
 }
@@ -177,6 +178,9 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 	ev, ok := event.InnerEvent.Data.(*slackevents.MessageEvent)
 	if !ok || ev == nil {
+		return
+	}
+	if ev.SubType != "" {
 		return
 	}
 	if ev.User == c.botUserID || ev.User == "" {
@@ -306,7 +310,8 @@ func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool
 			"• `!agent <id>` — Switch to a specific agent\n" +
 			"• `!reset` — Reset the conversation session\n" +
 			"• `!responsemode` — Show or change the response mode\n" +
-			"• `!responsemode <mode>` — Set response mode (`text`, `voice`, `mirror`, `both`, `reset`)"
+			"• `!responsemode <mode>` — Set response mode (`text`, `voice`, `mirror`, `both`, `reset`)\n" +
+			"• `!showtools` — Toggle tool call visibility"
 		c.postMessage(channelID, helpText, threadTS)
 		return true
 	}
@@ -402,6 +407,19 @@ func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool
 		return c.handleResponseModeCommand(channelID, arg, threadTS)
 	}
 
+	if lower == "showtools" {
+		c.showToolsMu.Lock()
+		c.showTools = !c.showTools
+		state := c.showTools
+		c.showToolsMu.Unlock()
+		label := "OFF"
+		if state {
+			label = "ON"
+		}
+		c.postMessage(channelID, fmt.Sprintf("🔧 Tool call visibility: *%s*", label), threadTS)
+		return true
+	}
+
 	return false
 }
 
@@ -444,6 +462,12 @@ func (c *Client) getResponseMode() string {
 		return ResponseModeText
 	}
 	return mode
+}
+
+func (c *Client) getShowTools() bool {
+	c.showToolsMu.RLock()
+	defer c.showToolsMu.RUnlock()
+	return c.showTools
 }
 
 func (c *Client) buildSessionID(channelID, threadTS string) string {
@@ -521,21 +545,17 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 
 	c.setReaction("brain", msgRef)
 
-	progressTimer := time.AfterFunc(progressTimeout, func() {
-		c.postMessage(channelID, "Still working on it, this may take a moment...", threadTS)
-	})
-	defer progressTimer.Stop()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run_sse", bytes.NewReader(jsonBody))
 	if err != nil {
 		c.logger.Error("Failed to create request", "error", err)
 		c.setReaction("x", msgRef)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
 	c.setAuthHeader(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -555,51 +575,81 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		return
 	}
 
-	var events []map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
-		c.logger.Error("Failed to decode response", "error", err)
-		c.setReaction("x", msgRef)
-		c.postMessage(channelID, "Failed to parse the agent response. Please try again.", threadTS)
-		return
+	var lastTextResponse string
+	hasText := false
+	toolCount := 0
+	var toolCounterTS string
+	ssErr := msgutil.ParseSSEStream(resp.Body, func(evt msgutil.SSEEvent) {
+		switch evt.Type {
+		case msgutil.SSEEventText:
+			hasText = true
+			lastTextResponse = evt.Text
+			c.sendTextMessage(channelID, evt.Text, threadTS, inputWasVoice)
+		case msgutil.SSEEventToolCall:
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolCallSlack(evt)
+				c.postMessage(channelID, toolMsg, threadTS)
+			} else {
+				toolCount++
+				counterText := fmt.Sprintf("⚙️ x%d", toolCount)
+				if toolCounterTS == "" {
+					opts := []slackapi.MsgOption{
+						slackapi.MsgOptionText(counterText, false),
+					}
+					if threadTS != "" {
+						opts = append(opts, slackapi.MsgOptionTS(threadTS))
+					}
+					_, ts, err := c.api.PostMessage(channelID, opts...)
+					if err == nil {
+						toolCounterTS = ts
+					}
+				} else {
+					opts := []slackapi.MsgOption{
+						slackapi.MsgOptionText(counterText, false),
+					}
+					_, _, _, _ = c.api.UpdateMessage(channelID, toolCounterTS, opts...)
+				}
+			}
+		}
+	})
+
+	if ssErr != nil {
+		c.logger.Error("SSE stream error", "error", ssErr)
 	}
 
-	progressTimer.Stop()
-	c.setReaction("white_check_mark", msgRef)
+	if !hasText {
+		c.postMessage(channelID, "I couldn't generate a response.", threadTS)
+	}
 
-	responseText := c.extractResponseText(events)
-	c.sendResponse(channelID, responseText, threadTS, inputWasVoice)
+	mode := c.getResponseMode()
+	sendVoice := mode == ResponseModeVoice || mode == ResponseModeBoth || (mode == ResponseModeMirror && inputWasVoice)
+	if sendVoice && lastTextResponse != "" {
+		c.sendVoiceResponse(channelID, lastTextResponse, threadTS, agentID)
+	}
+
+	c.setReaction("white_check_mark", msgRef)
 	c.sendNewArtifacts(channelID, threadTS, agentID, "default_user", sessionID, artifactsBefore)
 }
 
-func (c *Client) sendResponse(channelID, text, threadTS string, inputWasVoice bool) {
+// sendTextMessage sends a text message respecting the response mode.
+// For voice-only modes, text is not sent (TTS is handled separately).
+func (c *Client) sendTextMessage(channelID, text, threadTS string, inputWasVoice bool) {
 	mode := c.getResponseMode()
 
 	sendText := false
-	sendVoice := false
-
 	switch mode {
 	case ResponseModeVoice:
-		sendVoice = true
+		// voice-only: don't send text
 	case ResponseModeMirror:
-		if inputWasVoice {
-			sendVoice = true
-		} else {
+		if !inputWasVoice {
 			sendText = true
 		}
-	case ResponseModeBoth:
-		sendText = true
-		sendVoice = true
 	default:
 		sendText = true
 	}
 
 	if sendText {
 		c.postMessage(channelID, text, threadTS)
-	}
-
-	if sendVoice {
-		agentID := c.getActiveAgentID(channelID)
-		c.sendVoiceResponse(channelID, text, threadTS, agentID)
 	}
 }
 
@@ -1005,32 +1055,6 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 	return nil
 }
 
-func (c *Client) extractResponseText(events []map[string]interface{}) string {
-	var result string
-	for _, event := range events {
-		content, ok := event["content"].(map[string]interface{})
-		if !ok {
-			continue
-		}
-		parts, ok := content["parts"].([]interface{})
-		if !ok {
-			continue
-		}
-		for _, part := range parts {
-			partMap, ok := part.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			if text, ok := partMap["text"].(string); ok {
-				result += text
-			}
-		}
-	}
-	if result == "" {
-		return "I couldn't generate a response."
-	}
-	return result
-}
 
 func (c *Client) stripBotMention(text string) string {
 	mention := fmt.Sprintf("<@%s>", c.botUserID)

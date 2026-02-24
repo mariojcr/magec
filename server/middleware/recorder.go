@@ -31,6 +31,10 @@ func (r *bodyCapture) Write(b []byte) (int, error) {
 	return r.ResponseWriter.Write(b)
 }
 
+func (r *bodyCapture) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
 // ConversationRecorder wraps an HTTP handler to intercept /run calls and log
 // conversations to the conversation store. The perspective parameter determines
 // whether this logs the "admin" (all events) or "user" (filtered) view.
@@ -200,6 +204,10 @@ func (r *sseResponseRecorder) Flush() {
 	if r.flusher != nil {
 		r.flusher.Flush()
 	}
+}
+
+func (r *sseResponseRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }
 
 func parseSSEEvents(raw string) []map[string]interface{} {

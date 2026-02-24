@@ -250,7 +250,7 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	}
 
 	return &Service{
-		handler:    adkrest.NewHandler(launcherCfg, 30*time.Second),
+		handler:    adkrest.NewHandler(launcherCfg, 15*time.Minute),
 		sessionSvc: sessionSvc,
 		memorySvc:  memorySvc,
 		adkAgents:  adkAgentMap,
