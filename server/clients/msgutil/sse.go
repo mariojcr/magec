@@ -193,10 +193,52 @@ func FormatToolCallSlack(evt SSEEvent) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+// FormatToolResultTelegram formats a tool result as a Telegram expandable blockquote.
+func FormatToolResultTelegram(evt SSEEvent) string {
+	result := prettyResult(evt.ToolResult)
+	if result == "" {
+		return fmt.Sprintf("<blockquote>📎 <b>%s</b> → (empty)</blockquote>", escapeHTML(evt.ToolName))
+	}
+	return fmt.Sprintf("<blockquote expandable>📎 <b>%s</b>\n%s</blockquote>", escapeHTML(evt.ToolName), escapeHTML(result))
+}
+
+// FormatToolResultDiscord formats a tool result for Discord.
+func FormatToolResultDiscord(evt SSEEvent) string {
+	result := prettyResult(evt.ToolResult)
+	if result == "" {
+		return fmt.Sprintf("> 📎 **%s** → (empty)", evt.ToolName)
+	}
+	return fmt.Sprintf("📎 **%s**\n```\n%s\n```", evt.ToolName, result)
+}
+
+// FormatToolResultSlack formats a tool result for Slack.
+func FormatToolResultSlack(evt SSEEvent) string {
+	result := prettyResult(evt.ToolResult)
+	if result == "" {
+		return fmt.Sprintf("> 📎 *%s* → (empty)", evt.ToolName)
+	}
+	return fmt.Sprintf("📎 *%s*\n```\n%s\n```", evt.ToolName, result)
+}
+
 // argLine holds a key-value pair from tool arguments.
 type argLine struct {
 	Key   string
 	Value string
+}
+
+// prettyResult formats a tool result for display inside a code block.
+func prettyResult(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%v", v)
+	}
+	return string(b)
 }
 
 // humanArgLines converts tool arguments into human-readable key-value pairs.
@@ -259,11 +301,7 @@ func humanValue(v interface{}) string {
 		return "[" + strings.Join(items, ", ") + "]"
 	case map[string]interface{}:
 		b, _ := json.Marshal(val)
-		s := string(b)
-		if len(s) > 80 {
-			s = s[:80] + "…"
-		}
-		return s
+		return string(b)
 	default:
 		return fmt.Sprintf("%v", v)
 	}

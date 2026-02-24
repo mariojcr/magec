@@ -209,6 +209,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 
 	firstText := true
 	hasText := false
+	hasToolActivity := false
 	toolCount := 0
 	var toolCounterMsgID string
 	err := c.callAgentSSE(m, inputText, func(evt msgutil.SSEEvent) {
@@ -231,6 +232,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 				}
 			}
 		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
 			if c.getShowTools() {
 				toolMsg := msgutil.FormatToolCallDiscord(evt)
 				s.ChannelMessageSend(m.ChannelID, toolMsg)
@@ -246,6 +248,12 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 					s.ChannelMessageEdit(m.ChannelID, toolCounterMsgID, counterText)
 				}
 			}
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolResultDiscord(evt)
+				s.ChannelMessageSend(m.ChannelID, toolMsg)
+			}
 		}
 	})
 	close(typingDone)
@@ -258,7 +266,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 		return
 	}
 
-	if !hasText {
+	if !hasText && !hasToolActivity {
 		s.ChannelMessageSend(m.ChannelID, "I couldn't generate a response.")
 	}
 
@@ -356,6 +364,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	firstText := true
 	var lastTextResponse string
 	hasText := false
+	hasToolActivity := false
 	toolCount := 0
 	var toolCounterMsgID string
 	err = c.callAgentSSE(m, voiceInput, func(evt msgutil.SSEEvent) {
@@ -385,6 +394,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 			}
 		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
 			if c.getShowTools() {
 				toolMsg := msgutil.FormatToolCallDiscord(evt)
 				s.ChannelMessageSend(m.ChannelID, toolMsg)
@@ -400,6 +410,12 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 					s.ChannelMessageEdit(m.ChannelID, toolCounterMsgID, counterText)
 				}
 			}
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolResultDiscord(evt)
+				s.ChannelMessageSend(m.ChannelID, toolMsg)
+			}
 		}
 	})
 	close(typingDone)
@@ -412,7 +428,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	if !hasText {
+	if !hasText && !hasToolActivity {
 		s.ChannelMessageSend(m.ChannelID, "I couldn't generate a response.")
 	}
 

@@ -55,6 +55,9 @@ type Client struct {
 	showToolsMu sync.RWMutex
 	showTools   bool
 
+	seenMu sync.Mutex
+	seen   map[string]struct{}
+
 	botUserID string
 }
 
@@ -78,6 +81,7 @@ func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, 
 	socket := socketmode.New(api)
 
 	return &Client{
+		seen:        make(map[string]struct{}),
 		api:         api,
 		socket:      socket,
 		clientDef:   clientDef,
@@ -144,12 +148,31 @@ func (c *Client) handleEventsAPI(evt socketmode.Event) {
 	}
 }
 
+func (c *Client) isDuplicate(ts string) bool {
+	c.seenMu.Lock()
+	defer c.seenMu.Unlock()
+	if _, dup := c.seen[ts]; dup {
+		return true
+	}
+	c.seen[ts] = struct{}{}
+	if len(c.seen) > 1000 {
+		for k := range c.seen {
+			delete(c.seen, k)
+			break
+		}
+	}
+	return false
+}
+
 func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 	ev, ok := event.InnerEvent.Data.(*slackevents.AppMentionEvent)
 	if !ok || ev == nil {
 		return
 	}
 	if ev.User == c.botUserID {
+		return
+	}
+	if c.isDuplicate(ev.TimeStamp) {
 		return
 	}
 	if !c.isAllowed(ev.User, ev.Channel) {
@@ -190,6 +213,9 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 	if ev.ChannelType != "im" {
+		return
+	}
+	if c.isDuplicate(ev.TimeStamp) {
 		return
 	}
 	if !c.isAllowed(ev.User, ev.Channel) {
@@ -577,6 +603,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 
 	var lastTextResponse string
 	hasText := false
+	hasToolActivity := false
 	toolCount := 0
 	var toolCounterTS string
 	ssErr := msgutil.ParseSSEStream(resp.Body, func(evt msgutil.SSEEvent) {
@@ -588,6 +615,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 			toolCounterTS = ""
 			c.sendTextMessage(channelID, evt.Text, threadTS, inputWasVoice)
 		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
 			if c.getShowTools() {
 				toolMsg := msgutil.FormatToolCallSlack(evt)
 				c.postMessage(channelID, toolMsg, threadTS)
@@ -612,6 +640,12 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 					_, _, _, _ = c.api.UpdateMessage(channelID, toolCounterTS, opts...)
 				}
 			}
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolResultSlack(evt)
+				c.postMessage(channelID, toolMsg, threadTS)
+			}
 		}
 	})
 
@@ -619,7 +653,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		c.logger.Error("SSE stream error", "error", ssErr)
 	}
 
-	if !hasText {
+	if !hasText && !hasToolActivity {
 		c.postMessage(channelID, "I couldn't generate a response.", threadTS)
 	}
 

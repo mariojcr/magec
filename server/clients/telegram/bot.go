@@ -429,6 +429,7 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 	artifactsBefore := c.listArtifacts(agentID, userIDStr, sessionID)
 
 	hasText := false
+	hasToolActivity := false
 	toolCount := 0
 	eventCount := 0
 	var toolCounterMsgID int
@@ -441,6 +442,7 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 			toolCounterMsgID = 0
 			c.sendTextResponse(ctx, msg.Chat.ID, evt.Text, false)
 		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
 			if c.getShowTools() {
 				toolMsg := msgutil.FormatToolCallTelegram(evt)
 				_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
@@ -467,6 +469,16 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 					})
 				}
 			}
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolResultTelegram(evt)
+				_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+					ChatID:    tu.ID(msg.Chat.ID),
+					Text:      toolMsg,
+					ParseMode: "HTML",
+				})
+			}
 		}
 	})
 	close(typingDone)
@@ -481,7 +493,7 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		return nil
 	}
 
-	if !hasText {
+	if !hasText && !hasToolActivity {
 		c.logger.Warn("No text in agent response",
 			"chat_id", msg.Chat.ID,
 			"agent", agentID,
@@ -597,6 +609,7 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 
 	var lastTextResponse string
 	hasText := false
+	hasToolActivity := false
 	toolCount := 0
 	var toolCounterMsgID int
 	err = c.callAgentSSE(msg, voiceInput, func(evt msgutil.SSEEvent) {
@@ -608,6 +621,7 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 			toolCounterMsgID = 0
 			c.sendTextResponse(ctx, msg.Chat.ID, evt.Text, true)
 		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
 			if c.getShowTools() {
 				toolMsg := msgutil.FormatToolCallTelegram(evt)
 				_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
@@ -634,6 +648,16 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 					})
 				}
 			}
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				toolMsg := msgutil.FormatToolResultTelegram(evt)
+				_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+					ChatID:    tu.ID(msg.Chat.ID),
+					Text:      toolMsg,
+					ParseMode: "HTML",
+				})
+			}
 		}
 	})
 	close(typingDone)
@@ -648,7 +672,7 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		return nil
 	}
 
-	if !hasText {
+	if !hasText && !hasToolActivity {
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
 			Text:   "I couldn't generate a response.",
