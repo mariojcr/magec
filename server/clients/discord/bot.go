@@ -230,7 +230,14 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			for i, chunk := range chunks {
 				msg := &discordgo.MessageSend{Content: chunk}
 				if firstText && i == 0 && m.GuildID != "" {
-					msg.Reference = replyRef
+					ch, chErr := s.Channel(m.ChannelID)
+					isThread := chErr == nil &&
+						(ch.Type == discordgo.ChannelTypeGuildNewsThread ||
+							ch.Type == discordgo.ChannelTypeGuildPublicThread ||
+							ch.Type == discordgo.ChannelTypeGuildPrivateThread)
+					if !isThread {
+						msg.Reference = replyRef
+					}
 					firstText = false
 				}
 				_, err := s.ChannelMessageSendComplex(m.ChannelID, msg)
