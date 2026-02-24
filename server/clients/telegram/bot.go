@@ -430,8 +430,10 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 
 	hasText := false
 	toolCount := 0
+	eventCount := 0
 	var toolCounterMsgID int
 	err := c.callAgentSSE(msg, inputText, func(evt msgutil.SSEEvent) {
+		eventCount++
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -480,6 +482,13 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 	}
 
 	if !hasText {
+		c.logger.Warn("No text in agent response",
+			"chat_id", msg.Chat.ID,
+			"agent", agentID,
+			"session", sessionID,
+			"events_received", eventCount,
+			"tool_calls", toolCount,
+		)
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
 			Text:   "I couldn't generate a response.",

@@ -83,6 +83,11 @@
                 <FormInput v-model="form.contextGuardMaxTurns" type="number" placeholder="20" />
                 <p class="text-[10px] text-arena-500 mt-1">Number of messages to keep before summarizing older ones</p>
               </div>
+              <div v-if="form.contextGuardStrategy === 'threshold'">
+                <FormLabel label="Max tokens" />
+                <FormInput v-model="form.contextGuardMaxTokens" type="number" placeholder="Auto (model limit)" />
+                <p class="text-[10px] text-arena-500 mt-1">Token limit for triggering summarization. Leave empty to auto-detect from model.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -241,6 +246,7 @@ const form = reactive({
   contextGuardEnabled: false,
   contextGuardStrategy: 'threshold',
   contextGuardMaxTurns: '',
+  contextGuardMaxTokens: '',
   a2aEnabled: false,
 })
 
@@ -289,6 +295,7 @@ function open(agent = null) {
   form.contextGuardEnabled = agent?.contextGuard?.enabled || false
   form.contextGuardStrategy = agent?.contextGuard?.strategy || 'threshold'
   form.contextGuardMaxTurns = agent?.contextGuard?.maxTurns || ''
+  form.contextGuardMaxTokens = agent?.contextGuard?.maxTokens || ''
   form.a2aEnabled = agent?.a2a?.enabled || false
   dialogRef.value?.open()
 }
@@ -314,6 +321,7 @@ async function save() {
       enabled: true,
       strategy: form.contextGuardStrategy,
       maxTurns: parseInt(form.contextGuardMaxTurns) || 0,
+      maxTokens: parseInt(form.contextGuardMaxTokens) || 0,
     } : undefined,
     a2a: form.a2aEnabled ? { enabled: true } : undefined,
   }

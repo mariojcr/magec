@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"sort"
 	"strings"
 )
@@ -54,6 +55,14 @@ func ParseSSEStream(reader io.Reader, handler func(SSEEvent)) error {
 		}
 
 		events := classifyEvent(raw)
+		if len(events) == 0 {
+			author, _ := raw["author"].(string)
+			slog.Debug("SSE event dropped (no classifiable parts)",
+				"author", author,
+				"raw_keys", mapKeys(raw),
+				"data_len", len(data),
+			)
+		}
 		for _, evt := range events {
 			handler(evt)
 		}
@@ -265,4 +274,13 @@ func escapeHTML(s string) string {
 	s = strings.ReplaceAll(s, "<", "&lt;")
 	s = strings.ReplaceAll(s, ">", "&gt;")
 	return s
+}
+
+func mapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

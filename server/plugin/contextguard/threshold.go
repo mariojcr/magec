@@ -18,16 +18,18 @@ import (
 //   - Large windows (>200k tokens): fixed 20k-token buffer
 //   - Small windows (≤200k): 20% of the total window
 type thresholdStrategy struct {
-	registry *contextwindow.Registry
-	llm      model.LLM
-	mu       sync.Mutex
+	registry  *contextwindow.Registry
+	llm       model.LLM
+	maxTokens int
+	mu        sync.Mutex
 }
 
 // newThresholdStrategy creates a threshold strategy for a single agent.
-func newThresholdStrategy(registry *contextwindow.Registry, llm model.LLM) *thresholdStrategy {
+func newThresholdStrategy(registry *contextwindow.Registry, llm model.LLM, maxTokens int) *thresholdStrategy {
 	return &thresholdStrategy{
-		registry: registry,
-		llm:      llm,
+		registry:  registry,
+		llm:       llm,
+		maxTokens: maxTokens,
 	}
 }
 
@@ -40,7 +42,12 @@ func (s *thresholdStrategy) Name() string {
 // if the threshold is exceeded, splits the conversation into old + recent,
 // summarizes the old portion, and rewrites req.Contents in place.
 func (s *thresholdStrategy) Compact(ctx agent.CallbackContext, req *model.LLMRequest) error {
-	contextWindow := s.registry.ContextWindow(req.Model)
+	var contextWindow int
+	if s.maxTokens > 0 {
+		contextWindow = s.maxTokens
+	} else {
+		contextWindow = s.registry.ContextWindow(req.Model)
+	}
 	buffer := computeBuffer(contextWindow)
 	threshold := contextWindow - buffer
 

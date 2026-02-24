@@ -225,6 +225,7 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	if cwRegistry != nil {
 		strategies := make(map[string]string)
 		maxTurns := make(map[string]int)
+		maxTokens := make(map[string]int)
 		guardLLMs := make(map[string]model.LLM)
 		for _, agentDef := range agents {
 			cg := agentDef.ContextGuard
@@ -240,12 +241,16 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 			if cg.MaxTurns > 0 {
 				maxTurns[agentDef.ID] = cg.MaxTurns
 			}
+			if cg.MaxTokens > 0 {
+				maxTokens[agentDef.ID] = cg.MaxTokens
+			}
 		}
 		launcherCfg.PluginConfig = contextguard.NewPluginConfig(contextguard.Config{
 			Registry:   cwRegistry,
 			Models:     guardLLMs,
 			Strategies: strategies,
 			MaxTurns:   maxTurns,
+			MaxTokens:  maxTokens,
 		})
 	}
 
