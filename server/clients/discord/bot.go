@@ -229,7 +229,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			chunks := msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength)
 			for i, chunk := range chunks {
 				msg := &discordgo.MessageSend{Content: chunk}
-				if firstText && i == 0 {
+				if firstText && i == 0 && m.GuildID != "" {
 					msg.Reference = replyRef
 					firstText = false
 				}
@@ -268,7 +268,6 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
-		c.removeReaction(s, m.ChannelID, m.ID, "🧠")
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
 		return
@@ -278,8 +277,6 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 		s.ChannelMessageSend(m.ChannelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
 	}
 
-	c.removeReaction(s, m.ChannelID, m.ID, "👀")
-	c.removeReaction(s, m.ChannelID, m.ID, "🧠")
 	c.addReaction(s, m.ChannelID, m.ID, "✅")
 
 	c.sendNewArtifacts(s, m.ChannelID, agentID, userIDStr, sessionID, artifactsBefore)
@@ -432,7 +429,6 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
-		c.removeReaction(s, m.ChannelID, m.ID, "🧠")
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
 		return
@@ -448,8 +444,6 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 		c.sendVoiceResponse(s, m.ChannelID, lastTextResponse, agentID)
 	}
 
-	c.removeReaction(s, m.ChannelID, m.ID, "👀")
-	c.removeReaction(s, m.ChannelID, m.ID, "🧠")
 	c.addReaction(s, m.ChannelID, m.ID, "✅")
 
 	c.sendNewArtifacts(s, m.ChannelID, agentID, userIDStr, sessionID, artifactsBefore)
@@ -837,12 +831,6 @@ func (c *Client) stripBotMention(text, botID string) string {
 func (c *Client) addReaction(s *discordgo.Session, channelID, messageID, emoji string) {
 	if err := s.MessageReactionAdd(channelID, messageID, emoji); err != nil {
 		c.logger.Debug("Failed to add reaction", "emoji", emoji, "error", err)
-	}
-}
-
-func (c *Client) removeReaction(s *discordgo.Session, channelID, messageID, emoji string) {
-	if err := s.MessageReactionRemove(channelID, messageID, emoji, "@me"); err != nil {
-		c.logger.Debug("Failed to remove reaction", "emoji", emoji, "error", err)
 	}
 }
 
