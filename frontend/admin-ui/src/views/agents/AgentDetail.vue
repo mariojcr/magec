@@ -76,7 +76,12 @@ const contextGuardSummary = computed(() => {
   if (!cg?.enabled) return 'Disabled'
   const labels = { threshold: 'Token threshold', sliding_window: 'Sliding window' }
   const strategy = labels[cg.strategy] || cg.strategy || 'Token threshold'
-  const detail = cg.strategy === 'sliding_window' && cg.maxTurns ? `${strategy} (${cg.maxTurns} turns)` : strategy
+  let detail = strategy
+  if (cg.strategy === 'sliding_window' && cg.maxTurns) {
+    detail = `${strategy} (${cg.maxTurns} turns)`
+  } else if (cg.strategy === 'threshold' && cg.maxTokens) {
+    detail = `${strategy} (${cg.maxTokens.toLocaleString()} tokens)`
+  }
   return `${detail} (experimental)`
 })
 

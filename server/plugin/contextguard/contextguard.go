@@ -138,6 +138,7 @@ type Config struct {
 	Models     map[string]model.LLM
 	Strategies map[string]string // agent ID → StrategyThreshold | StrategySlidingWindow
 	MaxTurns   map[string]int    // agent ID → max Content entries (sliding window only)
+	MaxTokens  map[string]int    // agent ID → manual token threshold (0 = auto)
 }
 
 // NewPluginConfig creates a runner.PluginConfig ready to be passed to the
@@ -156,7 +157,7 @@ func NewPluginConfig(cfg Config) runner.PluginConfig {
 			}
 			strategies[agentID] = newSlidingWindowStrategy(cfg.Registry, llm, maxTurns)
 		default:
-			strategies[agentID] = newThresholdStrategy(cfg.Registry, llm)
+			strategies[agentID] = newThresholdStrategy(cfg.Registry, llm, cfg.MaxTokens[agentID])
 		}
 		slog.Info("ContextGuard: strategy configured",
 			"agent", agentID,

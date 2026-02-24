@@ -58,9 +58,10 @@ type TTSRef struct {
 // the selected Strategy. When Enabled is false (or the struct is nil)
 // the plugin does nothing for this agent.
 type ContextGuardConfig struct {
-	Enabled  bool   `json:"enabled" yaml:"enabled"`
-	Strategy string `json:"strategy,omitempty" yaml:"strategy,omitempty"`
-	MaxTurns int    `json:"maxTurns,omitempty" yaml:"maxTurns,omitempty"`
+	Enabled   bool   `json:"enabled" yaml:"enabled"`
+	Strategy  string `json:"strategy,omitempty" yaml:"strategy,omitempty"`
+	MaxTurns  int    `json:"maxTurns,omitempty" yaml:"maxTurns,omitempty"`
+	MaxTokens int    `json:"maxTokens,omitempty" yaml:"maxTokens,omitempty"`
 }
 
 // MemoryProvider represents a reusable memory backend (Redis, Postgres, etc.).
