@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Password — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -149,7 +151,10 @@
       </button>
       <h1>Admin Password</h1>
       <p>By default, the Admin UI and Admin API are open — anyone who can reach port <code>8081</code> can view and modify your entire configuration. Setting an admin password adds authentication to all admin endpoints.</p>
-<h2 id="enabling-authentication">Enabling authentication</h2>
+<h2 id="enabling-authentication">
+  Enabling authentication
+  <a class="heading-anchor" href="#enabling-authentication" aria-label="Link to this section">#</a>
+</h2>
 <p>Add <code>adminPassword</code> to the server section of your <code>config.yaml</code>:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="w">
@@ -160,7 +165,10 @@
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nb">export</span> <span class="nv">MAGEC_ADMIN_PASSWORD</span><span class="o">=</span><span class="s2">&#34;your-strong-password&#34;</span>
 </span></span><span class="line"><span class="cl">magec --config config.yaml
 </span></span></code></pre></div><p>When the password is set, every request to <code>/api/</code> endpoints requires a <code>Authorization: Bearer &lt;password&gt;</code> header. The Admin UI handles this automatically — it shows a login screen on first load and sends the header on every subsequent request.</p>
-<h2 id="how-it-works">How it works</h2>
+<h2 id="how-it-works">
+  How it works
+  <a class="heading-anchor" href="#how-it-works" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -195,33 +203,51 @@
       </tr>
   </tbody>
 </table>
-<h2 id="login-screen">Login screen</h2>
+<h2 id="login-screen">
+  Login screen
+  <a class="heading-anchor" href="#login-screen" aria-label="Link to this section">#</a>
+</h2>
 <p>When authentication is enabled, the Admin UI shows a password prompt before anything else:</p>
 <ul>
 <li>The password is stored <strong>in memory only</strong> — closing the browser tab requires re-authentication</li>
 <li>No cookies, no <code>localStorage</code>, no session tokens</li>
 <li>The UI calls <code>/api/v1/admin/auth/check</code> on load to determine if authentication is needed</li>
 </ul>
-<h2 id="docker-and-kubernetes">Docker and Kubernetes</h2>
+<h2 id="docker-and-kubernetes">
+  Docker and Kubernetes
+  <a class="heading-anchor" href="#docker-and-kubernetes" aria-label="Link to this section">#</a>
+</h2>
 <p>Pass the password as an environment variable — never hardcode it in <code>config.yaml</code>:</p>
-<h3 id="docker-compose">Docker Compose</h3>
+<h3 id="docker-compose">
+  Docker Compose
+  <a class="heading-anchor" href="#docker-compose" aria-label="Link to this section">#</a>
+</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">magec</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l">ghcr.io/achetronic/magec:latest</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">environment</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">MAGEC_ADMIN_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="s2">&#34;${MAGEC_ADMIN_PASSWORD}&#34;</span><span class="w">
-</span></span></span></code></pre></div><h3 id="kubernetes">Kubernetes</h3>
+</span></span></span></code></pre></div><h3 id="kubernetes">
+  Kubernetes
+  <a class="heading-anchor" href="#kubernetes" aria-label="Link to this section">#</a>
+</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">env</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span>- <span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">MAGEC_ADMIN_PASSWORD</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">valueFrom</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">      </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l">magec-secrets</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">        </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l">admin-password</span><span class="w">
-</span></span></span></code></pre></div><h2 id="what-happens-without-a-password">What happens without a password</h2>
+</span></span></span></code></pre></div><h2 id="what-happens-without-a-password">
+  What happens without a password
+  <a class="heading-anchor" href="#what-happens-without-a-password" aria-label="Link to this section">#</a>
+</h2>
 <p>If <code>adminPassword</code> is not set (or is empty), the server starts normally with a warning in the logs:</p>
 <pre tabindex="0"><code>WARN  Admin API is unprotected — set adminPassword in config.yaml
 </code></pre><p>All admin endpoints work without authentication. This is fine for local development but should never be used in production or anywhere the admin port is network-accessible.</p>
-<h2 id="secrets-encryption">Secrets encryption</h2>
+<h2 id="secrets-encryption">
+  Secrets encryption
+  <a class="heading-anchor" href="#secrets-encryption" aria-label="Link to this section">#</a>
+</h2>
 <p>The admin password also serves as the encryption key for <a href="/docs/secrets/">Secrets</a>. When a password is set, secret values are encrypted at rest using AES-256-GCM with a PBKDF2-derived key. Without a password, secrets are stored in plain text and a warning is logged.</p>
 
 

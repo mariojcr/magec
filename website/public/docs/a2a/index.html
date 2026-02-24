@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A2A Protocol — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -150,7 +152,10 @@
       <h1>A2A Protocol</h1>
       <p>A2A (Agent-to-Agent) lets your Magec agents talk to external AI systems — and lets external systems talk to yours. When you enable A2A on an agent, it becomes discoverable and callable by any application that speaks the <a href="https://a2a-protocol.org/latest/specification/">A2A protocol</a>.</p>
 <p>In practice: you flip a toggle, and your agent gets a URL that other tools can connect to. They discover what the agent can do, authenticate, and send it messages — all without you writing any code.</p>
-<h2 id="why-would-i-use-this">Why would I use this?</h2>
+<h2 id="why-would-i-use-this">
+  Why would I use this?
+  <a class="heading-anchor" href="#why-would-i-use-this" aria-label="Link to this section">#</a>
+</h2>
 <p>Think of A2A as giving your agent a phone number that other AI systems can call.</p>
 <ul>
 <li><strong>Connect agents across platforms.</strong> An agent running in another tool (Claude Desktop, a custom app, another Magec instance) can discover and invoke your agent directly.</li>
@@ -158,7 +163,10 @@
 <li><strong>Expose agents as services.</strong> Instead of building a custom API for each agent, A2A gives you a standard protocol that any compatible client already knows how to use.</li>
 </ul>
 <p>If you&rsquo;re running Magec for personal use or within a single app, you probably don&rsquo;t need A2A. It becomes useful when you want agents to collaborate across different systems.</p>
-<h2 id="how-it-works">How it works</h2>
+<h2 id="how-it-works">
+  How it works
+  <a class="heading-anchor" href="#how-it-works" aria-label="Link to this section">#</a>
+</h2>
 <p>When you enable A2A on an agent, Magec does three things:</p>
 <ol>
 <li><strong>Publishes an agent card</strong> — a JSON document describing the agent&rsquo;s name, capabilities, skills, and how to authenticate. This is the discovery mechanism.</li>
@@ -166,17 +174,29 @@
 <li><strong>Auto-generates skills from the agent&rsquo;s tools</strong> — MCP servers, built-in tools, and the agent&rsquo;s instructions are all reflected in the card so clients know what the agent can do.</li>
 </ol>
 <p>You don&rsquo;t configure any of this manually. The card and skills are derived from the agent&rsquo;s existing setup.</p>
-<h2 id="enabling-a2a">Enabling A2A</h2>
-<h3 id="agents">Agents</h3>
+<h2 id="enabling-a2a">
+  Enabling A2A
+  <a class="heading-anchor" href="#enabling-a2a" aria-label="Link to this section">#</a>
+</h2>
+<h3 id="agents">
+  Agents
+  <a class="heading-anchor" href="#agents" aria-label="Link to this section">#</a>
+</h3>
 <ol>
 <li>Open an agent in the Admin UI</li>
 <li>Toggle <strong>A2A Protocol</strong> on</li>
 <li>Save</li>
 </ol>
-<h3 id="flows">Flows</h3>
+<h3 id="flows">
+  Flows
+  <a class="heading-anchor" href="#flows" aria-label="Link to this section">#</a>
+</h3>
 <p>Agentic flows (sequential, parallel, loop) can also be exposed via A2A. The process is the same — open the flow in the editor, enable the A2A toggle, and save.</p>
 <p>The external client sees the flow as a single agent. The internal orchestration (which steps run in sequence, which run in parallel) is completely transparent. The agent card auto-generates skills that describe the flow&rsquo;s sub-agents and their capabilities, so the client understands what the flow can do without knowing how it&rsquo;s structured internally.</p>
-<h2 id="endpoints">Endpoints</h2>
+<h2 id="endpoints">
+  Endpoints
+  <a class="heading-anchor" href="#endpoints" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -204,11 +224,17 @@
   </tbody>
 </table>
 <p>Discovery endpoints are public so that external clients can find your agents. The invocation endpoint requires a <strong>Bearer token</strong> — this is a regular Magec client token, the same ones you create in the Admin UI under Clients.</p>
-<h2 id="connecting-a-client">Connecting a client</h2>
+<h2 id="connecting-a-client">
+  Connecting a client
+  <a class="heading-anchor" href="#connecting-a-client" aria-label="Link to this section">#</a>
+</h2>
 <p>Give the external A2A client this URL:</p>
 <pre tabindex="0"><code>https://your-server/api/v1/a2a/{agentId}
 </code></pre><p>The client will automatically fetch the agent card from the <code>.well-known</code> path relative to that URL, read the security requirements, and use the Bearer token you provide to send messages.</p>
-<h2 id="public-url">Public URL</h2>
+<h2 id="public-url">
+  Public URL
+  <a class="heading-anchor" href="#public-url" aria-label="Link to this section">#</a>
+</h2>
 <p>By default, agent cards reference <code>http://localhost:{port}</code> as the agent&rsquo;s URL. This works for local development but not when your server is behind a reverse proxy or exposed to the internet.</p>
 <p>Set <code>publicURL</code> in your config so that agent cards contain the correct address:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
@@ -220,7 +246,10 @@
   If you don&rsquo;t set <code>publicURL</code>, everything still works locally. You only need it when external systems need to reach your server from outside.
 </div>
 
-<h2 id="whats-in-an-agent-card">What&rsquo;s in an agent card?</h2>
+<h2 id="whats-in-an-agent-card">
+  What&rsquo;s in an agent card?
+  <a class="heading-anchor" href="#whats-in-an-agent-card" aria-label="Link to this section">#</a>
+</h2>
 <p>The agent card is what clients read to understand your agent. Here&rsquo;s what it contains:</p>
 <table>
   <thead>
@@ -257,7 +286,10 @@
   </tbody>
 </table>
 <p>Skills are generated automatically from the agent&rsquo;s configuration. Each MCP tool the agent has access to appears as a separate skill. The agent&rsquo;s system prompt is reflected in the primary skill description, so external clients can understand what the agent is good at without any manual setup.</p>
-<h2 id="hot-reload">Hot-reload</h2>
+<h2 id="hot-reload">
+  Hot-reload
+  <a class="heading-anchor" href="#hot-reload" aria-label="Link to this section">#</a>
+</h2>
 <p>Like everything in Magec, A2A configuration reloads automatically. Enable or disable A2A on an agent, save, and the change is live — no restart needed.</p>
 
     </div>

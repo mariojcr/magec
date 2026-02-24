@@ -78,7 +78,7 @@ The bot opens an outbound connection to Discord — no public URL, no webhook, n
 
 | Context | How it works |
 |---------|-------------|
-| **Direct Messages** | Send any message to the bot. It responds in the DM. |
+| **Direct Messages** | Send any message to the bot. It responds inline in the DM — no thread replies, just a clean linear conversation. |
 | **Channel @mentions** | @mention the bot in a channel. It replies to your message. |
 
 In channels, the bot **only responds when mentioned**. In DMs, it responds to everything.
@@ -133,6 +133,12 @@ The bot uses emoji reactions to show what's happening:
 ## Artifacts
 
 When an agent produces files (images, documents, etc.), the bot sends them as Discord file attachments automatically.
+
+## Thread Context
+
+When you @mention the bot inside a **thread**, it automatically reads up to 20 previous messages from that thread and includes them as context for the agent. This means the agent can see what other users said in the thread — not just messages directed at the bot.
+
+This only applies to actual Discord threads (public, private, or news threads). In regular channels and DMs, thread context is not injected — the agent relies on its own session history.
 
 ## Context Metadata
 

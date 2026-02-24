@@ -21,13 +21,16 @@ Go to [api.slack.com/apps](https://api.slack.com/apps) and create a new app:
 3. Under **Socket Mode**, enable it — Slack generates an **App Token** (`xapp-...`). Copy it.
 4. Under **OAuth & Permissions**, add these **Bot Token Scopes**:
    - `app_mentions:read` — receive @mentions in channels
+   - `channels:history` — read messages in public channels (thread context)
    - `chat:write` — send messages
    - `files:read` — download audio clips and file attachments
    - `files:write` — upload voice response files
-   - `reactions:write` — add emoji reactions to messages (progress indicators)
+   - `groups:history` — read messages in private channels (thread context)
    - `im:history` — read DM messages
    - `im:read` — access DM conversations
    - `im:write` — send DMs
+   - `mpim:history` — read messages in group DMs (thread context)
+   - `reactions:write` — add emoji reactions to messages (progress indicators)
    - `users:read` — look up user info (name, display name)
    - `users:read.email` — access user email addresses
 5. Under **Event Subscriptions**, enable events and subscribe to:
@@ -144,6 +147,14 @@ Magec injects metadata about each incoming Slack message into the agent context 
 | `slack_channel_type` | `"im"` for DMs, `"channel"` for mentions |
 | `slack_team_id` | Workspace ID |
 | `slack_thread_ts` | Thread timestamp (channel mentions only) |
+
+## Thread Context
+
+When you @mention the bot inside a **thread**, it automatically reads up to 20 previous messages from that thread and includes them as context for the agent. This means the agent can see what other users said in the thread — not just messages directed at the bot.
+
+This only applies to actual threads in channels. In DMs and top-level channel messages, thread context is not injected — the agent relies on its own session history.
+
+The required scopes for this feature (`channels:history`, `groups:history`, `mpim:history`) are already listed in the [setup](#1-create-a-slack-app) section above.
 
 ## Security
 

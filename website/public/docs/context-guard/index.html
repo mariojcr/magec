@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Context Guard — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -158,7 +160,10 @@
 <p>AI models can only handle a certain amount of text at once. This is called the <strong>context window</strong> — think of it as the model&rsquo;s short-term memory. The longer a conversation gets, the more of that memory it uses up. When it fills up, the conversation breaks.</p>
 <p>Context Guard keeps that from happening. It watches the conversation size and, when things start getting tight, compresses the older messages into a short summary. The recent messages stay exactly as they are. The agent doesn&rsquo;t lose track of anything — the conversation just takes up less space.</p>
 <p><strong>Without Context Guard</strong>, long conversations eventually fail. <strong>With it</strong>, they can go on as long as you need.</p>
-<h2 id="how-it-works">How it works</h2>
+<h2 id="how-it-works">
+  How it works
+  <a class="heading-anchor" href="#how-it-works" aria-label="Link to this section">#</a>
+</h2>
 <p>Before every message is sent to the model, Context Guard checks the conversation:</p>
 <ol>
 <li><strong>Is it getting too long?</strong> — It checks either the token count or the number of messages, depending on which strategy you chose.</li>
@@ -170,9 +175,15 @@
 </ol>
 <p>The summary is saved between messages, so it doesn&rsquo;t disappear. Each time Context Guard runs again, it folds the previous summary into the new one. Nothing is forgotten — it just gets more compact over time.</p>
 <p>If anything goes wrong during summarization (model error, timeout, empty response), Context Guard steps aside and lets the original conversation through. It never blocks anything.</p>
-<h2 id="strategies">Strategies</h2>
+<h2 id="strategies">
+  Strategies
+  <a class="heading-anchor" href="#strategies" aria-label="Link to this section">#</a>
+</h2>
 <p>Two options. You pick one per agent.</p>
-<h3 id="token-threshold">Token threshold</h3>
+<h3 id="token-threshold">
+  Token threshold
+  <a class="heading-anchor" href="#token-threshold" aria-label="Link to this section">#</a>
+</h3>
 <p><strong>Recommended for most agents.</strong> It estimates how many tokens the conversation is using and only compresses when it&rsquo;s running out of room.</p>
 <p>How much room it keeps:</p>
 <ul>
@@ -181,7 +192,10 @@
 </ul>
 <p>When the conversation eats into that reserved space, Context Guard kicks in. It keeps the most recent 20% of the conversation intact and summarizes everything before that.</p>
 <p>This is the best choice when the agent uses tools, does complex work, or when you want to get the most out of the model before compressing anything.</p>
-<h3 id="sliding-window">Sliding window</h3>
+<h3 id="sliding-window">
+  Sliding window
+  <a class="heading-anchor" href="#sliding-window" aria-label="Link to this section">#</a>
+</h3>
 <p>Simpler. It counts messages. When there are more than <code>maxTurns</code> messages, everything except the last <code>maxTurns</code> gets summarized.</p>
 <p>It doesn&rsquo;t look at token counts at all — just the number of messages.</p>
 <p>Good for chatbots, Q&amp;A agents, or any case where old messages stop being useful quickly.</p>
@@ -192,7 +206,10 @@
   <strong>Heads up if the agent uses tools.</strong> Tool calls add hidden messages — the model&rsquo;s request to call the tool and the tool&rsquo;s response each count as separate messages. One question where the agent calls a tool creates 4 messages, not 2. With <code>maxTurns: 20</code>, that&rsquo;s only about 5 tool-using exchanges before summarization fires. If the agent uses tools a lot, set a higher value (40–80) or just use token threshold instead.
 </div>
 
-<h2 id="setup">Setup</h2>
+<h2 id="setup">
+  Setup
+  <a class="heading-anchor" href="#setup" aria-label="Link to this section">#</a>
+</h2>
 <p>Open an agent in the Admin UI, expand the <strong>LLM</strong> section, and turn on <strong>Context Guard</strong>.</p>
 <table>
   <thead>
@@ -217,7 +234,10 @@
   </tbody>
 </table>
 <p>If it&rsquo;s off, nothing changes for the agent. Zero overhead.</p>
-<h3 id="which-strategy-to-pick">Which strategy to pick</h3>
+<h3 id="which-strategy-to-pick">
+  Which strategy to pick
+  <a class="heading-anchor" href="#which-strategy-to-pick" aria-label="Link to this section">#</a>
+</h3>
 <table>
   <thead>
       <tr>
@@ -244,7 +264,10 @@
       </tr>
   </tbody>
 </table>
-<h2 id="what-goes-into-the-summary">What goes into the summary</h2>
+<h2 id="what-goes-into-the-summary">
+  What goes into the summary
+  <a class="heading-anchor" href="#what-goes-into-the-summary" aria-label="Link to this section">#</a>
+</h2>
 <p>Context Guard asks the agent&rsquo;s own model to write a summary with four sections:</p>
 <ul>
 <li><strong>Current State</strong> — What&rsquo;s being worked on, what&rsquo;s done, what&rsquo;s next</li>
@@ -255,22 +278,43 @@
 <p>The idea: someone reading only this summary should be able to continue the conversation without asking &ldquo;what were we talking about?&rdquo;</p>
 <p>Summaries are longer for models with big context windows and shorter for smaller models. There&rsquo;s both a soft limit (in the prompt) and a hard limit (on the API) to make sure the summary itself doesn&rsquo;t take up too much space.</p>
 <p>If the model returns nothing (rare), Context Guard falls back to grabbing the first 200 characters of each message. Not pretty, but it keeps things moving.</p>
-<h2 id="limitations">Limitations</h2>
-<h3 id="tool-responses-disappear-from-summaries">Tool responses disappear from summaries</h3>
+<h2 id="limitations">
+  Limitations
+  <a class="heading-anchor" href="#limitations" aria-label="Link to this section">#</a>
+</h2>
+<h3 id="tool-responses-disappear-from-summaries">
+  Tool responses disappear from summaries
+  <a class="heading-anchor" href="#tool-responses-disappear-from-summaries" aria-label="Link to this section">#</a>
+</h3>
 <p>When old messages get summarized, tool calls show up as just <code>[tool X returned a result]</code>. The actual data the tool returned — files, search results, API responses — is not included in the summary prompt.</p>
 <p>The agent&rsquo;s conclusions based on that data will still be in the conversation, but the raw data itself is gone. This is how Google&rsquo;s <a href="https://github.com/google/adk-python">ADK Python</a> handles it too.</p>
-<h3 id="huge-tool-responses-can-cause-trouble">Huge tool responses can cause trouble</h3>
+<h3 id="huge-tool-responses-can-cause-trouble">
+  Huge tool responses can cause trouble
+  <a class="heading-anchor" href="#huge-tool-responses-can-cause-trouble" aria-label="Link to this section">#</a>
+</h3>
 <p>If a tool dumps a massive response into the conversation (100k+ tokens), that whole blob is sitting in the message history. Context Guard will catch it on the <em>next</em> message and compress, but the current message already has the giant response in it.</p>
 <p>With the token threshold strategy this usually isn&rsquo;t a problem — the safety buffer absorbs it. But if a single tool response is bigger than the whole buffer, the model might reject the request before Context Guard can do anything about it.</p>
 <p><strong>How to avoid this:</strong> Don&rsquo;t let your tools return unlimited data. Limit results, paginate, or return a reference instead of the full content. <a href="https://github.com/charmbracelet/crush">Claude Code</a> caps every tool — bash output at 30k characters, file reads at 5MB, search at 100 results. Follow that pattern.</p>
-<h3 id="no-retry-after-a-failure">No retry after a failure</h3>
+<h3 id="no-retry-after-a-failure">
+  No retry after a failure
+  <a class="heading-anchor" href="#no-retry-after-a-failure" aria-label="Link to this section">#</a>
+</h3>
 <p>If the conversation is already too big and the model says &ldquo;too many tokens,&rdquo; the request fails. Context Guard works <em>before</em> the call to keep this from happening, but it can&rsquo;t fix things <em>after</em> the fact.</p>
 <p>Automatic retry (compress and try again) may come in a future version, but it depends on a feature in ADK that hasn&rsquo;t been released yet.</p>
-<h3 id="token-counting-is-approximate">Token counting is approximate</h3>
+<h3 id="token-counting-is-approximate">
+  Token counting is approximate
+  <a class="heading-anchor" href="#token-counting-is-approximate" aria-label="Link to this section">#</a>
+</h3>
 <p>Tokens are estimated as <strong>4 characters ≈ 1 token</strong>. Same method Google&rsquo;s ADK uses. Works well for English, but can be off for CJK languages (underestimates) or code (overestimates).</p>
-<h3 id="sliding-window-ignores-message-size">Sliding window ignores message size</h3>
+<h3 id="sliding-window-ignores-message-size">
+  Sliding window ignores message size
+  <a class="heading-anchor" href="#sliding-window-ignores-message-size" aria-label="Link to this section">#</a>
+</h3>
 <p>Sliding window counts messages, not their size. A message with 50,000 tokens counts the same as one with 10. If your conversations have wildly different message sizes, use token threshold instead.</p>
-<h2 id="how-it-knows-the-models-limits">How it knows the model&rsquo;s limits</h2>
+<h2 id="how-it-knows-the-models-limits">
+  How it knows the model&rsquo;s limits
+  <a class="heading-anchor" href="#how-it-knows-the-models-limits" aria-label="Link to this section">#</a>
+</h2>
 <p>Context Guard needs each model&rsquo;s context window size to know when to compress. It loads this from a model catalog that refreshes every 6 hours.</p>
 <p>If a model isn&rsquo;t in the catalog, it assumes 128,000 tokens — safe enough for most current models.</p>
 

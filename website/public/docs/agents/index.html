@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agents — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -165,7 +167,10 @@
 <img src="/img/screenshots/admin-agent-dialog.png" alt="Admin UI — New Agent dialog" class="screenshot screenshot--desktop">
 
 </div>
-<h2 id="general">General</h2>
+<h2 id="general">
+  General
+  <a class="heading-anchor" href="#general" aria-label="Link to this section">#</a>
+</h2>
 <p>The basics: name, description, and tags.</p>
 <p>The <strong>name</strong> is how this agent appears everywhere in the platform — in the Voice UI agent switcher, in flow step labels, in conversation logs, in the Telegram <code>/agent</code> command. Pick something meaningful.</p>
 <p>The <strong>description</strong> is a note for yourself. It appears in the admin panel to help you remember what this agent is for when you have many of them.</p>
@@ -192,7 +197,10 @@
       </tr>
   </tbody>
 </table>
-<h2 id="system-prompt">System Prompt</h2>
+<h2 id="system-prompt">
+  System Prompt
+  <a class="heading-anchor" href="#system-prompt" aria-label="Link to this section">#</a>
+</h2>
 <p>This is the most important field. The system prompt defines who the agent is, how it behaves, what it should and shouldn&rsquo;t do, and in what style it should respond. Every single response the agent produces is shaped by this prompt.</p>
 <p>Write the prompt as instructions to the agent. You can be as detailed as you want — multi-paragraph instructions, examples of desired output, rules, personality traits, language preferences. The more specific you are, the more predictable the agent&rsquo;s behavior.</p>
 <p><strong>Example prompts:</strong></p>
@@ -202,7 +210,10 @@
 <li><em>&ldquo;You are a restaurant concierge. You know the menu, daily specials, and allergen information. When customers ask about dishes, be enthusiastic but honest.&rdquo;</em></li>
 </ul>
 <p>If you leave the system prompt empty, Magec uses a default prompt that makes the agent a general-purpose assistant.</p>
-<h3 id="output-key">Output Key</h3>
+<h3 id="output-key">
+  Output Key
+  <a class="heading-anchor" href="#output-key" aria-label="Link to this section">#</a>
+</h3>
 <p>The <strong>output key</strong> is used when the agent participates in a <a href="/docs/flows/">flow</a>. It saves the agent&rsquo;s output under a named key in the flow&rsquo;s shared state. Other agents in the same flow can then reference that output using <code>{key_name}</code> in their own prompts.</p>
 <p>For example, if a &ldquo;researcher&rdquo; agent has <code>outputKey: research_results</code>, a later &ldquo;writer&rdquo; agent can include <code>{research_results}</code> in its prompt to access what the researcher found.</p>
 <table>
@@ -223,7 +234,10 @@
       </tr>
   </tbody>
 </table>
-<h2 id="llm">LLM</h2>
+<h2 id="llm">
+  LLM
+  <a class="heading-anchor" href="#llm" aria-label="Link to this section">#</a>
+</h2>
 <p>Which AI brain powers this agent. You select a <a href="/docs/backends/">backend</a> (the provider connection) and a model (which specific model to use from that provider).</p>
 <p>The backend dropdown shows all backends you&rsquo;ve configured. The model is a free-text field — you type the model identifier exactly as the provider expects it.</p>
 <table>
@@ -251,10 +265,16 @@
   Each agent chooses its own backend and model independently. In a flow, you can have one agent running GPT-4 for complex reasoning and another running a fast local model for simple formatting — optimizing cost and speed at the agent level.
 </div>
 
-<h2 id="memory">Memory</h2>
+<h2 id="memory">
+  Memory
+  <a class="heading-anchor" href="#memory" aria-label="Link to this section">#</a>
+</h2>
 <p>Memory lets agents remember things between conversations. Without memory, every conversation starts from scratch. With memory, agents can recall what you talked about yesterday, remember your preferences, and build context over time.</p>
 <p>Memory in Magec is configured <strong>globally</strong> — you set up memory providers once (under <strong>Memory</strong> in the Admin UI), and all agents automatically benefit from them. There&rsquo;s no per-agent memory selection.</p>
-<h3 id="how-it-works">How it works</h3>
+<h3 id="how-it-works">
+  How it works
+  <a class="heading-anchor" href="#how-it-works" aria-label="Link to this section">#</a>
+</h3>
 <p>When memory providers are configured, every agent gets its own isolated memory space within those shared providers. Think of it like an apartment building: the building (Redis, PostgreSQL) is shared infrastructure, but each agent has its own unit with its own keys — no agent can access another&rsquo;s memories.</p>
 <ul>
 <li><strong>Session memory (Redis)</strong> — Each agent&rsquo;s conversation history is stored under unique identifiers, so conversations with one agent never bleed into another.</li>
@@ -269,18 +289,27 @@
 </div>
 
 <p>For details on setting up memory providers (Redis for sessions, PostgreSQL + pgvector for long-term), see <a href="/docs/memory/">Memory</a>.</p>
-<h2 id="mcp-servers">MCP Servers</h2>
+<h2 id="mcp-servers">
+  MCP Servers
+  <a class="heading-anchor" href="#mcp-servers" aria-label="Link to this section">#</a>
+</h2>
 <p>This is where agents become truly powerful. <a href="/docs/mcp/">MCP (Model Context Protocol)</a> lets you connect external tools to the agent — file access, web search, database queries, smart home control, GitHub operations, and hundreds more.</p>
 <p>Each toggle enables a configured MCP server, giving the agent access to its tools. When the agent decides it needs to perform an action (like turning on a light, reading a file, or querying a database), it calls the appropriate tool through MCP.</p>
 <p>An agent with no MCP servers can still chat — it just can&rsquo;t interact with the outside world. Adding MCP tools is what transforms an agent from a chatbot into something genuinely useful. An agent with Home Assistant MCP can control your house. An agent with GitHub MCP can manage your repositories. An agent with a database MCP can query and report on your data.</p>
 <p>The more tools you connect, the more capable your agents become. This is the mechanism that turns Magec from &ldquo;another chat interface&rdquo; into a real AI platform.</p>
-<h2 id="skills">Skills</h2>
+<h2 id="skills">
+  Skills
+  <a class="heading-anchor" href="#skills" aria-label="Link to this section">#</a>
+</h2>
 <p><a href="/docs/skills/">Skills</a> are reusable knowledge packs — instructions and reference files that teach the agent about a specific domain. A return policy skill, a product catalog skill, a coding standards skill. Create them once, toggle them on the agents that need them.</p>
 <p>While the <strong>system prompt</strong> defines who the agent is, skills define <strong>what it knows</strong>. An agent with a &ldquo;Return Policy&rdquo; skill and a &ldquo;Product Catalog&rdquo; skill becomes a capable customer support representative without you having to cram everything into one massive prompt.</p>
 <p>Skills are especially powerful when shared across agents. Update a product catalog skill once, and every agent that uses it sees the change.</p>
 <p>For a deeper comparison of when to use skills vs. creating specialized agents, see <a href="/docs/skills-vs-agents/">Skills vs. Agents</a>.</p>
-<h2 id="context-guard-hahahugoshortcode9s4hbhb">Context Guard 
+<h2 id="context-guard-hahahugoshortcode9s4hbhb">
+  Context Guard 
 <span class="docs-badge">Experimental</span>
+
+  <a class="heading-anchor" href="#context-guard-hahahugoshortcode9s4hbhb" aria-label="Link to this section">#</a>
 </h2>
 <p>Long conversations eventually hit the model&rsquo;s token limit and fail. Context Guard watches the conversation size and automatically summarizes older messages before that happens. Recent messages stay untouched.</p>
 <p>You set it up per-agent inside the <strong>LLM</strong> section. Two strategies:</p>
@@ -317,10 +346,16 @@
   Context Guard is experimental. It works, but there are known edge cases around large tool responses. See the full <a href="/docs/context-guard/">Context Guard</a> page for details.
 </div>
 
-<h2 id="voice-stt--tts">Voice (STT / TTS)</h2>
+<h2 id="voice-stt--tts">
+  Voice (STT / TTS)
+  <a class="heading-anchor" href="#voice-stt--tts" aria-label="Link to this section">#</a>
+</h2>
 <p>Voice settings are optional. You only need them if the agent will be used through the Voice UI or if you want voice responses in Telegram.</p>
 <p>Each agent can have its own voice configuration, which means different agents can sound different. A customer service agent could use a warm, friendly voice while a technical assistant uses a more neutral one.</p>
-<h3 id="transcription-stt--speech-to-text">Transcription (STT — Speech-to-Text)</h3>
+<h3 id="transcription-stt--speech-to-text">
+  Transcription (STT — Speech-to-Text)
+  <a class="heading-anchor" href="#transcription-stt--speech-to-text" aria-label="Link to this section">#</a>
+</h3>
 <p>Converts spoken audio into text. The agent needs this to understand what you&rsquo;re saying through the Voice UI or Telegram voice messages.</p>
 <table>
   <thead>
@@ -340,7 +375,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="text-to-speech-tts">Text-to-Speech (TTS)</h3>
+<h3 id="text-to-speech-tts">
+  Text-to-Speech (TTS)
+  <a class="heading-anchor" href="#text-to-speech-tts" aria-label="Link to this section">#</a>
+</h3>
 <p>Converts the agent&rsquo;s text responses into spoken audio. Required for the agent to &ldquo;speak&rdquo; in the Voice UI or send voice messages in Telegram.</p>
 <table>
   <thead>
@@ -375,7 +413,10 @@
   If an agent without TTS is selected as the spokesperson in a flow, the Voice UI will show a notification explaining that the agent can&rsquo;t speak. Same for STT — if the agent can&rsquo;t transcribe, you&rsquo;ll be told it can&rsquo;t understand voice input.
 </div>
 
-<h2 id="hot-reload">Hot-reload</h2>
+<h2 id="hot-reload">
+  Hot-reload
+  <a class="heading-anchor" href="#hot-reload" aria-label="Link to this section">#</a>
+</h2>
 <p>Changes to agents take effect immediately. Edit a prompt, add a tool, change the voice — save, and the next message to that agent uses the new configuration. No server restart, no redeployment.</p>
 
     </div>

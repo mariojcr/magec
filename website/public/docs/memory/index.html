@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Memory — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -162,10 +164,16 @@
 <li><strong>Long-term memory</strong> — Remembers facts and preferences across all conversations (persistent, like a personal database)</li>
 </ul>
 <p>Both are configured as <strong>memory providers</strong> in the Admin UI under <strong>Memory</strong>. Once configured, they apply globally — every agent automatically gets its own isolated memory space within these shared providers. There&rsquo;s no per-agent memory selection; the infrastructure is shared, but each agent&rsquo;s data is kept completely separate through unique identifiers.</p>
-<h2 id="session-memory-redis">Session memory (Redis)</h2>
+<h2 id="session-memory-redis">
+  Session memory (Redis)
+  <a class="heading-anchor" href="#session-memory-redis" aria-label="Link to this section">#</a>
+</h2>
 <p>Session memory stores the recent conversation history for each user-agent pair. When enabled, the agent can reference what was said earlier in the conversation without the user repeating it.</p>
 <p>This is implemented with Redis, which provides fast read/write access and automatic expiration. Each conversation session gets its own entry in Redis, identified by the user ID and session ID.</p>
-<h3 id="how-it-works">How it works</h3>
+<h3 id="how-it-works">
+  How it works
+  <a class="heading-anchor" href="#how-it-works" aria-label="Link to this section">#</a>
+</h3>
 <ol>
 <li>User sends a message to the agent</li>
 <li>Magec loads the session history from Redis (all previous messages in this session)</li>
@@ -173,7 +181,10 @@
 <li>The new messages (user + agent response) are appended to the session</li>
 <li>After the configured TTL expires, old sessions are automatically cleaned up</li>
 </ol>
-<h3 id="configuration">Configuration</h3>
+<h3 id="configuration">
+  Configuration
+  <a class="heading-anchor" href="#configuration" aria-label="Link to this section">#</a>
+</h3>
 <p>Create a session memory provider in the Admin UI under <strong>Memory</strong>:</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -208,12 +219,21 @@
       </tr>
   </tbody>
 </table>
-<h3 id="when-to-use-it">When to use it</h3>
+<h3 id="when-to-use-it">
+  When to use it
+  <a class="heading-anchor" href="#when-to-use-it" aria-label="Link to this section">#</a>
+</h3>
 <p>Most agents should have session memory enabled. Without it, the agent can&rsquo;t even remember what was said two messages ago — every message is processed in isolation, which makes for a very frustrating conversation experience.</p>
 <p>The main reason to disable it is for one-shot agents that process a single request and don&rsquo;t need conversational context (like an agent in a cron job).</p>
-<h2 id="long-term-memory-postgresql--pgvector">Long-term memory (PostgreSQL + pgvector)</h2>
+<h2 id="long-term-memory-postgresql--pgvector">
+  Long-term memory (PostgreSQL + pgvector)
+  <a class="heading-anchor" href="#long-term-memory-postgresql--pgvector" aria-label="Link to this section">#</a>
+</h2>
 <p>Long-term memory gives agents the ability to remember things across sessions and over time. It&rsquo;s a semantic memory system powered by vector embeddings — the agent doesn&rsquo;t just store raw text, it stores the meaning of information and can search by similarity.</p>
-<h3 id="how-it-works-1">How it works</h3>
+<h3 id="how-it-works-1">
+  How it works
+  <a class="heading-anchor" href="#how-it-works-1" aria-label="Link to this section">#</a>
+</h3>
 <p>When long-term memory is enabled, Magec automatically gives the agent two tools:</p>
 <ul>
 <li><strong><code>search_memory</code></strong> — Searches for relevant memories based on a query. The agent uses this at the start of conversations to recall relevant context (e.g., &ldquo;What do I know about this user?&rdquo;).</li>
@@ -225,14 +245,20 @@
 <li>Saves important user information and preferences as it encounters them</li>
 <li>References saved memories when they&rsquo;re relevant to the current conversation</li>
 </ol>
-<h3 id="what-makes-it-semantic">What makes it semantic</h3>
+<h3 id="what-makes-it-semantic">
+  What makes it semantic
+  <a class="heading-anchor" href="#what-makes-it-semantic" aria-label="Link to this section">#</a>
+</h3>
 <p>Traditional memory would require exact keyword matches. Magec&rsquo;s long-term memory uses <strong>vector embeddings</strong> — mathematical representations of meaning. This means:</p>
 <ul>
 <li>If you told the agent &ldquo;My name is Ana&rdquo; three weeks ago, and today you ask &ldquo;Do you know my name?&rdquo;, it finds the right memory even though the words are completely different.</li>
 <li>If you mentioned you&rsquo;re allergic to peanuts in one conversation, and later ask about restaurant recommendations, the agent can surface that allergy information because it&rsquo;s semantically relevant.</li>
 </ul>
 <p>This requires an <strong>embedding backend</strong> — a model that converts text into vectors. The embedding backend is configured on the memory provider, not on the agent. Any OpenAI-compatible embedding API works (OpenAI, Ollama with <code>nomic-embed-text</code>, etc.).</p>
-<h3 id="configuration-1">Configuration</h3>
+<h3 id="configuration-1">
+  Configuration
+  <a class="heading-anchor" href="#configuration-1" aria-label="Link to this section">#</a>
+</h3>
 <p>Create a long-term memory provider in the Admin UI under <strong>Memory</strong>:</p>
 <table>
   <thead>
@@ -271,7 +297,10 @@
   Long-term memory requires PostgreSQL with the <strong>pgvector</strong> extension installed. The Docker Compose setup includes <code>pgvector/pgvector:pg17</code> which has this pre-configured.
 </div>
 
-<h3 id="when-to-use-it-1">When to use it</h3>
+<h3 id="when-to-use-it-1">
+  When to use it
+  <a class="heading-anchor" href="#when-to-use-it-1" aria-label="Link to this section">#</a>
+</h3>
 <p>Long-term memory is most valuable for agents that interact with the same users repeatedly:</p>
 <ul>
 <li><strong>Personal assistants</strong> — Remember names, preferences, past decisions</li>
@@ -279,7 +308,10 @@
 <li><strong>Home automation</strong> — Remember routines, preferences (&ldquo;I like the lights dimmed in the evening&rdquo;)</li>
 </ul>
 <p>It&rsquo;s less useful for agents in flows that process data rather than interact with humans, or for one-shot task agents.</p>
-<h2 id="how-agents-use-memory">How agents use memory</h2>
+<h2 id="how-agents-use-memory">
+  How agents use memory
+  <a class="heading-anchor" href="#how-agents-use-memory" aria-label="Link to this section">#</a>
+</h2>
 <p>Memory is global, not per-agent. Once you create memory providers, all agents automatically use them — no additional configuration needed on the agent side.</p>
 <p>Each agent gets its own isolated space within the shared providers:</p>
 <ul>
@@ -287,7 +319,10 @@
 <li>In <strong>PostgreSQL</strong>, long-term memories are tagged with the agent&rsquo;s identifier — one agent&rsquo;s memories are invisible to others.</li>
 </ul>
 <p>This means you set up memory once and every agent benefits. A new agent you create tomorrow will automatically have session memory and long-term memory without any extra steps.</p>
-<h2 id="health-checks">Health checks</h2>
+<h2 id="health-checks">
+  Health checks
+  <a class="heading-anchor" href="#health-checks" aria-label="Link to this section">#</a>
+</h2>
 <p>The Admin UI includes a health check button for each memory provider. Use it to verify that the connection to Redis or PostgreSQL is working correctly. This is especially useful after initial setup or when troubleshooting connectivity issues.</p>
 
     </div>

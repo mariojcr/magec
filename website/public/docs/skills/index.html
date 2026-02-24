@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Skills — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -150,7 +152,10 @@
       <h1>Skills</h1>
       <p>Skills are reusable knowledge packs that you attach to agents. Think of them as &ldquo;expertise modules&rdquo; — a skill contains instructions and reference files that teach an agent how to handle a specific domain or task.</p>
 <p>Without skills, all of an agent&rsquo;s knowledge lives in its system prompt. That works fine for simple agents, but as the prompt grows with product catalogs, coding standards, response templates, and domain-specific rules, it becomes impossible to manage. Skills let you break that knowledge into independent, reusable pieces.</p>
-<h2 id="how-skills-work">How skills work</h2>
+<h2 id="how-skills-work">
+  How skills work
+  <a class="heading-anchor" href="#how-skills-work" aria-label="Link to this section">#</a>
+</h2>
 <p>A skill has three parts:</p>
 <table>
   <thead>
@@ -175,7 +180,10 @@
   </tbody>
 </table>
 <p>At runtime, when an agent with skills receives a message, Magec injects the skill instructions into the agent&rsquo;s context — right alongside the system prompt. The agent sees them as part of its knowledge and uses them naturally.</p>
-<h3 id="reference-files">Reference files</h3>
+<h3 id="reference-files">
+  Reference files
+  <a class="heading-anchor" href="#reference-files" aria-label="Link to this section">#</a>
+</h3>
 <p>Skills can also carry <strong>reference files</strong> — documents, templates, schemas, catalogs, or any text file that the agent needs as context. These files are uploaded through the Admin UI and stored on the server. When the agent runs, Magec reads the file contents and includes them in the agent&rsquo;s context alongside the skill instructions.</p>
 <p>This is perfect for:</p>
 <ul>
@@ -186,7 +194,10 @@
 <li>Any structured data the agent needs to reference</li>
 </ul>
 <p>Reference files are stored at <code>data/skills/{skillId}/</code> on the server. The store only tracks metadata (filename and size) — the actual content lives on disk, keeping the store lightweight.</p>
-<h2 id="creating-a-skill">Creating a skill</h2>
+<h2 id="creating-a-skill">
+  Creating a skill
+  <a class="heading-anchor" href="#creating-a-skill" aria-label="Link to this section">#</a>
+</h2>
 <p>In the Admin UI, go to <strong>Skills</strong> and click <strong>New</strong>.</p>
 <p>Write the <strong>instructions</strong> as if you were briefing a new team member on this specific area. Be direct and specific — the agent will follow these instructions literally.</p>
 <p><strong>Example instructions:</strong></p>
@@ -196,7 +207,10 @@
 </ul>
 <p>To add reference files, use the <strong>drag &amp; drop zone</strong> in the References section. You can add files before saving — they&rsquo;ll be uploaded when you hit Save.</p>
 <p>Each file in the list has a <strong>download button</strong> (to recover the original) and a <strong>delete button</strong> (to remove it from the skill).</p>
-<h2 id="connecting-skills-to-agents">Connecting skills to agents</h2>
+<h2 id="connecting-skills-to-agents">
+  Connecting skills to agents
+  <a class="heading-anchor" href="#connecting-skills-to-agents" aria-label="Link to this section">#</a>
+</h2>
 <p>After creating a skill, enable it on specific agents:</p>
 <ol>
 <li>Open an agent in the Admin UI</li>
@@ -205,7 +219,10 @@
 <li>Save</li>
 </ol>
 <p>Each agent can have different skills enabled. A &ldquo;customer support&rdquo; agent might have skills for returns, shipping, and product knowledge. A &ldquo;developer assistant&rdquo; might have skills for your coding standards and API documentation. You compose each agent&rsquo;s expertise by selecting which skills it gets.</p>
-<h2 id="example-skills">Example skills</h2>
+<h2 id="example-skills">
+  Example skills
+  <a class="heading-anchor" href="#example-skills" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -242,7 +259,10 @@
       </tr>
   </tbody>
 </table>
-<h2 id="skills-vs-system-prompt">Skills vs. system prompt</h2>
+<h2 id="skills-vs-system-prompt">
+  Skills vs. system prompt
+  <a class="heading-anchor" href="#skills-vs-system-prompt" aria-label="Link to this section">#</a>
+</h2>
 <p>You might wonder: why not just put everything in the system prompt? You can — and for simple agents, that&rsquo;s perfectly fine. Skills become valuable when:</p>
 <ul>
 <li><strong>You reuse the same knowledge across multiple agents.</strong> A product catalog skill can be shared by your support agent, your sales agent, and your FAQ bot. Update the catalog once, all agents see the change.</li>
@@ -258,7 +278,10 @@
   Skills are configured globally and then enabled per-agent — the same pattern as MCP Servers. Create a skill once, share it across as many agents as you want.
 </div>
 
-<h2 id="hot-reload">Hot-reload</h2>
+<h2 id="hot-reload">
+  Hot-reload
+  <a class="heading-anchor" href="#hot-reload" aria-label="Link to this section">#</a>
+</h2>
 <p>Changes to skills take effect on the next message. Edit instructions, upload new reference files, or toggle skills on different agents — save, and it&rsquo;s live. No restart needed.</p>
 
     </div>

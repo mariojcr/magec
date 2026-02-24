@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Commands — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -156,10 +158,16 @@
 <img src="/img/screenshots/admin-commands.png" alt="Admin UI — Commands" class="screenshot screenshot--desktop">
 
 </div>
-<h2 id="why-commands-exist">Why commands exist</h2>
+<h2 id="why-commands-exist">
+  Why commands exist
+  <a class="heading-anchor" href="#why-commands-exist" aria-label="Link to this section">#</a>
+</h2>
 <p>Imagine you have a daily report that needs to be generated every morning. The prompt is always the same: <em>&ldquo;Generate a summary of yesterday&rsquo;s sales data, including total revenue, top products, and notable trends.&rdquo;</em> Without commands, you&rsquo;d have to write this prompt into every cron job or webhook that triggers it. If you want to change the wording, you&rsquo;d need to update it in multiple places.</p>
 <p>With commands, you write the prompt once. Every cron job or webhook that uses it just references the command by ID. Change the prompt in one place, and all triggers use the updated version.</p>
-<h2 id="creating-a-command">Creating a command</h2>
+<h2 id="creating-a-command">
+  Creating a command
+  <a class="heading-anchor" href="#creating-a-command" aria-label="Link to this section">#</a>
+</h2>
 <p>In the Admin UI, go to <strong>Commands</strong> and click <strong>New</strong>:</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -196,7 +204,10 @@
 </table>
 <p>The <strong>prompt</strong> is the message that gets sent to the agent as if a user had typed it. The agent receives this prompt, processes it using its LLM, system prompt, memory, and tools, then produces a response.</p>
 <p>The <strong>agent</strong> field determines who handles the command. This can be a single agent or a flow. If it&rsquo;s a flow, the prompt enters the pipeline and is processed by all agents in the flow.</p>
-<h2 id="example-commands">Example commands</h2>
+<h2 id="example-commands">
+  Example commands
+  <a class="heading-anchor" href="#example-commands" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -228,11 +239,20 @@
       </tr>
   </tbody>
 </table>
-<h2 id="using-commands">Using commands</h2>
+<h2 id="using-commands">
+  Using commands
+  <a class="heading-anchor" href="#using-commands" aria-label="Link to this section">#</a>
+</h2>
 <p>Commands are used by two client types:</p>
-<h3 id="in-cron-jobs">In cron jobs</h3>
+<h3 id="in-cron-jobs">
+  In cron jobs
+  <a class="heading-anchor" href="#in-cron-jobs" aria-label="Link to this section">#</a>
+</h3>
 <p>A cron client runs a command on a schedule. You select the command and set the cron expression — the command fires automatically at the specified times. See <a href="/docs/cron/">Cron</a> for details.</p>
-<h3 id="in-webhooks-command-mode">In webhooks (command mode)</h3>
+<h3 id="in-webhooks-command-mode">
+  In webhooks (command mode)
+  <a class="heading-anchor" href="#in-webhooks-command-mode" aria-label="Link to this section">#</a>
+</h3>
 <p>A webhook client in command mode runs a predefined command when its endpoint is hit. The HTTP request body is ignored — the prompt always comes from the command. See <a href="/docs/webhooks/">Webhooks</a> for details.</p>
 
 

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Reference — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -149,10 +151,16 @@
       </button>
       <h1>API Reference</h1>
       <p>Magec exposes two HTTP servers on separate ports. Each one has its own interactive Swagger UI where you can explore every endpoint, see request/response schemas, and test things directly from the browser.</p>
-<h2 id="user-api--port-8080">User API — Port 8080</h2>
+<h2 id="user-api--port-8080">
+  User API — Port 8080
+  <a class="heading-anchor" href="#user-api--port-8080" aria-label="Link to this section">#</a>
+</h2>
 <p>This is the API that clients use to interact with agents. The Voice UI, Telegram, webhooks, and any custom integration goes through here.</p>
 <p><strong>Swagger UI →</strong> <code>http://localhost:8080/swagger/</code></p>
-<h3 id="authentication">Authentication</h3>
+<h3 id="authentication">
+  Authentication
+  <a class="heading-anchor" href="#authentication" aria-label="Link to this section">#</a>
+</h3>
 <p>All endpoints require a client token: <code>Authorization: Bearer mgc_...</code></p>
 <p>The token comes from the client configuration in the Admin UI. Each client has its own token, which determines what agents and flows it can access.</p>
 
@@ -162,7 +170,10 @@
   When no clients exist (fresh install without a seed), the API runs in open mode with no authentication required. Authentication is enforced as soon as you create your first client.
 </div>
 
-<h3 id="agent-endpoints-adk">Agent endpoints (ADK)</h3>
+<h3 id="agent-endpoints-adk">
+  Agent endpoints (ADK)
+  <a class="heading-anchor" href="#agent-endpoints-adk" aria-label="Link to this section">#</a>
+</h3>
 <p>All routes under <code>/api/v1/agent/*</code> implement the <a href="https://google.github.io/adk-docs/">Google Agent Development Kit (ADK)</a> protocol exposed as a REST API. This includes:</p>
 <ul>
 <li><strong>Execution</strong> — Send messages to agents (blocking or SSE streaming)</li>
@@ -180,7 +191,10 @@
 </span></span><span class="line"><span class="cl">    <span class="nt">&#34;parts&#34;</span><span class="p">:</span> <span class="p">[{</span> <span class="nt">&#34;text&#34;</span><span class="p">:</span> <span class="s2">&#34;Hello!&#34;</span> <span class="p">}]</span>
 </span></span><span class="line"><span class="cl">  <span class="p">}</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
-</span></span></code></pre></div><h3 id="other-endpoints">Other endpoints</h3>
+</span></span></code></pre></div><h3 id="other-endpoints">
+  Other endpoints
+  <a class="heading-anchor" href="#other-endpoints" aria-label="Link to this section">#</a>
+</h3>
 <p>Beyond ADK, the User API also serves:</p>
 <ul>
 <li><strong>Voice</strong> — STT and TTS proxies per agent, plus a WebSocket for real-time wake word and VAD events. See <a href="/docs/voice-system/">Voice System</a>.</li>
@@ -189,11 +203,15 @@
 <li><strong>Health</strong> — Simple health check at <code>/api/v1/health</code>.</li>
 </ul>
 <p>The Swagger UI documents all of these with full schemas and lets you try them interactively.</p>
-<h2 id="admin-api--port-8081">Admin API — Port 8081</h2>
+<h2 id="admin-api--port-8081">
+  Admin API — Port 8081
+  <a class="heading-anchor" href="#admin-api--port-8081" aria-label="Link to this section">#</a>
+</h2>
 <p>This is the management API that powers the Admin UI. Full CRUD for every resource in the platform: agents, backends, memory providers, MCP servers, clients, commands, flows, settings, and conversations.</p>
 <p><strong>Swagger UI →</strong> <code>http://localhost:8081/swagger/</code></p>
 <p>No authentication required. In production, restrict access to this port (bind to localhost, firewall, or VPN).</p>
-<p>Every resource follows the same REST pattern (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>), plus type-specific extras like health checks for memory providers, token regeneration for clients, and MCP server linking for agents. The Swagger UI has it all.</p>
+<p>Every resource follows the same REST pattern (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>), plus type-specific extras like health checks for memory providers, token regeneration for clients, and MCP server linking for agents.</p>
+<p>It also includes <strong>backup and restore</strong> endpoints — download a full <code>.tar.gz</code> snapshot of all data, or upload one to atomically replace everything. The Swagger UI has it all.</p>
 
 
 

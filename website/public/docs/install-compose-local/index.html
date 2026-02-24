@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Docker Compose — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -155,7 +157,10 @@
 <li>At least 8 GB of RAM (for Ollama + the LLM model)</li>
 <li>~6 GB disk space for AI models (downloaded on first start)</li>
 </ul>
-<h2 id="one-line-install">One-line install</h2>
+<h2 id="one-line-install">
+  One-line install
+  <a class="heading-anchor" href="#one-line-install" aria-label="Link to this section">#</a>
+</h2>
 <p>The interactive installer walks you through the full setup — LLM provider, voice, memory, NVIDIA GPU support — and generates a ready-to-run Docker Compose deployment:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">curl -fsSL https://magec.dev/install <span class="p">|</span> bash
 </span></span></code></pre></div>
@@ -165,9 +170,15 @@
   The first start downloads approximately 5 GB of AI models (Qwen 3 8B for LLM, nomic-embed-text for embeddings). This only happens once. Track progress with <code>docker compose logs -f ollama-setup</code>.
 </div>
 
-<h2 id="manual-setup">Manual setup</h2>
+<h2 id="manual-setup">
+  Manual setup
+  <a class="heading-anchor" href="#manual-setup" aria-label="Link to this section">#</a>
+</h2>
 <p>If you prefer to set things up yourself, or want to customize the configuration before starting:</p>
-<h3 id="1-download-the-files">1. Download the files</h3>
+<h3 id="1-download-the-files">
+  1. Download the files
+  <a class="heading-anchor" href="#1-download-the-files" aria-label="Link to this section">#</a>
+</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">mkdir magec <span class="o">&amp;&amp;</span> <span class="nb">cd</span> magec
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/docker/compose/docker-compose.yaml <span class="se">\
@@ -175,7 +186,10 @@
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">curl -fsSL https://raw.githubusercontent.com/achetronic/magec/master/docker/compose/config.yaml <span class="se">\
 </span></span></span><span class="line"><span class="cl">  -o config.yaml
-</span></span></code></pre></div><h3 id="2-optional-enable-gpu">2. (Optional) Enable GPU</h3>
+</span></span></code></pre></div><h3 id="2-optional-enable-gpu">
+  2. (Optional) Enable GPU
+  <a class="heading-anchor" href="#2-optional-enable-gpu" aria-label="Link to this section">#</a>
+</h3>
 <p>Edit <code>docker-compose.yaml</code> and uncomment the <code>deploy</code> section under the <code>ollama</code> service:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ollama</span><span class="p">:</span><span class="w">
@@ -186,9 +200,15 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">            </span>- <span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l">nvidia</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="nt">count</span><span class="p">:</span><span class="w"> </span><span class="l">all</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">              </span><span class="nt">capabilities</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="l">gpu]</span><span class="w">
-</span></span></span></code></pre></div><h3 id="3-start">3. Start</h3>
+</span></span></span></code></pre></div><h3 id="3-start">
+  3. Start
+  <a class="heading-anchor" href="#3-start" aria-label="Link to this section">#</a>
+</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker compose up -d
-</span></span></code></pre></div><h2 id="what-gets-deployed">What gets deployed</h2>
+</span></span></code></pre></div><h2 id="what-gets-deployed">
+  What gets deployed
+  <a class="heading-anchor" href="#what-gets-deployed" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -235,9 +255,15 @@
       </tr>
   </tbody>
 </table>
-<h2 id="set-up-your-first-agent">Set up your first agent</h2>
+<h2 id="set-up-your-first-agent">
+  Set up your first agent
+  <a class="heading-anchor" href="#set-up-your-first-agent" aria-label="Link to this section">#</a>
+</h2>
 <p>Once everything is running, open the <strong>Admin UI</strong> at <code>http://localhost:8081</code>.</p>
-<h3 id="create-backends">Create backends</h3>
+<h3 id="create-backends">
+  Create backends
+  <a class="heading-anchor" href="#create-backends" aria-label="Link to this section">#</a>
+</h3>
 <p>You need three backends — one for the LLM/embeddings, one for STT, one for TTS:</p>
 <p><strong>Ollama (LLM + Embeddings)</strong> — Backends → New:</p>
 <table>
@@ -320,7 +346,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="create-memory-providers">Create memory providers</h3>
+<h3 id="create-memory-providers">
+  Create memory providers
+  <a class="heading-anchor" href="#create-memory-providers" aria-label="Link to this section">#</a>
+</h3>
 <p><strong>Session memory</strong> — Memory → New Session Provider:</p>
 <table>
   <thead>
@@ -367,7 +396,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="create-an-agent">Create an agent</h3>
+<h3 id="create-an-agent">
+  Create an agent
+  <a class="heading-anchor" href="#create-an-agent" aria-label="Link to this section">#</a>
+</h3>
 <p>Agents → New:</p>
 <table>
   <thead>
@@ -426,7 +458,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="create-a-client">Create a client</h3>
+<h3 id="create-a-client">
+  Create a client
+  <a class="heading-anchor" href="#create-a-client" aria-label="Link to this section">#</a>
+</h3>
 <p>Clients → New:</p>
 <table>
   <thead>
@@ -451,9 +486,15 @@
   </tbody>
 </table>
 <p>Copy the <strong>pairing token</strong>, open <code>http://localhost:8080</code>, paste it, and start talking.</p>
-<h2 id="using-cloud-providers-instead">Using cloud providers instead</h2>
+<h2 id="using-cloud-providers-instead">
+  Using cloud providers instead
+  <a class="heading-anchor" href="#using-cloud-providers-instead" aria-label="Link to this section">#</a>
+</h2>
 <p>The Docker Compose includes all the local AI services, but you can use cloud providers by simply creating different backends in the Admin UI. The local services will still be running but unused — or you can stop them.</p>
-<h3 id="openai-handles-everything">OpenAI (handles everything)</h3>
+<h3 id="openai-handles-everything">
+  OpenAI (handles everything)
+  <a class="heading-anchor" href="#openai-handles-everything" aria-label="Link to this section">#</a>
+</h3>
 <p>Create a single backend:</p>
 <table>
   <thead>
@@ -484,7 +525,10 @@
 <p>Use it for the agent&rsquo;s LLM (<code>gpt-4.1-mini</code>), transcription (<code>whisper-1</code>), and TTS (<code>tts-1</code>). For embeddings in long-term memory, use <code>text-embedding-3-small</code>.</p>
 <p>Then stop the local services you don&rsquo;t need:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker compose stop ollama ollama-setup parakeet tts
-</span></span></code></pre></div><h3 id="anthropic--gemini-llm-only">Anthropic / Gemini (LLM only)</h3>
+</span></span></code></pre></div><h3 id="anthropic--gemini-llm-only">
+  Anthropic / Gemini (LLM only)
+  <a class="heading-anchor" href="#anthropic--gemini-llm-only" aria-label="Link to this section">#</a>
+</h3>
 <p>These providers only offer LLM — STT, TTS, and embeddings stay local. Create the cloud backend for the LLM and keep using Parakeet, Edge TTS, and Ollama (for embeddings) as configured above.</p>
 <table>
   <thead>
@@ -507,7 +551,10 @@
       </tr>
   </tbody>
 </table>
-<h2 id="managing-the-deployment">Managing the deployment</h2>
+<h2 id="managing-the-deployment">
+  Managing the deployment
+  <a class="heading-anchor" href="#managing-the-deployment" aria-label="Link to this section">#</a>
+</h2>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="nb">cd</span> magec                               <span class="c1"># your installation directory</span>
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">docker compose logs -f                 <span class="c1"># follow all logs</span>
@@ -519,7 +566,10 @@
 </span></span><span class="line"><span class="cl">
 </span></span><span class="line"><span class="cl">docker compose pull                    <span class="c1"># pull latest images</span>
 </span></span><span class="line"><span class="cl">docker compose up -d                   <span class="c1"># restart with new versions</span>
-</span></span></code></pre></div><h2 id="data-persistence">Data persistence</h2>
+</span></span></code></pre></div><h2 id="data-persistence">
+  Data persistence
+  <a class="heading-anchor" href="#data-persistence" aria-label="Link to this section">#</a>
+</h2>
 <p>All data is stored in Docker volumes:</p>
 <table>
   <thead>
@@ -551,8 +601,14 @@
 <p>To start completely fresh:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker compose down -v    <span class="c1"># -v removes all volumes</span>
 </span></span><span class="line"><span class="cl">docker compose up -d      <span class="c1"># fresh start</span>
-</span></span></code></pre></div><h2 id="customizing-your-deployment">Customizing your deployment</h2>
-<h3 id="adding-mcp-servers-as-containers">Adding MCP servers as containers</h3>
+</span></span></code></pre></div><h2 id="customizing-your-deployment">
+  Customizing your deployment
+  <a class="heading-anchor" href="#customizing-your-deployment" aria-label="Link to this section">#</a>
+</h2>
+<h3 id="adding-mcp-servers-as-containers">
+  Adding MCP servers as containers
+  <a class="heading-anchor" href="#adding-mcp-servers-as-containers" aria-label="Link to this section">#</a>
+</h3>
 <p>You can extend the Docker Compose file to add MCP servers alongside Magec:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">hass-mcp</span><span class="p">:</span><span class="w">
@@ -563,13 +619,19 @@
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;8888:8080&#34;</span><span class="w">
 </span></span></span></code></pre></div><p>Then add the MCP server in the Admin UI pointing at <code>http://hass-mcp:8080/sse</code>.</p>
-<h3 id="changing-ports">Changing ports</h3>
+<h3 id="changing-ports">
+  Changing ports
+  <a class="heading-anchor" href="#changing-ports" aria-label="Link to this section">#</a>
+</h3>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">magec</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="nt">ports</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;3000:8080&#34;</span><span class="w">   </span><span class="c"># Voice UI + User API on port 3000</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">      </span>- <span class="s2">&#34;3001:8081&#34;</span><span class="w">   </span><span class="c"># Admin UI + Admin API on port 3001</span><span class="w">
-</span></span></span></code></pre></div><h3 id="accessing-host-services">Accessing host services</h3>
+</span></span></span></code></pre></div><h3 id="accessing-host-services">
+  Accessing host services
+  <a class="heading-anchor" href="#accessing-host-services" aria-label="Link to this section">#</a>
+</h3>
 <p>If your LLM or other services run on the Docker host (not in containers), use <code>host.docker.internal</code>:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">services</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">magec</span><span class="p">:</span><span class="w">
@@ -582,7 +644,10 @@
   On macOS and Windows, <code>host.docker.internal</code> works automatically. On Linux, you need the <code>extra_hosts</code> mapping above.
 </div>
 
-<h2 id="next-steps">Next steps</h2>
+<h2 id="next-steps">
+  Next steps
+  <a class="heading-anchor" href="#next-steps" aria-label="Link to this section">#</a>
+</h2>
 <ul>
 <li><strong><a href="/docs/configuration/">Configuration</a></strong> — understand <code>config.yaml</code> vs. Admin UI resources</li>
 <li><strong><a href="/docs/agents/">Agents</a></strong> — customize agent behavior, prompts, and voice</li>

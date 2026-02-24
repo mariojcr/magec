@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voice System — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -148,11 +150,17 @@
         Navigation
       </button>
       <h1>Voice System</h1>
-      <h2 id="why-we-explain-this">Why we explain this</h2>
+      <h2 id="why-we-explain-this">
+  Why we explain this
+  <a class="heading-anchor" href="#why-we-explain-this" aria-label="Link to this section">#</a>
+</h2>
 <p>The Voice UI needs your microphone to work. That&rsquo;s obvious. What&rsquo;s less obvious is <strong>what happens with your audio</strong> once the microphone is on — and we think you deserve to know exactly how it works before you trust a system with an always-listening microphone.</p>
 <p>Here&rsquo;s the short version: <strong>your audio never leaves your server.</strong> Magec processes everything on your own hardware. There&rsquo;s no cloud relay, no third-party listening service, no &ldquo;anonymous audio samples sent for improvement.&rdquo; The microphone stream goes from your browser to your Magec server over a WebSocket, gets analyzed by local AI models running on your server, and that&rsquo;s it.</p>
 <p>But let&rsquo;s be more specific, because &ldquo;trust us&rdquo; isn&rsquo;t good enough:</p>
-<h3 id="what-actually-happens-when-the-microphone-is-on">What actually happens when the microphone is on</h3>
+<h3 id="what-actually-happens-when-the-microphone-is-on">
+  What actually happens when the microphone is on
+  <a class="heading-anchor" href="#what-actually-happens-when-the-microphone-is-on" aria-label="Link to this section">#</a>
+</h3>
 <p>When the Voice UI is active and listening for the wake word, the browser captures tiny audio frames (~32 milliseconds each) and streams them to your Magec server. On the server, two small AI models process these frames:</p>
 <ol>
 <li>
@@ -164,7 +172,10 @@
 </ol>
 <p><strong>No audio is recorded until you explicitly activate the system</strong> (either by saying the wake word or pressing the button). The continuous stream is purely for detection — the models analyze tiny windows of sound, make a yes/no decision, and throw the audio away.</p>
 <p>Only after activation does Magec capture your speech and send it for transcription. And even then, the transcription can happen entirely on your server if you&rsquo;re using a local deployment.</p>
-<h3 id="the-full-picture">The full picture</h3>
+<h3 id="the-full-picture">
+  The full picture
+  <a class="heading-anchor" href="#the-full-picture" aria-label="Link to this section">#</a>
+</h3>
 
 
 <img src="/img/diagrams/voice-privacy.svg" alt="Diagram — What happens with your audio" style="width:100%; margin: 2rem 0; border-radius: 12px;">
@@ -172,7 +183,10 @@
 <p>If you use the fully local deployment, <strong>every single step</strong> happens on your machine. If you use a cloud provider, only the text (never the raw audio) goes to that provider — and only after you&rsquo;ve spoken and the audio has been transcribed.</p>
 <p>We explain the details below not because you need them to use Magec, but because we believe you should be able to verify exactly what your system is doing. Open source means you can read the code. This documentation means you don&rsquo;t have to.</p>
 <hr>
-<h2 id="wake-word-detection">Wake Word Detection</h2>
+<h2 id="wake-word-detection">
+  Wake Word Detection
+  <a class="heading-anchor" href="#wake-word-detection" aria-label="Link to this section">#</a>
+</h2>
 <p>The wake word system listens to the audio stream and detects when someone says <strong>&ldquo;Oye Magec&rdquo;</strong> or <strong>&ldquo;Magec&rdquo;</strong>. This enables hands-free activation — you don&rsquo;t need to press a button to start talking.</p>
 <p>Each audio frame passes through three stages: frequency analysis (what sounds are present), pattern matching (does it sound like speech), and classification (is it the wake word). If it matches, the system activates. If not, the frame is discarded and the next one is processed.</p>
 
@@ -180,14 +194,20 @@
 <img src="/img/diagrams/voice-wakeword.svg" alt="Diagram — Wake word detection pipeline" style="width:100%; margin: 2rem 0; border-radius: 12px;">
 
 <p>The wake word models were custom-trained for the word &ldquo;Magec&rdquo; and the phrase &ldquo;Oye Magec&rdquo; with Canarian Spanish pronunciation. They run locally on your server using ONNX Runtime — a lightweight inference engine that works on any hardware without a GPU.</p>
-<h2 id="voice-activity-detection-vad">Voice Activity Detection (VAD)</h2>
+<h2 id="voice-activity-detection-vad">
+  Voice Activity Detection (VAD)
+  <a class="heading-anchor" href="#voice-activity-detection-vad" aria-label="Link to this section">#</a>
+</h2>
 <p>Once the wake word triggers (or you press the microphone button), the VAD system takes over. It detects when you start and stop speaking, so Magec knows exactly what to send for transcription.</p>
 
 
 <img src="/img/diagrams/voice-vad.svg" alt="Diagram — Voice activity detection" style="width:100%; margin: 2rem 0; border-radius: 12px;">
 
 <p>The VAD tracks the speech pattern over time rather than making frame-by-frame decisions. This means it won&rsquo;t cut you off mid-sentence just because you took a breath — it waits for 2 seconds of real silence before considering your utterance complete.</p>
-<h2 id="speech-to-text-and-text-to-speech">Speech-to-Text and Text-to-Speech</h2>
+<h2 id="speech-to-text-and-text-to-speech">
+  Speech-to-Text and Text-to-Speech
+  <a class="heading-anchor" href="#speech-to-text-and-text-to-speech" aria-label="Link to this section">#</a>
+</h2>
 <p>Once the VAD determines you&rsquo;ve finished speaking, the captured audio needs to be converted to text (STT). After the agent processes your message, its response needs to be converted back to audio (TTS). These two steps are where <strong>you choose</strong> whether to stay local or use a cloud service.</p>
 <p>Both STT and TTS are configured per-agent in the <a href="/docs/agents/">agent settings</a>. This means different agents can use different providers — one agent might use a local STT for privacy, while another uses cloud TTS for higher voice quality.</p>
 <table>
@@ -219,7 +239,10 @@
   In the fully local deployment, both STT and TTS run on your server by default. No audio or text is sent anywhere. If you switch to a cloud provider, only the captured speech (STT) or response text (TTS) is sent to that provider — the continuous microphone stream and detection still happen entirely on your server.
 </div>
 
-<h2 id="disabling-voice">Disabling voice</h2>
+<h2 id="disabling-voice">
+  Disabling voice
+  <a class="heading-anchor" href="#disabling-voice" aria-label="Link to this section">#</a>
+</h2>
 <p>If you don&rsquo;t need the Voice UI or voice features, set <code>voice.ui.enabled: false</code> in your <code>config.yaml</code>:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">voice</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">ui</span><span class="p">:</span><span class="w">

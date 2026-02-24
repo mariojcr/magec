@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voice UI — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -150,7 +152,10 @@
       <h1>Voice UI</h1>
       <p>Magec ships with a built-in voice interface that runs in any browser. Talk to your agents, read their responses, switch between conversations — all from your phone or desktop. It&rsquo;s designed to feel like a native app, not a web page.</p>
 <p>The Voice UI is a Progressive Web App (PWA), which means you can install it on your phone and it gets its own icon, full-screen experience, and works like any other app. No app store needed.</p>
-<h2 id="pairing">Pairing</h2>
+<h2 id="pairing">
+  Pairing
+  <a class="heading-anchor" href="#pairing" aria-label="Link to this section">#</a>
+</h2>
 <p>The first time you open the Voice UI, it needs to connect to your Magec server. Enter the token from your client configuration and the UI pairs with the API. Once paired, the token is stored locally and you won&rsquo;t need to enter it again.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -160,7 +165,10 @@
 
 </div>
 <p>You can find the token in the Admin UI under <strong>Clients</strong>. If you used the installer, a Voice UI client was already created for you.</p>
-<h2 id="home">Home</h2>
+<h2 id="home">
+  Home
+  <a class="heading-anchor" href="#home" aria-label="Link to this section">#</a>
+</h2>
 <p>The home screen is where every conversation starts. Front and center is <strong>Magec</strong> — an animated orb inspired by the god of the Sun worshipped by the ancient people of the Canary Islands.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -180,7 +188,10 @@
 <li><strong>Push-to-talk</strong> — Tap the microphone button and speak. Release (or tap again) to send.</li>
 </ul>
 <p>When idle, the orb breathes gently in gold. When you&rsquo;re recording, it pulses red and its particles follow your voice waveform. This isn&rsquo;t just decoration — it gives you immediate visual feedback that the system is actively listening.</p>
-<h2 id="chat">Chat</h2>
+<h2 id="chat">
+  Chat
+  <a class="heading-anchor" href="#chat" aria-label="Link to this section">#</a>
+</h2>
 <p>Every conversation is stored and browsable. You can read back what was said, see both your messages and the agent&rsquo;s responses, and pick up where you left off. The chat view shows the full text of each exchange.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -190,7 +201,10 @@
 
 </div>
 <p>When the agent responds, you hear the response spoken aloud (if the agent has TTS configured) and see the text in the chat simultaneously.</p>
-<h2 id="conversation-history">Conversation history</h2>
+<h2 id="conversation-history">
+  Conversation history
+  <a class="heading-anchor" href="#conversation-history" aria-label="Link to this section">#</a>
+</h2>
 <p>The sidebar lets you manage multiple conversations. Create new sessions, switch between them, or delete old ones. Each session keeps its own context, so you can have parallel conversations with different agents about different topics.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -200,7 +214,10 @@
 
 </div>
 <p>Sessions are tied to the agent or flow you&rsquo;re using. When you switch agents, you get a separate set of sessions for that agent.</p>
-<h2 id="agent-switching">Agent switching</h2>
+<h2 id="agent-switching">
+  Agent switching
+  <a class="heading-anchor" href="#agent-switching" aria-label="Link to this section">#</a>
+</h2>
 <p>The agent switcher lets you change which agent (or flow) you&rsquo;re talking to. It shows all agents and flows that your client token has access to.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -210,7 +227,10 @@
 
 </div>
 <p>For single agents, selecting one switches your conversation to that agent. For flows, selecting one activates the entire multi-agent pipeline — your messages enter the flow and the response comes from the flow&rsquo;s processing.</p>
-<h3 id="spokesperson-for-flows">Spokesperson (for flows)</h3>
+<h3 id="spokesperson-for-flows">
+  Spokesperson (for flows)
+  <a class="heading-anchor" href="#spokesperson-for-flows" aria-label="Link to this section">#</a>
+</h3>
 <p>When you select a flow, a new concept appears: the <strong>spokesperson</strong>. Since a flow contains multiple agents, someone needs to be &ldquo;the voice&rdquo; — the agent whose TTS configuration is used to speak responses, and whose STT configuration is used to transcribe your voice.</p>
 <p>The agent switcher shows the flow&rsquo;s agents and lets you pick the spokesperson. By default, it&rsquo;s the first response agent in the flow. You can change it at any time.</p>
 <p>This is useful when different agents in a flow have different voices. The &ldquo;manager&rdquo; agent might have a professional voice, while the &ldquo;creative&rdquo; agent has a more casual one. You pick who speaks based on the situation.</p>
@@ -221,7 +241,10 @@
   If the selected spokesperson doesn&rsquo;t have TTS configured, you&rsquo;ll see a notification explaining that the agent can&rsquo;t speak. The flow still works — you just won&rsquo;t hear voice responses. Same for STT: if the spokesperson can&rsquo;t transcribe, you&rsquo;ll be notified that voice input isn&rsquo;t available for that agent.
 </div>
 
-<h2 id="settings">Settings</h2>
+<h2 id="settings">
+  Settings
+  <a class="heading-anchor" href="#settings" aria-label="Link to this section">#</a>
+</h2>
 <p>The settings panel lets you configure your Voice UI experience:</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -235,7 +258,10 @@
 <li><strong>Agent</strong> — Quick access to the agent switcher</li>
 </ul>
 <p>Your preferences (selected agent, spokesperson, language) are saved locally and persist between sessions.</p>
-<h2 id="notifications">Notifications</h2>
+<h2 id="notifications">
+  Notifications
+  <a class="heading-anchor" href="#notifications" aria-label="Link to this section">#</a>
+</h2>
 <p>System events and status updates appear as notifications — connection changes, errors, configuration warnings, and other things worth knowing about.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -244,7 +270,10 @@
 <img src="/img/screenshots/voice-ui-notifications.png" alt="Voice UI — Notifications" class="screenshot screenshot screenshot--phone">
 
 </div>
-<h2 id="install-as-an-app-pwa">Install as an app (PWA)</h2>
+<h2 id="install-as-an-app-pwa">
+  Install as an app (PWA)
+  <a class="heading-anchor" href="#install-as-an-app-pwa" aria-label="Link to this section">#</a>
+</h2>
 <p>The Voice UI is a Progressive Web App. Install it on your phone or tablet and it looks and feels like a native app — full screen, its own icon, no browser chrome. This is particularly useful for dedicated setups like a voice tablet on your desk or at a front desk.</p>
 <ul>
 <li><strong>Android:</strong> Chrome → Menu (⋮) → &ldquo;Install app&rdquo;</li>
@@ -257,7 +286,10 @@
   <strong>HTTP on local network:</strong> If you&rsquo;re running Magec over HTTP (no HTTPS), you need to tell Chrome to trust the origin for microphone access. Go to <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>, add your server URL (e.g., <code>http://192.168.1.100:8080</code>), and restart Chrome.
 </div>
 
-<h2 id="how-voice-works-under-the-hood">How voice works under the hood</h2>
+<h2 id="how-voice-works-under-the-hood">
+  How voice works under the hood
+  <a class="heading-anchor" href="#how-voice-works-under-the-hood" aria-label="Link to this section">#</a>
+</h2>
 <p>The Voice UI communicates with the server through two channels:</p>
 <ol>
 <li><strong>REST API</strong> — For sending messages, receiving responses, managing sessions, and voice synthesis (TTS) / transcription (STT)</li>

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Advanced Secrets — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -150,14 +152,20 @@
       <h1>Advanced Secrets</h1>
       <p>This page covers the internal details of how Magec handles secrets — the expansion pipeline, encryption at rest, compatibility with external environment variables, and recovery procedures. For a practical guide on creating and using secrets, see <a href="/docs/secrets/">Secrets</a>.</p>
 <p>Secrets are named values — API keys, tokens, passwords — that you manage through the Admin UI and reference anywhere in your configuration using <code>${KEY}</code> syntax. They provide a single place to store sensitive data instead of scattering environment variables across your deployment.</p>
-<h2 id="how-secrets-work">How secrets work</h2>
+<h2 id="how-secrets-work">
+  How secrets work
+  <a class="heading-anchor" href="#how-secrets-work" aria-label="Link to this section">#</a>
+</h2>
 <p>Each secret has a <strong>key</strong> (like <code>OPENAI_API_KEY</code>) and a <strong>value</strong> (the actual API key). When Magec starts, it loads all secrets and injects them as environment variables. Any <code>${VAR}</code> reference in <code>config.yaml</code> or <code>store.json</code> that matches a secret key gets expanded to its value.</p>
 <p>This means a backend configured with:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
 </span></span><span class="line"><span class="cl">  <span class="nt">&#34;apiKey&#34;</span><span class="p">:</span> <span class="s2">&#34;${OPENAI_API_KEY}&#34;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>…will resolve to the actual API key if you&rsquo;ve created a secret with key <code>OPENAI_API_KEY</code>.</p>
-<h3 id="the-expansion-pipeline">The expansion pipeline</h3>
+<h3 id="the-expansion-pipeline">
+  The expansion pipeline
+  <a class="heading-anchor" href="#the-expansion-pipeline" aria-label="Link to this section">#</a>
+</h3>
 <p>On startup, Magec processes secrets before anything else:</p>
 <ol>
 <li>Load <code>store.json</code> from disk (raw, unexpanded)</li>
@@ -167,7 +175,10 @@
 <li>Continue with the fully resolved configuration</li>
 </ol>
 <p>This two-pass approach means secrets can reference other environment variables, and the rest of the store can reference secrets — everything resolves in a single consistent pass.</p>
-<h2 id="encryption-at-rest">Encryption at rest</h2>
+<h2 id="encryption-at-rest">
+  Encryption at rest
+  <a class="heading-anchor" href="#encryption-at-rest" aria-label="Link to this section">#</a>
+</h2>
 <p>When <code>server.encryptionKey</code> is set in <code>config.yaml</code>, secret values are encrypted before writing to <code>store.json</code>:</p>
 <table>
   <thead>
@@ -197,7 +208,10 @@
 </table>
 <p>Without an encryption key, secrets are stored as plain text in <code>store.json</code> and a warning is logged:</p>
 <pre tabindex="0"><code>WARN  Secrets are stored without encryption — set server.encryptionKey in config
-</code></pre><h2 id="compatibility-with-external-environment-variables">Compatibility with external environment variables</h2>
+</code></pre><h2 id="compatibility-with-external-environment-variables">
+  Compatibility with external environment variables
+  <a class="heading-anchor" href="#compatibility-with-external-environment-variables" aria-label="Link to this section">#</a>
+</h2>
 <p>Secrets don&rsquo;t replace environment variables — they complement them. The expansion pipeline merges both sources:</p>
 <ul>
 <li><strong>Secrets</strong> are injected via <code>os.Setenv()</code> before expansion</li>
@@ -254,8 +268,14 @@
   The main advantage of Magec secrets over external environment variables is that you can manage them through the Admin UI without restarting the server or redeploying. Add an API key, and it&rsquo;s available immediately on the next store reload.
 </div>
 
-<h2 id="recovery">Recovery</h2>
-<h3 id="changing-the-encryption-key">Changing the encryption key</h3>
+<h2 id="recovery">
+  Recovery
+  <a class="heading-anchor" href="#recovery" aria-label="Link to this section">#</a>
+</h2>
+<h3 id="changing-the-encryption-key">
+  Changing the encryption key
+  <a class="heading-anchor" href="#changing-the-encryption-key" aria-label="Link to this section">#</a>
+</h3>
 <p>If you change the encryption key, existing encrypted secrets cannot be decrypted — the derived key will be different. Before changing it:</p>
 <ol>
 <li>Note down all secret values (they&rsquo;re write-only, so you&rsquo;ll need them from their original source)</li>
@@ -263,9 +283,15 @@
 <li>Restart Magec — encrypted values will fail to decrypt and remain as <code>enc:v1:...</code> strings</li>
 <li>Re-create or update each secret with its plain-text value — they&rsquo;ll be re-encrypted with the new key</li>
 </ol>
-<h3 id="losing-the-encryption-key">Losing the encryption key</h3>
+<h3 id="losing-the-encryption-key">
+  Losing the encryption key
+  <a class="heading-anchor" href="#losing-the-encryption-key" aria-label="Link to this section">#</a>
+</h3>
 <p>If you lose the encryption key entirely, the same applies — encrypted values are unrecoverable without the original key. You&rsquo;ll need to re-enter all secret values from their original sources.</p>
-<h3 id="removing-the-encryption-key">Removing the encryption key</h3>
+<h3 id="removing-the-encryption-key">
+  Removing the encryption key
+  <a class="heading-anchor" href="#removing-the-encryption-key" aria-label="Link to this section">#</a>
+</h3>
 <p>If you remove <code>encryptionKey</code> from <code>config.yaml</code>:</p>
 <ol>
 <li>Existing encrypted secrets cannot be decrypted — you&rsquo;ll need to re-create them (they&rsquo;ll be stored as plain text)</li>

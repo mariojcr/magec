@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Backends — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -157,7 +159,10 @@
 <img src="/img/screenshots/admin-backends.png" alt="Admin UI — Backends" class="screenshot screenshot--desktop">
 
 </div>
-<h2 id="backend-types">Backend types</h2>
+<h2 id="backend-types">
+  Backend types
+  <a class="heading-anchor" href="#backend-types" aria-label="Link to this section">#</a>
+</h2>
 <p>Click <strong>+ New Backend</strong> to create one. All types share the same dialog:</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -166,7 +171,10 @@
 <img src="/img/screenshots/admin-backend-dialog.png" alt="Admin UI — New Backend dialog" class="screenshot screenshot--desktop">
 
 </div>
-<h3 id="openai-openai">OpenAI (<code>openai</code>)</h3>
+<h3 id="openai-openai">
+  OpenAI (<code>openai</code>)
+  <a class="heading-anchor" href="#openai-openai" aria-label="Link to this section">#</a>
+</h3>
 <p>Works with OpenAI&rsquo;s API and any service that implements the same protocol. This includes <strong>Ollama</strong>, <strong>LM Studio</strong>, <strong>vLLM</strong>, <strong>LocalAI</strong>, and many others. If a service exposes <code>/v1/chat/completions</code>, this is the type to use.</p>
 <table>
   <thead>
@@ -221,7 +229,10 @@ Key:  (leave empty)
   The <code>openai</code> type is the most versatile because the OpenAI API has become a de facto standard. Most local inference servers implement it, so you can run fully local without any code changes.
 </div>
 
-<h3 id="anthropic-anthropic">Anthropic (<code>anthropic</code>)</h3>
+<h3 id="anthropic-anthropic">
+  Anthropic (<code>anthropic</code>)
+  <a class="heading-anchor" href="#anthropic-anthropic" aria-label="Link to this section">#</a>
+</h3>
 <p>For Anthropic&rsquo;s Claude models. Uses the official Anthropic API protocol, which is different from OpenAI&rsquo;s.</p>
 <table>
   <thead>
@@ -245,7 +256,10 @@ Key:  (leave empty)
   </tbody>
 </table>
 <p>Anthropic doesn&rsquo;t offer STT, TTS, or embedding APIs, so this backend type is used only for LLM inference. For voice and embeddings, add a separate <code>openai</code>-type backend pointing at a local service.</p>
-<h3 id="google-gemini-gemini">Google Gemini (<code>gemini</code>)</h3>
+<h3 id="google-gemini-gemini">
+  Google Gemini (<code>gemini</code>)
+  <a class="heading-anchor" href="#google-gemini-gemini" aria-label="Link to this section">#</a>
+</h3>
 <p>For Google&rsquo;s Gemini models. Uses the official Google GenAI SDK.</p>
 <table>
   <thead>
@@ -269,7 +283,10 @@ Key:  (leave empty)
   </tbody>
 </table>
 <p>Like Anthropic, Gemini is LLM-only in Magec. Use a separate backend for STT, TTS, and embeddings.</p>
-<h2 id="what-a-backend-can-power">What a backend can power</h2>
+<h2 id="what-a-backend-can-power">
+  What a backend can power
+  <a class="heading-anchor" href="#what-a-backend-can-power" aria-label="Link to this section">#</a>
+</h2>
 <p>A single backend connection can serve multiple roles depending on the provider&rsquo;s capabilities:</p>
 <table>
   <thead>
@@ -308,7 +325,10 @@ Key:  (leave empty)
   </tbody>
 </table>
 <p>Not every backend supports every role. OpenAI supports all four. Ollama supports LLM and embeddings. Anthropic and Gemini support only LLM. For the roles a provider doesn&rsquo;t cover, you add a different backend.</p>
-<h2 id="creating-a-backend">Creating a backend</h2>
+<h2 id="creating-a-backend">
+  Creating a backend
+  <a class="heading-anchor" href="#creating-a-backend" aria-label="Link to this section">#</a>
+</h2>
 <p>In the Admin UI, go to <strong>Backends</strong> and click <strong>New</strong>. Choose the type, fill in the connection details, and save. The backend is available immediately — no restart needed.</p>
 <p>You can then reference this backend in:</p>
 <ul>
@@ -317,7 +337,10 @@ Key:  (leave empty)
 <li><strong>Agent → TTS</strong> — for text-to-speech</li>
 <li><strong>Memory Provider → Embedding</strong> — for semantic search in long-term memory</li>
 </ul>
-<h2 id="mixing-backends">Mixing backends</h2>
+<h2 id="mixing-backends">
+  Mixing backends
+  <a class="heading-anchor" href="#mixing-backends" aria-label="Link to this section">#</a>
+</h2>
 <p>One of Magec&rsquo;s strengths is that each agent picks its own backend independently. In a single flow, you could have:</p>
 <ul>
 <li>Agent A using <strong>GPT-4</strong> (OpenAI) for complex reasoning</li>

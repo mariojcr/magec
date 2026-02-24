@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clients — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -148,7 +150,7 @@
         Navigation
       </button>
       <h1>Clients</h1>
-      <p>Clients are how users and systems interact with your agents. Every conversation in Magec happens through a client — whether it&rsquo;s a person talking through the Voice UI, a Telegram bot answering messages, or a cron job running a task on a schedule.</p>
+      <p>Clients are how users and systems interact with your agents. Every conversation in Magec happens through a client — whether it&rsquo;s a person talking through the Voice UI, a Telegram or Discord bot answering messages, or a cron job running a task on a schedule.</p>
 <p>Think of clients as doors into your AI platform. Each door has a lock (authentication token), a list of rooms it can access (allowed agents and flows), and its own way of communicating. You can have as many doors as you need, each configured for a different purpose.</p>
 <div class="screenshots" style="margin-bottom: 2rem;">
 
@@ -157,16 +159,22 @@
 <img src="/img/screenshots/admin-clients.png" alt="Admin UI — Clients list" class="screenshot screenshot--desktop">
 
 </div>
-<h2 id="how-clients-work">How clients work</h2>
+<h2 id="how-clients-work">
+  How clients work
+  <a class="heading-anchor" href="#how-clients-work" aria-label="Link to this section">#</a>
+</h2>
 <p>Every client in Magec follows the same pattern:</p>
 <ol>
 <li><strong>Authentication</strong> — Each client gets a unique token (prefixed with <code>mgc_</code>) that authenticates it against the API. The token is generated automatically when you create the client.</li>
 <li><strong>Authorization</strong> — Each client has a list of allowed agents and flows. It can only interact with the ones you&rsquo;ve explicitly permitted.</li>
-<li><strong>Transport</strong> — Each client type handles its own communication channel. The Voice UI calls the REST API, Telegram polls the Bot API, webhooks listen for HTTP requests, cron fires on a schedule.</li>
+<li><strong>Transport</strong> — Each client type handles its own communication channel. The Voice UI calls the REST API, Telegram polls the Bot API, Slack and Discord connect via WebSocket, webhooks listen for HTTP requests, cron fires on a schedule.</li>
 <li><strong>Execution</strong> — All clients end up in the same place: sending a prompt to an agent (or flow) and returning the response through their own channel.</li>
 </ol>
 <p>This design means you control exactly who can access what. A Voice UI client for the front desk might have access to a customer service agent only. A Telegram bot for your team might have access to all agents and flows. A cron job might only run a specific daily report.</p>
-<h2 id="client-types">Client types</h2>
+<h2 id="client-types">
+  Client types
+  <a class="heading-anchor" href="#client-types" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -187,6 +195,16 @@
           <td>Mobile assistant, team bot, customer support</td>
       </tr>
       <tr>
+          <td><strong>Slack</strong></td>
+          <td>Connects a Slack bot via Socket Mode. Users DM the bot or @mention it in channels.</td>
+          <td>Team workspace assistant, internal tools, ops bot</td>
+      </tr>
+      <tr>
+          <td><strong>Discord</strong></td>
+          <td>Connects a Discord bot via Gateway WebSocket. Users DM the bot or @mention it in channels.</td>
+          <td>Community assistant, server bot, moderation helper</td>
+      </tr>
+      <tr>
           <td><strong>Webhook</strong></td>
           <td>Exposes an HTTP endpoint that triggers agent invocations.</td>
           <td>CI/CD integration, form processing, alert handling, external automation</td>
@@ -202,10 +220,15 @@
 <ul>
 <li><a href="/docs/voice-ui/">Voice UI</a> — Browser-based voice interface with wake word, push-to-talk, agent switching, conversation history, and PWA support</li>
 <li><a href="/docs/telegram/">Telegram</a> — Bot with text and voice messages, response modes, per-chat agent switching, and user restrictions</li>
+<li><a href="/docs/slack/">Slack</a> — Bot with Socket Mode, text and voice messages, per-channel agent switching, and thread replies</li>
+<li><a href="/docs/discord/">Discord</a> — Bot with Gateway WebSocket, text and voice messages, per-channel agent switching, and @mention replies</li>
 <li><a href="/docs/webhooks/">Webhooks</a> — HTTP endpoint for external system integrations with command and passthrough modes</li>
 <li><a href="/docs/cron/">Cron</a> — Scheduled tasks that run commands against agents on a configurable schedule</li>
 </ul>
-<h2 id="creating-a-client">Creating a client</h2>
+<h2 id="creating-a-client">
+  Creating a client
+  <a class="heading-anchor" href="#creating-a-client" aria-label="Link to this section">#</a>
+</h2>
 <ol>
 <li>Open the Admin UI at <code>http://localhost:8081</code></li>
 <li>Go to <strong>Clients</strong> and click <strong>New</strong></li>
@@ -215,14 +238,22 @@
 <li>Fill in any type-specific settings (Telegram bot token, cron schedule, etc.)</li>
 <li>Save</li>
 </ol>
-<p>Magec generates the authentication token automatically. For Direct and Telegram clients, you&rsquo;ll use this token to connect. For webhooks, you include it in the <code>Authorization</code> header. For cron, authentication is handled internally.</p>
-<h2 id="token-management">Token management</h2>
+<p>Magec generates the authentication token automatically. For Direct and Telegram clients, you&rsquo;ll use this token to connect. For Slack and Discord, authentication uses their own bot tokens. For webhooks, you include it in the <code>Authorization</code> header. For cron, authentication is handled internally.</p>
+<h2 id="token-management">
+  Token management
+  <a class="heading-anchor" href="#token-management" aria-label="Link to this section">#</a>
+</h2>
 <p>Each client has a unique <code>mgc_</code> token. If a token is compromised, you can regenerate it from the Admin UI — the old token stops working immediately and a new one is issued. This doesn&rsquo;t affect the client&rsquo;s configuration, just its authentication credential.</p>
-<h2 id="multiple-clients-same-agents">Multiple clients, same agents</h2>
+<h2 id="multiple-clients-same-agents">
+  Multiple clients, same agents
+  <a class="heading-anchor" href="#multiple-clients-same-agents" aria-label="Link to this section">#</a>
+</h2>
 <p>You can create as many clients as you need, and multiple clients can access the same agents. For example:</p>
 <ul>
 <li>A <strong>Voice UI client</strong> for the front desk with access to the Customer Service agent</li>
 <li>A <strong>Telegram client</strong> for your team with access to all agents</li>
+<li>A <strong>Slack client</strong> for your workspace with access to work agents</li>
+<li>A <strong>Discord client</strong> for your community server with access to help agents</li>
 <li>A <strong>Webhook client</strong> for your CI pipeline with access to the Code Review agent</li>
 <li>A <strong>Cron client</strong> for daily reports with access to the Analytics flow</li>
 </ul>

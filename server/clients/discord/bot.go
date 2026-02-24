@@ -681,7 +681,7 @@ func (c *Client) callAgentSSE(m *discordgo.MessageCreate, message string, handle
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
 	}
 
-	fullMessage := c.buildMessageContext(m) + message
+	fullMessage := c.buildMessageContext(m) + c.fetchThreadContext(m) + message
 
 	reqBody := map[string]interface{}{
 		"appName":   agentID,
@@ -746,6 +746,53 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 		return fmt.Errorf("failed to create session: status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+func (c *Client) fetchThreadContext(m *discordgo.MessageCreate) string {
+	ch, err := c.session.Channel(m.ChannelID)
+	if err != nil {
+		c.logger.Debug("Failed to get channel info", "error", err)
+		return ""
+	}
+	isThread := ch.Type == discordgo.ChannelTypeGuildNewsThread ||
+		ch.Type == discordgo.ChannelTypeGuildPublicThread ||
+		ch.Type == discordgo.ChannelTypeGuildPrivateThread
+	if !isThread {
+		return ""
+	}
+
+	msgs, err := c.session.ChannelMessages(m.ChannelID, 20, m.ID, "", "")
+	if err != nil {
+		c.logger.Debug("Failed to fetch thread context", "error", err)
+		return ""
+	}
+	if len(msgs) == 0 {
+		return ""
+	}
+
+	// Messages come newest-first; reverse for chronological order
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+
+	var sb strings.Builder
+	sb.WriteString("<!--THREAD_CONTEXT_START-->\n")
+	for _, msg := range msgs {
+		name := msg.Author.Username
+		if msg.Author.GlobalName != "" {
+			name = msg.Author.GlobalName
+		}
+		text := strings.TrimSpace(msg.Content)
+		if text == "" {
+			continue
+		}
+		if msg.Author.ID == c.session.State.User.ID {
+			text = c.stripBotMention(text, c.session.State.User.ID)
+		}
+		sb.WriteString(fmt.Sprintf("[%s]: %s\n", name, text))
+	}
+	sb.WriteString("<!--THREAD_CONTEXT_END-->\n")
+	return sb.String()
 }
 
 func (c *Client) buildMessageContext(m *discordgo.MessageCreate) string {

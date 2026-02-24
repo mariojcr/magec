@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuration — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -149,7 +151,10 @@
       </button>
       <h1>Configuration</h1>
       <p>Magec uses two separate configuration layers. Understanding this split is important because they work differently and serve different purposes.</p>
-<h2 id="the-two-layers">The two layers</h2>
+<h2 id="the-two-layers">
+  The two layers
+  <a class="heading-anchor" href="#the-two-layers" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -176,7 +181,10 @@
 </table>
 <p><strong>Infrastructure</strong> is about how the server runs. <strong>Resources</strong> are about what the server does.</p>
 <p>Think of it like this: <code>config.yaml</code> is the wiring of your house (ports, protocols, switches). <code>store.json</code> is the furniture and appliances inside (your agents, their tools, who can talk to them).</p>
-<h2 id="configyaml--infrastructure">config.yaml — Infrastructure</h2>
+<h2 id="configyaml--infrastructure">
+  config.yaml — Infrastructure
+  <a class="heading-anchor" href="#configyaml--infrastructure" aria-label="Link to this section">#</a>
+</h2>
 <p>This file is read once at startup. Changes require a server restart. It controls only the server process itself — nothing about agents, backends, or AI.</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="w">
@@ -193,7 +201,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="nt">log</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l">info        </span><span class="w"> </span><span class="c"># debug, info, warn, error</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l">console    </span><span class="w"> </span><span class="c"># console, json</span><span class="w">
-</span></span></span></code></pre></div><h3 id="server">Server</h3>
+</span></span></span></code></pre></div><h3 id="server">
+  Server
+  <a class="heading-anchor" href="#server" aria-label="Link to this section">#</a>
+</h3>
 <p>Controls where the server listens. Magec runs two HTTP servers on separate ports — one for users (API, Voice UI, webhooks) and one for administration (Admin UI, management API).</p>
 <table>
   <thead>
@@ -231,7 +242,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="voice">Voice</h3>
+<h3 id="voice">
+  Voice
+  <a class="heading-anchor" href="#voice" aria-label="Link to this section">#</a>
+</h3>
 <p>Controls voice features at the server level. This is independent of per-agent voice settings — it&rsquo;s a global switch.</p>
 <table>
   <thead>
@@ -254,7 +268,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="log">Log</h3>
+<h3 id="log">
+  Log
+  <a class="heading-anchor" href="#log" aria-label="Link to this section">#</a>
+</h3>
 <table>
   <thead>
       <tr>
@@ -276,17 +293,26 @@
       </tr>
   </tbody>
 </table>
-<h3 id="environment-variables">Environment variables</h3>
+<h3 id="environment-variables">
+  Environment variables
+  <a class="heading-anchor" href="#environment-variables" aria-label="Link to this section">#</a>
+</h3>
 <p>All values in <code>config.yaml</code> support <code>${VAR}</code> syntax for environment variable substitution. This is useful for Docker deployments where you want to configure the server without modifying the file:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l">${MAGEC_PORT:-8080}</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="nt">log</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l">${LOG_LEVEL:-info}</span><span class="w">
-</span></span></span></code></pre></div><h2 id="datastorejson--resources">data/store.json — Resources</h2>
+</span></span></span></code></pre></div><h2 id="datastorejson--resources">
+  data/store.json — Resources
+  <a class="heading-anchor" href="#datastorejson--resources" aria-label="Link to this section">#</a>
+</h2>
 <p>This is Magec&rsquo;s internal database. Every agent, backend, memory provider, MCP server, client, command, and flow is stored here. The server keeps it in memory for fast access and writes to disk on every change.</p>
 <p><strong>You should never edit this file by hand.</strong> Use the Admin UI at <code>http://localhost:8081</code> or the Admin REST API. Both provide full CRUD for all resource types with validation, health checks, and immediate hot-reload.</p>
-<h3 id="whats-inside">What&rsquo;s inside</h3>
+<h3 id="whats-inside">
+  What&rsquo;s inside
+  <a class="heading-anchor" href="#whats-inside" aria-label="Link to this section">#</a>
+</h3>
 <table>
   <thead>
       <tr>
@@ -338,16 +364,25 @@
       </tr>
   </tbody>
 </table>
-<h3 id="hot-reload">Hot-reload</h3>
+<h3 id="hot-reload">
+  Hot-reload
+  <a class="heading-anchor" href="#hot-reload" aria-label="Link to this section">#</a>
+</h3>
 <p>Changes made through the Admin UI or API take effect <strong>immediately</strong> — no server restart needed. When you update an agent&rsquo;s prompt, add a new backend, or modify a flow, the change is persisted to <code>store.json</code> and the server picks it up in real time.</p>
-<h3 id="environment-variables-in-storejson">Environment variables in store.json</h3>
+<h3 id="environment-variables-in-storejson">
+  Environment variables in store.json
+  <a class="heading-anchor" href="#environment-variables-in-storejson" aria-label="Link to this section">#</a>
+</h3>
 <p>Like <code>config.yaml</code>, the store also supports <code>${VAR}</code> substitution. This is particularly useful for keeping API keys and tokens out of the file:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-json" data-lang="json"><span class="line"><span class="cl"><span class="p">{</span>
 </span></span><span class="line"><span class="cl">  <span class="nt">&#34;apiKey&#34;</span><span class="p">:</span> <span class="s2">&#34;${OPENAI_API_KEY}&#34;</span>
 </span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></div><p>The installer uses this for cloud deployments, so your API keys come from environment variables rather than being stored in plain text.</p>
 <p>For a more convenient way to manage sensitive values, see <a href="/docs/secrets/">Secrets</a> — they let you store API keys through the Admin UI and reference them with the same <code>${VAR}</code> syntax.</p>
-<h3 id="backup-and-restore">Backup and restore</h3>
+<h3 id="backup-and-restore">
+  Backup and restore
+  <a class="heading-anchor" href="#backup-and-restore" aria-label="Link to this section">#</a>
+</h3>
 <p>To back up your entire Magec configuration, copy <code>data/store.json</code>. To restore it, put it back and restart the server. That single file contains every resource you&rsquo;ve configured.</p>
 
 

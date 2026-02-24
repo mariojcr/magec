@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Docker Quick Start (OpenAI) — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -154,7 +156,10 @@
 <li>Docker installed</li>
 <li>An OpenAI API key (<code>sk-...</code>)</li>
 </ul>
-<h2 id="1-create-a-config-file">1. Create a config file</h2>
+<h2 id="1-create-a-config-file">
+  1. Create a config file
+  <a class="heading-anchor" href="#1-create-a-config-file" aria-label="Link to this section">#</a>
+</h2>
 <p>Create a <code>config.yaml</code> with the default server settings:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-yaml" data-lang="yaml"><span class="line"><span class="cl"><span class="nt">server</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="m">0.0.0.0</span><span class="w">
@@ -168,7 +173,10 @@
 </span></span></span><span class="line"><span class="cl"><span class="nt">log</span><span class="p">:</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l">info</span><span class="w">
 </span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l">console</span><span class="w">
-</span></span></span></code></pre></div><h2 id="2-run-magec">2. Run Magec</h2>
+</span></span></span></code></pre></div><h2 id="2-run-magec">
+  2. Run Magec
+  <a class="heading-anchor" href="#2-run-magec" aria-label="Link to this section">#</a>
+</h2>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d <span class="se">\
 </span></span></span><span class="line"><span class="cl">  --name magec <span class="se">\
 </span></span></span><span class="line"><span class="cl">  -p 8080:8080 <span class="se">\
@@ -195,9 +203,15 @@
       </tr>
   </tbody>
 </table>
-<h2 id="3-set-up-your-first-agent">3. Set up your first agent</h2>
+<h2 id="3-set-up-your-first-agent">
+  3. Set up your first agent
+  <a class="heading-anchor" href="#3-set-up-your-first-agent" aria-label="Link to this section">#</a>
+</h2>
 <p>Open the <strong>Admin UI</strong> at <code>http://localhost:8081</code> and create the resources in this order:</p>
-<h3 id="create-a-backend">Create a backend</h3>
+<h3 id="create-a-backend">
+  Create a backend
+  <a class="heading-anchor" href="#create-a-backend" aria-label="Link to this section">#</a>
+</h3>
 <p>Go to <strong>Backends → New</strong>:</p>
 <table>
   <thead>
@@ -225,7 +239,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="create-an-agent">Create an agent</h3>
+<h3 id="create-an-agent">
+  Create an agent
+  <a class="heading-anchor" href="#create-an-agent" aria-label="Link to this section">#</a>
+</h3>
 <p>Go to <strong>Agents → New</strong>:</p>
 <table>
   <thead>
@@ -284,7 +301,10 @@
       </tr>
   </tbody>
 </table>
-<h3 id="create-a-client">Create a client</h3>
+<h3 id="create-a-client">
+  Create a client
+  <a class="heading-anchor" href="#create-a-client" aria-label="Link to this section">#</a>
+</h3>
 <p>Go to <strong>Clients → New</strong>:</p>
 <table>
   <thead>
@@ -309,13 +329,19 @@
   </tbody>
 </table>
 <p>Save. Copy the <strong>pairing token</strong> that appears.</p>
-<h3 id="connect-the-voice-ui">Connect the Voice UI</h3>
+<h3 id="connect-the-voice-ui">
+  Connect the Voice UI
+  <a class="heading-anchor" href="#connect-the-voice-ui" aria-label="Link to this section">#</a>
+</h3>
 <ol>
 <li>Open <code>http://localhost:8080</code></li>
 <li>Paste the pairing token</li>
 <li>Tap the microphone or say <strong>&ldquo;Oye Magec&rdquo;</strong> and start talking</li>
 </ol>
-<h2 id="optional-add-memory">Optional: Add memory</h2>
+<h2 id="optional-add-memory">
+  Optional: Add memory
+  <a class="heading-anchor" href="#optional-add-memory" aria-label="Link to this section">#</a>
+</h2>
 <p>To give your agent conversation memory, you need Redis (for session history) and/or PostgreSQL with pgvector (for long-term semantic memory).</p>
 <p>The quickest way to add Redis:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker run -d --name magec-redis -p 6379:6379 redis:alpine
@@ -346,14 +372,20 @@
 </div>
 
 <p>For the full memory setup (including long-term memory with PostgreSQL + pgvector), see the <a href="/docs/install-compose-local/">Docker Compose — Local</a> guide which includes everything pre-configured.</p>
-<h2 id="data-persistence">Data persistence</h2>
+<h2 id="data-persistence">
+  Data persistence
+  <a class="heading-anchor" href="#data-persistence" aria-label="Link to this section">#</a>
+</h2>
 <p>The <code>-v magec_data:/app/data</code> flag creates a Docker volume for Magec&rsquo;s data. Your agents, backends, clients, and conversation history persist across container restarts and updates.</p>
 <p>To update Magec:</p>
 <div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">docker pull ghcr.io/achetronic/magec:latest
 </span></span><span class="line"><span class="cl">docker rm -f magec
 </span></span><span class="line"><span class="cl"><span class="c1"># Run the same docker run command again</span>
 </span></span></code></pre></div><p>Your data is safe in the <code>magec_data</code> volume.</p>
-<h2 id="next-steps">Next steps</h2>
+<h2 id="next-steps">
+  Next steps
+  <a class="heading-anchor" href="#next-steps" aria-label="Link to this section">#</a>
+</h2>
 <p>This setup is great for trying Magec, but for a full deployment with memory, local models, or multiple services, check:</p>
 <ul>
 <li><strong><a href="/docs/install-compose-local/">Docker Compose — Local</a></strong> — fully local with Ollama, Parakeet, memory, everything pre-wired</li>

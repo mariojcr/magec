@@ -548,7 +548,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	}
 
 	meta := c.buildMessageContext(userID, channelID, channelType, threadTS, teamID)
-	fullMessage := meta + validatedText
+	fullMessage := meta + c.fetchThreadContext(channelID, threadTS, messageTS) + validatedText
 
 	reqBody := map[string]interface{}{
 		"appName":   agentID,
@@ -876,6 +876,60 @@ func (c *Client) transcribeAudio(wavData []byte, agentID string) (string, error)
 	}
 
 	return result.Text, nil
+}
+
+func (c *Client) fetchThreadContext(channelID, threadTS, currentMsgTS string) string {
+	if threadTS == "" {
+		return ""
+	}
+
+	c.logger.Debug("Fetching thread context", "channelID", channelID, "threadTS", threadTS, "currentMsgTS", currentMsgTS)
+
+	msgs, _, _, err := c.api.GetConversationReplies(&slackapi.GetConversationRepliesParameters{
+		ChannelID: channelID,
+		Timestamp: threadTS,
+		Limit:     20,
+	})
+	if err != nil {
+		c.logger.Debug("Failed to fetch thread context", "error", err)
+		return ""
+	}
+
+	c.logger.Debug("Thread context fetched", "count", len(msgs))
+
+	if len(msgs) <= 1 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("<!--THREAD_CONTEXT_START-->\n")
+	for _, msg := range msgs {
+		if msg.Timestamp == currentMsgTS {
+			continue
+		}
+		text := strings.TrimSpace(msg.Text)
+		if text == "" {
+			continue
+		}
+		name := msg.Username
+		if name == "" {
+			if info, err := c.api.GetUserInfo(msg.User); err == nil && info != nil {
+				if info.RealName != "" {
+					name = info.RealName
+				} else {
+					name = info.Name
+				}
+			} else {
+				name = msg.User
+			}
+		}
+		if msg.BotID != "" && name == "" {
+			name = "assistant"
+		}
+		sb.WriteString(fmt.Sprintf("[%s]: %s\n", name, text))
+	}
+	sb.WriteString("<!--THREAD_CONTEXT_END-->\n")
+	return sb.String()
 }
 
 func (c *Client) buildMessageContext(userID, channelID, channelType, threadTS, teamID string) string {

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Skills vs. Specialized Agents — Magec — Self-hosted Multi-Agent AI Platform</title>
@@ -117,6 +117,8 @@
         
         <a href="/docs/slack/" class="docs-sidebar__link">Slack</a>
         
+        <a href="/docs/discord/" class="docs-sidebar__link">Discord</a>
+        
         <a href="/docs/webhooks/" class="docs-sidebar__link">Webhooks</a>
         
         <a href="/docs/cron/" class="docs-sidebar__link">Cron</a>
@@ -150,7 +152,10 @@
       <h1>Skills vs. Specialized Agents</h1>
       <p>A common question when building on Magec: should you create <strong>one agent with many skills</strong>, or <strong>many specialized agents</strong>? Both approaches work. The right choice depends on what you&rsquo;re building.</p>
 <p>This page helps you decide.</p>
-<h2 id="one-agent-many-skills">One agent, many skills</h2>
+<h2 id="one-agent-many-skills">
+  One agent, many skills
+  <a class="heading-anchor" href="#one-agent-many-skills" aria-label="Link to this section">#</a>
+</h2>
 <p>You have a single agent and attach multiple skills to it — product knowledge, return policy, shipping rules, escalation procedures. The agent handles everything.</p>
 <p><strong>When this works best:</strong></p>
 <ul>
@@ -172,7 +177,10 @@
 <li>The agent must decide which skill&rsquo;s knowledge applies to each question — it usually gets this right, but ambiguous cases can happen.</li>
 <li>All skills share the same LLM and system prompt personality.</li>
 </ul>
-<h2 id="many-specialized-agents">Many specialized agents</h2>
+<h2 id="many-specialized-agents">
+  Many specialized agents
+  <a class="heading-anchor" href="#many-specialized-agents" aria-label="Link to this section">#</a>
+</h2>
 <p>You create separate agents, each focused on one domain. Each agent has its own system prompt, skills, tools, and potentially its own LLM model. You can connect them through a <a href="/docs/flows/">flow</a> or let users switch between them.</p>
 <p><strong>When this works best:</strong></p>
 <ul>
@@ -193,7 +201,10 @@ Agent: Shipping Advisor   → Skill: Shipping Rules, MCP: tracking API
 <li>Users need to switch agents (via <code>/agent</code> in Telegram, agent switcher in Voice UI) or you need a flow to route them</li>
 <li>Context doesn&rsquo;t carry between agents unless you use flows with <code>outputKey</code></li>
 </ul>
-<h2 id="decision-guide">Decision guide</h2>
+<h2 id="decision-guide">
+  Decision guide
+  <a class="heading-anchor" href="#decision-guide" aria-label="Link to this section">#</a>
+</h2>
 <table>
   <thead>
       <tr>
@@ -235,7 +246,10 @@ Agent: Shipping Advisor   → Skill: Shipping Rules, MCP: tracking API
       </tr>
   </tbody>
 </table>
-<h2 id="the-hybrid-approach">The hybrid approach</h2>
+<h2 id="the-hybrid-approach">
+  The hybrid approach
+  <a class="heading-anchor" href="#the-hybrid-approach" aria-label="Link to this section">#</a>
+</h2>
 <p>In practice, the best setups combine both patterns. Use skills to make individual agents knowledgeable, and use multiple agents when the domains are truly different.</p>
 <p><strong>Example: a business platform</strong></p>
 <pre tabindex="0"><code>Agent: Customer Support
@@ -254,7 +268,10 @@ Agent: DevOps Monitor
   ├── MCP: Kubernetes
   └── MCP: PagerDuty
 </code></pre><p>The Product Catalog skill is shared between Customer Support and Sales — update it once, both agents benefit. But Customer Support and DevOps Monitor are completely different domains with different tools, so they&rsquo;re separate agents.</p>
-<h2 id="flows-the-best-of-both-worlds">Flows: the best of both worlds</h2>
+<h2 id="flows-the-best-of-both-worlds">
+  Flows: the best of both worlds
+  <a class="heading-anchor" href="#flows-the-best-of-both-worlds" aria-label="Link to this section">#</a>
+</h2>
 <p><a href="/docs/flows/">Agentic Flows</a> let you chain specialized agents into pipelines. Each agent does what it&rsquo;s best at, and the output feeds into the next step.</p>
 <pre tabindex="0"><code>Flow: Weekly Business Report
   1. Data Agent    → queries databases, produces raw numbers
