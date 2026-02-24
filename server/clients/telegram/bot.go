@@ -435,6 +435,8 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
+			toolCount = 0
+			toolCounterMsgID = 0
 			c.sendTextResponse(ctx, msg.Chat.ID, evt.Text, false)
 		case msgutil.SSEEventToolCall:
 			if c.getShowTools() {
@@ -593,6 +595,8 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 		case msgutil.SSEEventText:
 			hasText = true
 			lastTextResponse = evt.Text
+			toolCount = 0
+			toolCounterMsgID = 0
 			c.sendTextResponse(ctx, msg.Chat.ID, evt.Text, true)
 		case msgutil.SSEEventToolCall:
 			if c.getShowTools() {

@@ -215,6 +215,8 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
+			toolCount = 0
+			toolCounterMsgID = ""
 			chunks := msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength)
 			for i, chunk := range chunks {
 				msg := &discordgo.MessageSend{Content: chunk}
@@ -361,6 +363,8 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 		case msgutil.SSEEventText:
 			hasText = true
 			lastTextResponse = evt.Text
+			toolCount = 0
+			toolCounterMsgID = ""
 			mode := c.getResponseMode()
 			sendText := mode != ResponseModeVoice && (mode != ResponseModeMirror || false)
 			if mode == ResponseModeBoth || mode == ResponseModeText || (mode == ResponseModeMirror && false) {

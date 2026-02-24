@@ -584,6 +584,8 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		case msgutil.SSEEventText:
 			hasText = true
 			lastTextResponse = evt.Text
+			toolCount = 0
+			toolCounterTS = ""
 			c.sendTextMessage(channelID, evt.Text, threadTS, inputWasVoice)
 		case msgutil.SSEEventToolCall:
 			if c.getShowTools() {
