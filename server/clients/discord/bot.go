@@ -210,9 +210,17 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 	firstText := true
 	hasText := false
 	hasToolActivity := false
+	var lastFinishReason string
+	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterMsgID string
 	err := c.callAgentSSE(m, inputText, func(evt msgutil.SSEEvent) {
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -267,7 +275,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 	}
 
 	if !hasText && !hasToolActivity {
-		s.ChannelMessageSend(m.ChannelID, "I couldn't generate a response.")
+		s.ChannelMessageSend(m.ChannelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
 	}
 
 	c.removeReaction(s, m.ChannelID, m.ID, "👀")
@@ -365,9 +373,17 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var lastTextResponse string
 	hasText := false
 	hasToolActivity := false
+	var lastFinishReason string
+	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterMsgID string
 	err = c.callAgentSSE(m, voiceInput, func(evt msgutil.SSEEvent) {
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -429,7 +445,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if !hasText && !hasToolActivity {
-		s.ChannelMessageSend(m.ChannelID, "I couldn't generate a response.")
+		s.ChannelMessageSend(m.ChannelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
 	}
 
 	mode := c.getResponseMode()

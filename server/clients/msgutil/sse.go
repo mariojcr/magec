@@ -14,10 +14,15 @@ import (
 type SSEEventType int
 
 const (
-	SSEEventText       SSEEventType = iota // Agent produced text content
-	SSEEventToolCall                       // Agent called a tool (functionCall)
-	SSEEventToolResult                     // Tool returned a result (functionResponse)
-	SSEEventUnknown                        // Unrecognized event
+	SSEEventText                SSEEventType = iota // Agent produced text content
+	SSEEventToolCall                                // Agent called a tool (functionCall)
+	SSEEventToolResult                              // Tool returned a result (functionResponse)
+	SSEEventExecutableCode                          // Model generated code for execution
+	SSEEventCodeExecutionResult                     // Result of code execution
+	SSEEventInlineData                              // Raw binary data (image, audio, etc.)
+	SSEEventFileData                                // File reference by URI
+	SSEEventError                                   // Event-level error from ADK/LLM
+	SSEEventUnknown                                 // Unrecognized event
 )
 
 // SSEEvent represents a single parsed event from the ADK /run_sse stream.
@@ -29,6 +34,30 @@ type SSEEvent struct {
 	ToolArgs   interface{}
 	ToolResult interface{}
 	Raw        map[string]interface{}
+
+	Code         string // ExecutableCode: code content
+	CodeLanguage string // ExecutableCode: language
+	CodeOutcome  string // CodeExecutionResult: outcome
+	CodeOutput   string // CodeExecutionResult: output
+	MIMEType     string // InlineData/FileData: MIME type
+	FileURI      string // FileData: file URI
+	DataBytes    string // InlineData: base64-encoded data
+
+	ErrorCode    string // Event-level error code
+	ErrorMessage string // Event-level error message
+	FinishReason string // Why the model stopped (STOP, MAX_TOKENS, SAFETY, etc.)
+	TurnComplete bool   // Whether the model's turn is finished
+	Partial      bool   // Whether this is a partial streaming chunk
+
+	UsageMetadata *UsageMetadata // Token usage info
+}
+
+// UsageMetadata holds token count information from the LLM.
+type UsageMetadata struct {
+	PromptTokens     int
+	CandidateTokens  int
+	TotalTokens      int
+	CachedTokens     int
 }
 
 // ParseSSEStream reads a /run_sse response body and calls handler for each
@@ -75,13 +104,51 @@ func ParseSSEStream(reader io.Reader, handler func(SSEEvent)) error {
 func classifyEvent(raw map[string]interface{}) []SSEEvent {
 	author, _ := raw["author"].(string)
 
+	base := SSEEvent{
+		Author: author,
+		Raw:    raw,
+	}
+
+	if v, ok := raw["turn_complete"].(bool); ok {
+		base.TurnComplete = v
+	}
+	if v, ok := raw["partial"].(bool); ok {
+		base.Partial = v
+	}
+	if v, ok := raw["finish_reason"].(string); ok {
+		base.FinishReason = v
+	}
+	if v, ok := raw["error_code"].(string); ok {
+		base.ErrorCode = v
+	}
+	if v, ok := raw["error_message"].(string); ok {
+		base.ErrorMessage = v
+	}
+	base.UsageMetadata = parseUsageMetadata(raw)
+
+	if base.ErrorCode != "" || base.ErrorMessage != "" {
+		evt := base
+		evt.Type = SSEEventError
+		return []SSEEvent{evt}
+	}
+
 	content, ok := raw["content"].(map[string]interface{})
 	if !ok {
+		if base.FinishReason != "" || base.UsageMetadata != nil || base.TurnComplete {
+			evt := base
+			evt.Type = SSEEventUnknown
+			return []SSEEvent{evt}
+		}
 		return nil
 	}
 
 	parts, ok := content["parts"].([]interface{})
 	if !ok {
+		if base.FinishReason != "" || base.UsageMetadata != nil || base.TurnComplete {
+			evt := base
+			evt.Type = SSEEventUnknown
+			return []SSEEvent{evt}
+		}
 		return nil
 	}
 
@@ -94,38 +161,83 @@ func classifyEvent(raw map[string]interface{}) []SSEEvent {
 		}
 
 		if text, ok := partMap["text"].(string); ok && text != "" {
-			events = append(events, SSEEvent{
-				Type:   SSEEventText,
-				Author: author,
-				Text:   text,
-				Raw:    raw,
-			})
+			evt := base
+			evt.Type = SSEEventText
+			evt.Text = text
+			events = append(events, evt)
 		}
 
 		if fc, ok := partMap["functionCall"].(map[string]interface{}); ok {
 			name, _ := fc["name"].(string)
-			events = append(events, SSEEvent{
-				Type:     SSEEventToolCall,
-				Author:   author,
-				ToolName: name,
-				ToolArgs: fc["args"],
-				Raw:      raw,
-			})
+			evt := base
+			evt.Type = SSEEventToolCall
+			evt.ToolName = name
+			evt.ToolArgs = fc["args"]
+			events = append(events, evt)
 		}
 
 		if fr, ok := partMap["functionResponse"].(map[string]interface{}); ok {
 			name, _ := fr["name"].(string)
-			events = append(events, SSEEvent{
-				Type:       SSEEventToolResult,
-				Author:     author,
-				ToolName:   name,
-				ToolResult: fr["response"],
-				Raw:        raw,
-			})
+			evt := base
+			evt.Type = SSEEventToolResult
+			evt.ToolName = name
+			evt.ToolResult = fr["response"]
+			events = append(events, evt)
+		}
+
+		if ec, ok := partMap["executableCode"].(map[string]interface{}); ok {
+			evt := base
+			evt.Type = SSEEventExecutableCode
+			evt.Code, _ = ec["code"].(string)
+			evt.CodeLanguage, _ = ec["language"].(string)
+			events = append(events, evt)
+		}
+
+		if cr, ok := partMap["codeExecutionResult"].(map[string]interface{}); ok {
+			evt := base
+			evt.Type = SSEEventCodeExecutionResult
+			evt.CodeOutcome, _ = cr["outcome"].(string)
+			evt.CodeOutput, _ = cr["output"].(string)
+			events = append(events, evt)
+		}
+
+		if id, ok := partMap["inlineData"].(map[string]interface{}); ok {
+			evt := base
+			evt.Type = SSEEventInlineData
+			evt.MIMEType, _ = id["mimeType"].(string)
+			evt.DataBytes, _ = id["data"].(string)
+			events = append(events, evt)
+		}
+
+		if fd, ok := partMap["fileData"].(map[string]interface{}); ok {
+			evt := base
+			evt.Type = SSEEventFileData
+			evt.MIMEType, _ = fd["mimeType"].(string)
+			evt.FileURI, _ = fd["fileUri"].(string)
+			events = append(events, evt)
 		}
 	}
 
 	return events
+}
+
+func parseUsageMetadata(raw map[string]interface{}) *UsageMetadata {
+	um, ok := raw["usage_metadata"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	toInt := func(key string) int {
+		if v, ok := um[key].(float64); ok {
+			return int(v)
+		}
+		return 0
+	}
+	return &UsageMetadata{
+		PromptTokens:    toInt("prompt_token_count"),
+		CandidateTokens: toInt("candidates_token_count"),
+		TotalTokens:     toInt("total_token_count"),
+		CachedTokens:    toInt("cached_content_token_count"),
+	}
 }
 
 // CollectSSEEvents is a convenience wrapper that reads the full SSE stream
@@ -321,4 +433,28 @@ func mapKeys(m map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// ExplainNoResponse returns a user-facing message explaining why the agent
+// did not produce text, based on the finish_reason and error_message from the
+// SSE stream.
+func ExplainNoResponse(finishReason, errorMessage string) string {
+	if errorMessage != "" {
+		return fmt.Sprintf("⚠️ The agent returned an error: %s", errorMessage)
+	}
+	switch strings.ToUpper(finishReason) {
+	case "MAX_TOKENS":
+		return "⚠️ The response was cut short because the context window is full. Try /reset to start a fresh session."
+	case "SAFETY":
+		return "⚠️ The response was blocked by the model's safety filters."
+	case "RECITATION":
+		return "⚠️ The response was blocked due to recitation/copyright concerns."
+	case "STOP":
+		return "The agent completed without generating a text response."
+	default:
+		if finishReason != "" {
+			return fmt.Sprintf("⚠️ The agent stopped unexpectedly (reason: %s).", finishReason)
+		}
+		return "I couldn't generate a response."
+	}
 }

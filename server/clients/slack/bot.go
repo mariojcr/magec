@@ -604,9 +604,17 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	var lastTextResponse string
 	hasText := false
 	hasToolActivity := false
+	var lastFinishReason string
+	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterTS string
 	ssErr := msgutil.ParseSSEStream(resp.Body, func(evt msgutil.SSEEvent) {
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -654,7 +662,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	}
 
 	if !hasText && !hasToolActivity {
-		c.postMessage(channelID, "I couldn't generate a response.", threadTS)
+		c.postMessage(channelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage), threadTS)
 	}
 
 	mode := c.getResponseMode()

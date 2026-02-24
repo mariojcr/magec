@@ -432,9 +432,21 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 	hasToolActivity := false
 	toolCount := 0
 	eventCount := 0
+	var lastFinishReason string
+	var lastErrorMessage string
+	var lastUsage *msgutil.UsageMetadata
 	var toolCounterMsgID int
 	err := c.callAgentSSE(msg, inputText, func(evt msgutil.SSEEvent) {
 		eventCount++
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
+		if evt.UsageMetadata != nil {
+			lastUsage = evt.UsageMetadata
+		}
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -479,6 +491,12 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 					ParseMode: "HTML",
 				})
 			}
+		case msgutil.SSEEventError:
+			c.logger.Error("Agent stream error",
+				"chat_id", msg.Chat.ID,
+				"error_code", evt.ErrorCode,
+				"error_message", evt.ErrorMessage,
+			)
 		}
 	})
 	close(typingDone)
@@ -494,16 +512,25 @@ func (c *Client) handleMessage(ctx *th.Context, msg telego.Message) error {
 	}
 
 	if !hasText && !hasToolActivity {
-		c.logger.Warn("No text in agent response",
+		logFields := []any{
 			"chat_id", msg.Chat.ID,
 			"agent", agentID,
 			"session", sessionID,
 			"events_received", eventCount,
-			"tool_calls", toolCount,
-		)
+			"finish_reason", lastFinishReason,
+		}
+		if lastUsage != nil {
+			logFields = append(logFields,
+				"prompt_tokens", lastUsage.PromptTokens,
+				"total_tokens", lastUsage.TotalTokens,
+			)
+		}
+		c.logger.Warn("No text in agent response", logFields...)
+
+		userMsg := msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage)
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
-			Text:   "I couldn't generate a response.",
+			Text:   userMsg,
 		})
 	}
 
@@ -610,9 +637,17 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 	var lastTextResponse string
 	hasText := false
 	hasToolActivity := false
+	var lastFinishReason string
+	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterMsgID int
 	err = c.callAgentSSE(msg, voiceInput, func(evt msgutil.SSEEvent) {
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
 		switch evt.Type {
 		case msgutil.SSEEventText:
 			hasText = true
@@ -658,6 +693,12 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 					ParseMode: "HTML",
 				})
 			}
+		case msgutil.SSEEventError:
+			c.logger.Error("Agent stream error",
+				"chat_id", msg.Chat.ID,
+				"error_code", evt.ErrorCode,
+				"error_message", evt.ErrorMessage,
+			)
 		}
 	})
 	close(typingDone)
@@ -673,9 +714,10 @@ func (c *Client) handleVoice(ctx *th.Context, msg telego.Message) error {
 	}
 
 	if !hasText && !hasToolActivity {
+		userMsg := msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage)
 		_, _ = ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
 			ChatID: tu.ID(msg.Chat.ID),
-			Text:   "I couldn't generate a response.",
+			Text:   userMsg,
 		})
 	}
 
