@@ -565,11 +565,11 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		c.logger.Error("Failed to marshal request", "error", err)
-		c.setReaction("x", msgRef)
+		c.addReaction("x", msgRef)
 		return
 	}
 
-	c.setReaction("brain", msgRef)
+	c.addReaction("brain", msgRef)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
@@ -577,7 +577,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run_sse", bytes.NewReader(jsonBody))
 	if err != nil {
 		c.logger.Error("Failed to create request", "error", err)
-		c.setReaction("x", msgRef)
+		c.addReaction("x", msgRef)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -587,7 +587,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
-		c.setReaction("x", msgRef)
+		c.addReaction("x", msgRef)
 		c.postMessage(channelID, fmt.Sprintf("Failed to reach the agent: %s", sanitizeError(err)), threadTS)
 		return
 	}
@@ -596,7 +596,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		c.logger.Error("Agent returned error", "status", resp.StatusCode, "body", string(body))
-		c.setReaction("x", msgRef)
+		c.addReaction("x", msgRef)
 		c.postMessage(channelID, fmt.Sprintf("Agent returned an error (status %d). Please try again.", resp.StatusCode), threadTS)
 		return
 	}
@@ -671,7 +671,7 @@ func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, 
 		c.sendVoiceResponse(channelID, lastTextResponse, threadTS, agentID)
 	}
 
-	c.setReaction("white_check_mark", msgRef)
+	c.addReaction("white_check_mark", msgRef)
 	c.sendNewArtifacts(channelID, threadTS, agentID, "default_user", sessionID, artifactsBefore)
 }
 
@@ -939,10 +939,6 @@ func (c *Client) addReaction(emoji string, ref slackapi.ItemRef) {
 	}
 }
 
-func (c *Client) setReaction(emoji string, ref slackapi.ItemRef) {
-	c.addReaction(emoji, ref)
-}
-
 func sanitizeError(err error) string {
 	msg := err.Error()
 	if len(msg) > 200 {
@@ -1098,7 +1094,6 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 	}
 	return nil
 }
-
 
 func (c *Client) stripBotMention(text string) string {
 	mention := fmt.Sprintf("<@%s>", c.botUserID)

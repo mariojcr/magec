@@ -176,17 +176,7 @@ func (c *Client) Start(ctx context.Context) error {
 		c.logger.Info("Text handler triggered", "chat_id", msg.Chat.ID, "user_id", msg.From.ID, "text", msg.Text)
 		return c.handleMessage(ctx, msg)
 	}, func(_ context.Context, update telego.Update) bool {
-		match := update.Message != nil && update.Message.Voice == nil && update.Message.Text != ""
-		if update.Message != nil {
-			c.logger.Debug("Text predicate check",
-				"chat_id", update.Message.Chat.ID,
-				"user_id", update.Message.From.ID,
-				"text", update.Message.Text,
-				"has_voice", update.Message.Voice != nil,
-				"match", match,
-			)
-		}
-		return match
+		return update.Message != nil && update.Message.Voice == nil && update.Message.Text != ""
 	})
 
 	// Start handling (blocks until stopped)
@@ -1100,8 +1090,6 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 
 	return nil
 }
-
-
 
 // downloadFile fetches a file by URL. Used to download voice messages from
 // the Telegram file API (not from magec, so no auth header is added).

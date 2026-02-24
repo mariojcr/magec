@@ -391,13 +391,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 			toolCount = 0
 			toolCounterMsgID = ""
 			mode := c.getResponseMode()
-			sendText := mode != ResponseModeVoice && (mode != ResponseModeMirror || false)
-			if mode == ResponseModeBoth || mode == ResponseModeText || (mode == ResponseModeMirror && false) {
-				sendText = true
-			}
-			if mode == ResponseModeVoice || mode == ResponseModeMirror {
-				sendText = false
-			}
+			sendText := mode == ResponseModeText || mode == ResponseModeBoth
 			if sendText {
 				chunks := msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength)
 				for i, chunk := range chunks {
@@ -617,7 +611,6 @@ func (c *Client) handleResponseModeCommand(s *discordgo.Session, channelID, arg 
 	return true
 }
 
-
 func (c *Client) sendVoiceResponse(s *discordgo.Session, channelID, text, agentID string) {
 	audioData, err := c.generateTTS(text, agentID)
 	if err != nil {
@@ -760,7 +753,6 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 	}
 	return nil
 }
-
 
 func (c *Client) buildMessageContext(m *discordgo.MessageCreate) string {
 	meta := map[string]interface{}{
