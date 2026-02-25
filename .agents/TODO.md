@@ -381,6 +381,29 @@ ADK supports agents as tools — orchestrator decides at runtime which specialis
 
 ---
 
+### ContextGuard Summary Tier Migration (app/user scope)
+
+**Problem**: ContextGuard summaries are currently session-scoped. When a user switches client (Discord → Telegram) or starts a new thread, the agent loses all conversation context from previous sessions. The summary dies with the session.
+
+**Blocked by**: All users are currently `default_user`. Moving summaries to `app:` tier would share them across **all** clients/channels for that agent — if a user asks about Kubernetes deployments on Discord and networking on Telegram, both contexts contaminate each other's summary.
+
+**Solution (requires real user identity)**:
+1. Implement per-client user identity: each client generates a meaningful `userID` (e.g. `discord_123456`, `slack_U0ABC`, `telegram_98765`) instead of `default_user`
+2. Move ContextGuard state keys to `user:` tier (`session.KeyPrefixUser` prefix) so summaries are scoped per-user across all that user's sessions with a given agent
+3. The `user:` tier in `adk-utils-go` v0.5.0 already supports differentiated TTL (defaults to no expiration), so summaries survive indefinitely
+
+**What's already in place**:
+- `adk-utils-go` v0.5.0 has full tier support (`app:`, `user:`, `temp:`) with independent TTLs for app/user state (default: no expiration, matching canonical ADK DatabaseService behaviour)
+- ContextGuard state keys are simple string constants in `server/plugin/contextguard/contextguard.go` — adding the prefix is a one-line change per key
+- The Redis session service stores `user:` state in a dedicated HASH (`userstate:{appName}:{userID}`) separate from session data
+
+**Cross-client identity (future)**:
+If a single person uses Discord AND Telegram, they'd have two `userID`s and two separate summaries — which is actually correct (different conversational contexts). True cross-client identity (linking `discord_123` and `telegram_456` as the same person) is a separate, larger problem.
+
+**Modify**: `server/plugin/contextguard/contextguard.go`, `server/clients/telegram/bot.go`, `server/clients/slack/bot.go`, `server/clients/discord/bot.go`, `server/clients/executor.go`
+
+---
+
 ## Low Priority
 
 ### More TTS Voices Configuration UI
