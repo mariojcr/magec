@@ -58,6 +58,32 @@
             </div>
           </div>
 
+          <!-- LLM Headers -->
+          <div>
+            <FormLabel label="Headers" />
+            <div class="space-y-2">
+              <div v-for="(h, i) in form.llmHeaders" :key="i" class="flex gap-2 items-center">
+                <input
+                  v-model="h.key"
+                  placeholder="anthropic-beta"
+                  class="flex-1 bg-piedra-800 border border-piedra-700 rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-sol-500 focus:border-sol-500 outline-none"
+                />
+                <input
+                  v-model="h.value"
+                  placeholder="context-1m-2025-08-07"
+                  class="flex-[2] bg-piedra-800 border border-piedra-700 rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-sol-500 focus:border-sol-500 outline-none"
+                />
+                <button @click="form.llmHeaders.splice(i, 1)" class="p-1.5 hover:bg-piedra-800 rounded-lg text-arena-400 hover:text-lava-400 flex-shrink-0" title="Remove header">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <button @click="form.llmHeaders.push({ key: '', value: '' })" class="text-xs text-sol-400 hover:text-sol-500 transition-colors">
+                + Add header
+              </button>
+            </div>
+            <p class="text-[10px] text-arena-500 mt-1">Extra HTTP headers for this agent's LLM requests. Override backend-level headers.</p>
+          </div>
+
           <!-- Context Guard -->
           <div class="border-t border-piedra-700/30 pt-3">
             <div class="flex items-center justify-between">
@@ -234,6 +260,7 @@ const form = reactive({
   systemPrompt: '',
   llmBackend: '',
   llmModel: '',
+  llmHeaders: [],
   mcpServers: [],
   skills: [],
   tags: [],
@@ -249,6 +276,20 @@ const form = reactive({
   contextGuardMaxTokens: '',
   a2aEnabled: false,
 })
+
+function headersToList(obj) {
+  if (!obj || !Object.keys(obj).length) return []
+  return Object.entries(obj).map(([key, value]) => ({ key, value }))
+}
+
+function listToHeaders(list) {
+  const obj = {}
+  for (const h of list) {
+    const k = h.key.trim()
+    if (k) obj[k] = h.value
+  }
+  return Object.keys(obj).length ? obj : undefined
+}
 
 function toggleMcp(id) {
   const idx = form.mcpServers.indexOf(id)
@@ -283,6 +324,7 @@ function open(agent = null) {
   form.systemPrompt = agent?.systemPrompt || ''
   form.llmBackend = agent?.llm?.backend || ''
   form.llmModel = agent?.llm?.model || ''
+  form.llmHeaders = headersToList(agent?.llm?.headers)
   form.mcpServers = [...(agent?.mcpServers || [])]
   form.skills = [...(agent?.skills || [])]
   form.tags = [...(agent?.tags || [])]
@@ -306,7 +348,7 @@ async function save() {
     description: form.description.trim(),
     outputKey: form.outputKey.trim(),
     systemPrompt: form.systemPrompt.trim(),
-    llm: { backend: form.llmBackend, model: form.llmModel.trim() },
+    llm: { backend: form.llmBackend, model: form.llmModel.trim(), headers: listToHeaders(form.llmHeaders) },
     transcription: { backend: form.transcriptionBackend, model: form.transcriptionModel.trim() },
     tts: {
       backend: form.ttsBackend,

@@ -44,13 +44,12 @@ import (
 	genaianthro "github.com/achetronic/adk-utils-go/genai/anthropic"
 	genaiopenai "github.com/achetronic/adk-utils-go/genai/openai"
 	memorypostgres "github.com/achetronic/adk-utils-go/memory/postgres"
+	"github.com/achetronic/adk-utils-go/plugin/contextguard"
 	sessionredis "github.com/achetronic/adk-utils-go/session/redis"
 	toolsmemory "github.com/achetronic/adk-utils-go/tools/memory"
 	artifactfs "github.com/achetronic/adk-utils-go/artifact/filesystem"
 
 	"github.com/achetronic/magec/server/config"
-	"github.com/achetronic/magec/server/contextwindow"
-	"github.com/achetronic/magec/server/plugin/contextguard"
 	"github.com/achetronic/magec/server/store"
 )
 
@@ -94,7 +93,7 @@ type Service struct {
 // routes requests to the right agent based on the appName in the request body.
 // Any FlowDefinitions are translated into ADK workflow agents and registered
 // alongside the regular agents.
-func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, skills []store.Skill, flows []store.FlowDefinition, settings store.Settings, cwRegistry *contextwindow.Registry) (*Service, error) {
+func New(ctx context.Context, agents []store.AgentDefinition, backends []store.BackendDefinition, memoryProviders []store.MemoryProvider, mcpServers []store.MCPServer, skills []store.Skill, flows []store.FlowDefinition, settings store.Settings, registry contextguard.ModelRegistry) (*Service, error) {
 	if len(agents) == 0 {
 		return nil, fmt.Errorf("no agents defined")
 	}
@@ -155,7 +154,7 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 		if !ok {
 			return nil, fmt.Errorf("agent %q: LLM backend %q not found", agentDef.ID, agentDef.LLM.Backend)
 		}
-		llmModel, err := createLLM(ctx, llmBackend, agentDef.LLM.Model)
+		llmModel, err := createLLM(ctx, llmBackend, agentDef.LLM)
 		if err != nil {
 			return nil, fmt.Errorf("agent %q: failed to create LLM: %w", agentDef.ID, err)
 		}
@@ -222,36 +221,25 @@ func New(ctx context.Context, agents []store.AgentDefinition, backends []store.B
 	// The plugin receives the full llmMap so every agent summarizes with its
 	// own model — a user on a powerful model gets a high-quality summary,
 	// a user on a cheap model gets a summary matching those expectations.
-	if cwRegistry != nil {
-		strategies := make(map[string]string)
-		maxTurns := make(map[string]int)
-		maxTokens := make(map[string]int)
-		guardLLMs := make(map[string]model.LLM)
+	if registry != nil {
+		guard := contextguard.New(registry)
 		for _, agentDef := range agents {
 			cg := agentDef.ContextGuard
 			if cg == nil || !cg.Enabled {
 				continue
 			}
-			guardLLMs[agentDef.ID] = llmMap[agentDef.ID]
-			if cg.Strategy != "" {
-				strategies[agentDef.ID] = cg.Strategy
-			} else {
-				strategies[agentDef.ID] = contextguard.StrategyThreshold
+			var opts []contextguard.AgentOption
+			switch cg.Strategy {
+			case contextguard.StrategySlidingWindow:
+				opts = append(opts, contextguard.WithSlidingWindow(cg.MaxTurns))
+			default:
+				if cg.MaxTokens > 0 {
+					opts = append(opts, contextguard.WithMaxTokens(cg.MaxTokens))
+				}
 			}
-			if cg.MaxTurns > 0 {
-				maxTurns[agentDef.ID] = cg.MaxTurns
-			}
-			if cg.MaxTokens > 0 {
-				maxTokens[agentDef.ID] = cg.MaxTokens
-			}
+			guard.Add(agentDef.ID, llmMap[agentDef.ID], opts...)
 		}
-		launcherCfg.PluginConfig = contextguard.NewPluginConfig(contextguard.Config{
-			Registry:   cwRegistry,
-			Models:     guardLLMs,
-			Strategies: strategies,
-			MaxTurns:   maxTurns,
-			MaxTokens:  maxTokens,
-		})
+		launcherCfg.PluginConfig = guard.PluginConfig()
 	}
 
 	return &Service{
@@ -390,26 +378,53 @@ func createMemoryService(ctx context.Context, settings store.Settings, memoryPro
 	return svc, nil
 }
 
+// mergeHeaders combines backend-level and agent-level headers into an http.Header.
+// Agent-level headers override backend-level headers when the same key is set.
+func mergeHeaders(backendHeaders, agentHeaders map[string]string) http.Header {
+	if len(backendHeaders) == 0 && len(agentHeaders) == 0 {
+		return nil
+	}
+	h := make(http.Header)
+	for k, v := range backendHeaders {
+		h.Set(k, v)
+	}
+	for k, v := range agentHeaders {
+		h.Set(k, v)
+	}
+	return h
+}
+
 // createLLM instantiates the language model client for a backend definition.
 // Supports OpenAI-compatible, Anthropic, and Gemini backends.
-func createLLM(ctx context.Context, backend store.BackendDefinition, modelName string) (model.LLM, error) {
+func createLLM(ctx context.Context, backend store.BackendDefinition, llmRef store.BackendRef) (model.LLM, error) {
+	headers := mergeHeaders(backend.Headers, llmRef.Headers)
+
 	switch backend.Type {
 	case config.BackendTypeOpenAI:
 		return genaiopenai.New(genaiopenai.Config{
 			APIKey:    backend.APIKey,
 			BaseURL:   backend.URL,
-			ModelName: modelName,
+			ModelName: llmRef.Model,
+			HTTPOptions: genaiopenai.HTTPOptions{
+				Headers: headers,
+			},
 		}), nil
 
 	case config.BackendTypeAnthropic:
 		return genaianthro.New(genaianthro.Config{
 			APIKey:    backend.APIKey,
-			ModelName: modelName,
+			ModelName: llmRef.Model,
+			HTTPOptions: genaianthro.HTTPOptions{
+				Headers: headers,
+			},
 		}), nil
 
 	case config.BackendTypeGemini:
-		return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+		return gemini.NewModel(ctx, llmRef.Model, &genai.ClientConfig{
 			APIKey: backend.APIKey,
+			HTTPOptions: genai.HTTPOptions{
+				Headers: headers,
+			},
 		})
 
 	default:

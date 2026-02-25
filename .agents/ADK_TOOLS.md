@@ -223,9 +223,9 @@ filtered := tool.FilterToolset(myToolset, func(ctx agent.ReadonlyContext, t tool
 
 ### Memory tools: `adk-utils-go` vs ADK official
 
-Magec currently uses custom memory tools from `adk-utils-go/tools/memory` (v0.2.2 in use):
+Magec currently uses custom memory tools from `adk-utils-go/tools/memory` (v0.7.0 in use):
 
-| Tool | `adk-utils-go` (current v0.2.2) | ADK official (`main`) |
+| Tool | `adk-utils-go` (current v0.7.0) | ADK official (`main`) |
 |------|----------------------|----------------------|----------------------|
 | **Search** | `search_memory` (with entry IDs) | `loadmemorytool` (`load_memory`) |
 | **Save** | `save_to_memory` | — (no equivalent) |

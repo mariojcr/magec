@@ -32,6 +32,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/achetronic/adk-utils-go/plugin/contextguard"
 	"github.com/achetronic/magec/server/agent"
 	mageca2a "github.com/achetronic/magec/server/a2a"
 	"github.com/achetronic/magec/server/api/admin"
@@ -43,7 +44,6 @@ import (
 	"github.com/achetronic/magec/server/clients/telegram"
 	"github.com/achetronic/magec/server/clients/webhook"
 	"github.com/achetronic/magec/server/config"
-	"github.com/achetronic/magec/server/contextwindow"
 	"github.com/achetronic/magec/server/frontend"
 	"github.com/achetronic/magec/server/logging"
 	"github.com/achetronic/magec/server/middleware"
@@ -140,7 +140,7 @@ func main() {
 
 	// cwRegistry caches LLM context window sizes fetched from Crush.
 	// It starts a background goroutine that refreshes every 6 hours.
-	cwRegistry := contextwindow.NewRegistry()
+	cwRegistry := contextguard.NewCrushRegistry()
 	cwRegistry.Start(ctx)
 
 	// A2A (Agent-to-Agent) protocol handler
@@ -550,7 +550,7 @@ type agentRouterHandler struct {
 	a2aHandler   *mageca2a.Handler
 	// cwRegistry is passed through to agent.New so the ContextGuard plugin
 	// can look up each model's context window at runtime.
-	cwRegistry *contextwindow.Registry
+	cwRegistry *contextguard.CrushRegistry
 }
 
 // ServeHTTP delegates to the current agent handler, or returns 503 if no
