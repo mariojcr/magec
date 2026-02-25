@@ -32,17 +32,19 @@ type A2AConfig struct {
 
 // BackendDefinition represents a reusable AI backend.
 type BackendDefinition struct {
-	ID     string `json:"id" yaml:"id"`
-	Name   string `json:"name" yaml:"name"`
-	Type   string `json:"type" yaml:"type"`
-	URL    string `json:"url,omitempty" yaml:"url,omitempty"`
-	APIKey string `json:"apiKey,omitempty" yaml:"apiKey,omitempty"`
+	ID      string            `json:"id" yaml:"id"`
+	Name    string            `json:"name" yaml:"name"`
+	Type    string            `json:"type" yaml:"type"`
+	URL     string            `json:"url,omitempty" yaml:"url,omitempty"`
+	APIKey  string            `json:"apiKey,omitempty" yaml:"apiKey,omitempty"`
+	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 
 // BackendRef holds a reference to a backend by ID + model.
 type BackendRef struct {
-	Backend string `json:"backend,omitempty" yaml:"backend,omitempty"`
-	Model   string `json:"model,omitempty" yaml:"model,omitempty"`
+	Backend string            `json:"backend,omitempty" yaml:"backend,omitempty"`
+	Model   string            `json:"model,omitempty" yaml:"model,omitempty"`
+	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 
 // TTSRef holds TTS-specific configuration referencing a backend by ID.

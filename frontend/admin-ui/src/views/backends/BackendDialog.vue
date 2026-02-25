@@ -21,6 +21,30 @@
         <FormLabel label="API Key" />
         <FormInput v-model="form.apiKey" type="password" placeholder="sk-..." />
       </div>
+      <div>
+        <FormLabel label="Headers" />
+        <div class="space-y-2">
+          <div v-for="(h, i) in form.headers" :key="i" class="flex gap-2 items-center">
+            <input
+              v-model="h.key"
+              placeholder="Authorization"
+              class="flex-1 bg-piedra-800 border border-piedra-700 rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-sol-500 focus:border-sol-500 outline-none"
+            />
+            <input
+              v-model="h.value"
+              placeholder="Bearer sk-..."
+              class="flex-[2] bg-piedra-800 border border-piedra-700 rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-sol-500 focus:border-sol-500 outline-none"
+            />
+            <button @click="form.headers.splice(i, 1)" class="p-1.5 hover:bg-piedra-800 rounded-lg text-arena-400 hover:text-lava-400 flex-shrink-0" title="Remove header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <button @click="form.headers.push({ key: '', value: '' })" class="text-xs text-sol-400 hover:text-sol-500 transition-colors">
+            + Add header
+          </button>
+        </div>
+        <p class="text-[10px] text-arena-500 mt-1">Extra HTTP headers sent with every request to this backend. Agent-level headers override these.</p>
+      </div>
     </div>
   </AppDialog>
 </template>
@@ -44,7 +68,22 @@ const form = reactive({
   type: 'openai',
   url: '',
   apiKey: '',
+  headers: [],
 })
+
+function headersToList(obj) {
+  if (!obj || !Object.keys(obj).length) return []
+  return Object.entries(obj).map(([key, value]) => ({ key, value }))
+}
+
+function listToHeaders(list) {
+  const obj = {}
+  for (const h of list) {
+    const k = h.key.trim()
+    if (k) obj[k] = h.value
+  }
+  return Object.keys(obj).length ? obj : undefined
+}
 
 function open(backend = null) {
   isEdit.value = !!backend
@@ -53,11 +92,14 @@ function open(backend = null) {
   form.type = backend?.type || 'openai'
   form.url = backend?.url || ''
   form.apiKey = backend?.apiKey || ''
+  form.headers = headersToList(backend?.headers)
   dialogRef.value?.open()
 }
 
 async function save() {
   const data = { name: form.name, type: form.type, url: form.url, apiKey: form.apiKey }
+  const headers = listToHeaders(form.headers)
+  if (headers) data.headers = headers
   try {
     if (isEdit.value) {
       await backendsApi.update(editId.value, data)

@@ -60,13 +60,7 @@ magec/
 │   │       └── docs/           # Generated swagger (userapi)
 │   ├── a2a/                   # A2A protocol handler
 │   │   └── handler.go          # Per-agent/flow JSON-RPC endpoints, agent cards, SSE streaming
-│   ├── plugin/                # ADK plugins
-│   │   └── contextguard/      # Context window management plugin
-│   │       ├── contextguard.go # BeforeModelCallback plugin, strategy dispatch, summary persistence
-│   │       ├── threshold.go    # Token-based strategy (estimates tokens, summarizes when near limit)
-│   │       └── sliding_window.go # Turn-count strategy (compacts after maxTurns content entries)
-│   ├── contextwindow/         # Remote model metadata registry
-│   │   └── contextwindow.go   # Fetches provider.json, caches context window sizes per model (6h refresh)
+
 │   ├── middleware/
 │   │   ├── middleware.go       # AccessLog (httpsnoop), CORS, ClientAuth, AdminAuth (rate-limited)
 │   │   ├── recorder.go         # ConversationRecorder + ConversationRecorderSSE (dual-perspective)
@@ -234,8 +228,7 @@ log:
 - **MCP headers/TLS**: `MCPServer` struct has `Headers map[string]string` and `Insecure bool`. `httpClientForMCP()` creates transport with optional `InsecureSkipVerify`
 - **Skill injection**: Skills are injected into the agent system prompt at build time. Instructions appended as `--- Skill: {name} ---`, reference file contents appended as `[Reference: {filename}]`. Files read from `data/skills/{skillId}/`
 - **Encryption key**: `server.encryptionKey` in config.yaml. Independent from `adminPassword`. Used to encrypt secrets at rest (AES-256-GCM, PBKDF2-derived)
-- **ContextGuard plugin**: ADK `plugin.Plugin` with `BeforeModelCallback`. Two strategies: `threshold` (token-based, summarizes when near context limit) and `sliding_window` (turn-count, compacts after maxTurns). Each agent summarizes with its own LLM. Summary persisted in session state
-- **Context window registry**: `server/contextwindow/` fetches model context sizes from remote `provider.json` (6h cache, 128k default fallback). Used by ContextGuard threshold strategy
+- **ContextGuard plugin**: Externalized to `adk-utils-go/plugin/contextguard` (v0.7.0). Builder API: `contextguard.New(registry)` + `guard.Add(agentID, llm, opts...)` + `guard.PluginConfig()`. Two strategies: `threshold` (token-based, auto-detect via CrushRegistry or manual `WithMaxTokens`) and `sliding_window` (turn-count via `WithSlidingWindow`). Each agent summarizes with its own LLM. Summary persisted in session state with `{agentName}` suffix keys. `CrushRegistry` fetches model metadata from Crush's provider.json with 6h background refresh
 - **A2A protocol**: Agents/flows with `A2A.Enabled` get JSON-RPC endpoints via `a2a-go` + ADK `adka2a`. Agent cards auto-generated with capabilities and skills. SSE streaming for responses
 - **Dual-perspective conversation recording**: Middleware chains recorder twice: "admin" perspective (all events, before FlowResponseFilter) and "user" perspective (filtered, after). Each conversation has a `ParentID` linking the pair
 - **Store dual-copy pattern**: Store maintains `rawData` (unexpanded, with `${VAR}` refs) and `data` (env-expanded). API responses use raw data, runtime uses expanded. Secret values injected as env vars before expansion
@@ -304,7 +297,7 @@ GPU section commented out by default. Users who want cloud providers create diff
 **Go backend:**
 - `google.golang.org/adk` — Agent Development Kit (v0.4.0)
 - `google.golang.org/genai` — Google GenAI SDK (v1.40.0)
-- `github.com/achetronic/adk-utils-go` — ADK utilities (v0.2.2): providers, session, memory tools
+- `github.com/achetronic/adk-utils-go` — ADK utilities (v0.7.0): providers, session, memory tools, ContextGuard plugin
 - `github.com/a2aproject/a2a-go` — A2A protocol library (v0.3.3)
 - `github.com/modelcontextprotocol/go-sdk` — MCP client (v1.2.0)
 - `github.com/gorilla/mux` — HTTP router (v1.8.1)

@@ -67,8 +67,23 @@ func ParseSSEStream(reader io.Reader, handler func(SSEEvent)) error {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 256*1024), 1024*1024)
 
+	const adkErrorPrefix = "Error while running agent: "
+
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		if strings.HasPrefix(line, adkErrorPrefix) {
+			errMsg := strings.TrimPrefix(line, adkErrorPrefix)
+			slog.Error("SSE stream: ADK agent error received as plain text",
+				"error", errMsg,
+			)
+			handler(SSEEvent{
+				Type:         SSEEventError,
+				ErrorMessage: errMsg,
+			})
+			continue
+		}
+
 		if !strings.HasPrefix(line, "data: ") {
 			continue
 		}
