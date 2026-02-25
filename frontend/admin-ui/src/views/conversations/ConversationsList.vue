@@ -60,8 +60,10 @@
         <option value="">All sources</option>
         <option value="voice-ui">Voice UI</option>
         <option value="telegram">Telegram</option>
+        <option value="discord">Discord</option>
         <option value="slack">Slack</option>
-        <option value="executor">Executor</option>
+        <option value="webhook">Webhook</option>
+        <option value="cron">Cron</option>
         <option value="flow">Flow</option>
         <option value="direct">Direct</option>
       </select>
@@ -297,6 +299,8 @@ function sourceIcon(source) {
   const map = {
     'voice-ui': 'phone',
     telegram: 'phone',
+    discord: 'chat',
+    slack: 'chat',
     executor: 'command',
     flow: 'flow',
     direct: 'phone',
@@ -310,6 +314,8 @@ function sourceBg(source) {
   const map = {
     'voice-ui': 'bg-teal-500/15',
     telegram: 'bg-atlantico-500/15',
+    discord: 'bg-violet-500/15',
+    slack: 'bg-emerald-500/15',
     executor: 'bg-indigo-500/15',
     flow: 'bg-rose-500/15',
     direct: 'bg-teal-500/15',
@@ -323,6 +329,8 @@ function sourceText(source) {
   const map = {
     'voice-ui': 'text-teal-400',
     telegram: 'text-atlantico-400',
+    discord: 'text-violet-400',
+    slack: 'text-emerald-400',
     executor: 'text-indigo-400',
     flow: 'text-rose-400',
     direct: 'text-teal-400',
@@ -336,6 +344,8 @@ function formatSource(source) {
   const map = {
     'voice-ui': 'Voice UI',
     telegram: 'Telegram',
+    discord: 'Discord',
+    slack: 'Slack',
     executor: 'Executor',
     flow: 'Flow',
     direct: 'Direct',
