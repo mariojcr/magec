@@ -41,6 +41,9 @@ type Client struct {
 	agentURL  string
 	agents    []AgentInfo
 	logger    *slog.Logger
+	store     interface {
+		UpdateClient(id string, c store.ClientDefinition) error
+	}
 
 	api    *slackapi.Client
 	socket *socketmode.Client
@@ -61,7 +64,9 @@ type Client struct {
 	botUserID string
 }
 
-func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, logger *slog.Logger) (*Client, error) {
+func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, s interface {
+	UpdateClient(id string, c store.ClientDefinition) error
+}, logger *slog.Logger) (*Client, error) {
 	if clientDef.Config.Slack == nil {
 		return nil, fmt.Errorf("slack config is required")
 	}
@@ -78,15 +83,14 @@ func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, 
 		slackapi.OptionAppLevelToken(cfg.AppToken),
 	)
 
-	socket := socketmode.New(api)
-
 	return &Client{
 		seen:        make(map[string]struct{}),
 		api:         api,
-		socket:      socket,
+		socket:      socketmode.New(api),
 		clientDef:   clientDef,
 		agentURL:    agentURL,
 		agents:      agents,
+		store:       s,
 		activeAgent: make(map[string]string),
 		logger:      logger,
 	}, nil
@@ -166,10 +170,7 @@ func (c *Client) isDuplicate(ts string) bool {
 
 func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 	ev, ok := event.InnerEvent.Data.(*slackevents.AppMentionEvent)
-	if !ok || ev == nil {
-		return
-	}
-	if ev.User == c.botUserID {
+	if !ok || ev == nil || ev.User == c.botUserID {
 		return
 	}
 	if c.isDuplicate(ev.TimeStamp) {
@@ -185,6 +186,8 @@ func (c *Client) handleAppMention(event slackevents.EventsAPIEvent) {
 		return
 	}
 
+	// If the mention is in the channel root, anchor the reply thread to this message.
+	// If it's already inside a thread, keep that thread's TS.
 	threadTS := ev.ThreadTimeStamp
 	if threadTS == "" {
 		threadTS = ev.TimeStamp
@@ -203,13 +206,7 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 	if !ok || ev == nil {
 		return
 	}
-	if ev.SubType != "" {
-		return
-	}
-	if ev.User == c.botUserID || ev.User == "" {
-		return
-	}
-	if ev.BotID != "" {
+	if ev.SubType != "" || ev.BotID != "" || ev.User == c.botUserID || ev.User == "" {
 		return
 	}
 	if ev.ChannelType != "im" {
@@ -232,14 +229,12 @@ func (c *Client) handleMessage(event slackevents.EventsAPIEvent) {
 		return
 	}
 
-	threadTS := ev.ThreadTimeStamp
-
-	if c.handleBotCommand(ev.User, ev.Channel, text, threadTS) {
+	if c.handleBotCommand(ev.User, ev.Channel, text, ev.ThreadTimeStamp) {
 		return
 	}
 
 	c.logger.Info("Slack DM received", "user", ev.User, "channel", ev.Channel, "text", text)
-	c.processMessage(ev.User, ev.Channel, "im", text, threadTS, ev.TimeStamp, event.TeamID, false)
+	c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, ev.TimeStamp, event.TeamID, false)
 }
 
 func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bool {
@@ -255,35 +250,12 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 		c.logger.Info("Slack audio clip received",
 			"user", ev.User,
 			"channel", ev.Channel,
-			"filetype", file.Filetype,
 			"mimetype", file.Mimetype,
 			"size", file.Size,
 			"fileID", file.ID,
-			"urlPrivate", file.URLPrivate,
-			"urlPrivateDownload", file.URLPrivateDownload,
 		)
 
-		downloadURL := file.URLPrivateDownload
-		if downloadURL == "" {
-			downloadURL = file.URLPrivate
-		}
-
-		fullFile, _, _, err := c.api.GetFileInfo(file.ID, 0, 0)
-		if err != nil {
-			c.logger.Warn("Failed to get file info from Slack API, using event URLs", "error", err, "fileID", file.ID)
-		} else {
-			c.logger.Info("File info from API",
-				"fileID", fullFile.ID,
-				"urlPrivate", fullFile.URLPrivate,
-				"urlPrivateDownload", fullFile.URLPrivateDownload,
-			)
-			if fullFile.URLPrivateDownload != "" {
-				downloadURL = fullFile.URLPrivateDownload
-			} else if fullFile.URLPrivate != "" {
-				downloadURL = fullFile.URLPrivate
-			}
-		}
-
+		downloadURL := c.resolveFileURL(file.ID, file.URLPrivateDownload, file.URLPrivate)
 		if downloadURL == "" {
 			c.logger.Error("Audio clip has no download URL")
 			c.postMessage(ev.Channel, "Sorry, I couldn't download your audio clip.", "")
@@ -298,6 +270,7 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 		}
 
 		agentID := c.getActiveAgentID(ev.Channel)
+
 		wavData, err := c.convertAudioToWav(audioData)
 		if err != nil {
 			c.logger.Error("Failed to convert audio clip", "error", err)
@@ -313,11 +286,27 @@ func (c *Client) handleAudioClip(ev *slackevents.MessageEvent, teamID string) bo
 		}
 
 		c.logger.Info("Transcribed audio clip", "text", text)
-
 		c.processMessage(ev.User, ev.Channel, "im", text, ev.ThreadTimeStamp, ev.TimeStamp, teamID, true)
 		return true
 	}
 	return false
+}
+
+// resolveFileURL returns the best available download URL for a Slack file,
+// preferring the fresher URL from the API over the one embedded in the event.
+func (c *Client) resolveFileURL(fileID, eventDownloadURL, eventPrivateURL string) string {
+	if fullFile, _, _, err := c.api.GetFileInfo(fileID, 0, 0); err == nil && fullFile != nil {
+		if fullFile.URLPrivateDownload != "" {
+			return fullFile.URLPrivateDownload
+		}
+		if fullFile.URLPrivate != "" {
+			return fullFile.URLPrivate
+		}
+	}
+	if eventDownloadURL != "" {
+		return eventDownloadURL
+	}
+	return eventPrivateURL
 }
 
 func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool {
@@ -361,20 +350,13 @@ func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool
 			}
 			agentList += fmt.Sprintf("%s%s\n", marker, label)
 		}
-		msg := fmt.Sprintf("*Active agent:* %s\n\n*Available agents:*\n%s\nUsage: `!agent <id>`", currentLabel, agentList)
-		c.postMessage(channelID, msg, threadTS)
+		c.postMessage(channelID, fmt.Sprintf("*Active agent:* %s\n\n*Available agents:*\n%s\nUsage: `!agent <id>`", currentLabel, agentList), threadTS)
 		return true
 	}
 
 	if strings.HasPrefix(lower, "agent ") {
 		agentID := strings.TrimSpace(text[6:])
-		found := false
-		for _, a := range c.agents {
-			if a.ID == agentID {
-				found = true
-				break
-			}
-		}
+		found := slices.ContainsFunc(c.agents, func(a AgentInfo) bool { return a.ID == agentID })
 		if !found {
 			var ids []string
 			for _, a := range c.agents {
@@ -394,25 +376,9 @@ func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool
 		return true
 	}
 
-	if lower == "responsemode" {
-		current := c.getResponseMode()
-		c.responseMu.RLock()
-		overridden := c.responseModeOverride != ""
-		c.responseMu.RUnlock()
-
-		status := fmt.Sprintf("*Response mode:* `%s`", current)
-		if overridden {
-			status += fmt.Sprintf(" (override, config: `%s`)", c.clientDef.Config.Slack.ResponseMode)
-		}
-		status += "\n*Options:* `text`, `voice`, `mirror`, `both`, `reset`"
-
-		c.postMessage(channelID, status, threadTS)
-		return true
-	}
-
 	if lower == "reset" {
 		agentID := c.getActiveAgentID(channelID)
-		sessionID := c.buildSessionID(channelID, "")
+		sessionID := c.buildSessionID(channelID, threadTS, agentID)
 		if err := c.deleteSession(agentID, sessionID); err != nil {
 			c.logger.Error("Failed to delete session", "error", err)
 			c.postMessage(channelID, "Failed to reset session.", threadTS)
@@ -425,6 +391,20 @@ func (c *Client) handleBotCommand(userID, channelID, text, threadTS string) bool
 			label = agent.Name
 		}
 		c.postMessage(channelID, fmt.Sprintf("Session reset for *%s*. Next message starts a fresh conversation.", label), threadTS)
+		return true
+	}
+
+	if lower == "responsemode" {
+		current := c.getResponseMode()
+		c.responseMu.RLock()
+		overridden := c.responseModeOverride != ""
+		c.responseMu.RUnlock()
+		status := fmt.Sprintf("*Response mode:* `%s`", current)
+		if overridden {
+			status += fmt.Sprintf(" (override, config: `%s`)", c.clientDef.Config.Slack.ResponseMode)
+		}
+		status += "\n*Options:* `text`, `voice`, `mirror`, `both`, `reset`"
+		c.postMessage(channelID, status, threadTS)
 		return true
 	}
 
@@ -456,9 +436,7 @@ func (c *Client) handleResponseModeCommand(channelID, arg, threadTS string) bool
 		c.responseMu.Lock()
 		c.responseModeOverride = ""
 		c.responseMu.Unlock()
-		c.logger.Info("Response mode override cleared",
-			"config_mode", c.clientDef.Config.Slack.ResponseMode,
-		)
+		c.logger.Info("Response mode override cleared", "config_mode", c.clientDef.Config.Slack.ResponseMode)
 		c.postMessage(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Slack.ResponseMode), threadTS)
 		return true
 	}
@@ -477,17 +455,200 @@ func (c *Client) handleResponseModeCommand(channelID, arg, threadTS string) bool
 	return true
 }
 
+func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, messageTS, teamID string, inputWasVoice bool) {
+	msgRef := slackapi.NewRefToMessage(channelID, messageTS)
+	c.addReaction("eyes", msgRef)
+
+	agentID := c.getActiveAgentID(channelID)
+	sessionID := c.buildSessionID(channelID, threadTS, agentID)
+
+	artifactsBefore := c.listArtifacts(agentID, "default_user", sessionID)
+
+	validatedText, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
+	if truncated {
+		c.logger.Warn("Inbound message truncated", "channel", channelID, "original_len", len([]rune(text)))
+	}
+
+	fullMessage := c.buildMessageContext(userID, channelID, channelType, threadTS, teamID) +
+		c.fetchThreadContext(channelID, threadTS, messageTS) +
+		validatedText
+
+	c.addReaction("brain", msgRef)
+
+	var lastTextResponse string
+	hasText := false
+	hasToolActivity := false
+	var lastFinishReason string
+	var lastErrorMessage string
+	toolCount := 0
+	var toolCounterTS string
+
+	err := c.callAgentSSE(agentID, sessionID, fullMessage, func(evt msgutil.SSEEvent) {
+		if evt.FinishReason != "" {
+			lastFinishReason = evt.FinishReason
+		}
+		if evt.ErrorMessage != "" {
+			lastErrorMessage = evt.ErrorMessage
+		}
+		switch evt.Type {
+		case msgutil.SSEEventText:
+			hasText = true
+			lastTextResponse = evt.Text
+			toolCount = 0
+			toolCounterTS = ""
+			c.sendTextMessage(channelID, evt.Text, threadTS, inputWasVoice)
+		case msgutil.SSEEventToolCall:
+			hasToolActivity = true
+			toolCounterTS = c.sendToolCounter(channelID, threadTS, toolCounterTS, &toolCount, evt)
+		case msgutil.SSEEventToolResult:
+			hasToolActivity = true
+			if c.getShowTools() {
+				c.postMessage(channelID, msgutil.FormatToolResultSlack(evt), threadTS)
+			}
+		}
+	})
+
+	if err != nil {
+		c.logger.Error("Failed to call agent", "error", err)
+		c.addReaction("x", msgRef)
+		c.postMessage(channelID, fmt.Sprintf("Failed to reach the agent: %s", sanitizeError(err)), threadTS)
+		return
+	}
+
+	if !hasText && !hasToolActivity {
+		c.postMessage(channelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage), threadTS)
+	}
+
+	mode := c.getResponseMode()
+	if (mode == ResponseModeVoice || mode == ResponseModeBoth || (mode == ResponseModeMirror && inputWasVoice)) && lastTextResponse != "" {
+		c.sendVoiceResponse(channelID, lastTextResponse, threadTS, agentID)
+	}
+
+	c.addReaction("white_check_mark", msgRef)
+	c.sendNewArtifacts(channelID, threadTS, agentID, "default_user", sessionID, artifactsBefore)
+}
+
+// sendToolCounter posts or edits a compact tool activity counter in the channel/thread.
+// Returns the updated message TS for subsequent edits.
+func (c *Client) sendToolCounter(channelID, threadTS, counterTS string, toolCount *int, evt msgutil.SSEEvent) string {
+	if c.getShowTools() {
+		c.postMessage(channelID, msgutil.FormatToolCallSlack(evt), threadTS)
+		return counterTS
+	}
+
+	*toolCount++
+	counterText := fmt.Sprintf("⚙️ x%d", *toolCount)
+
+	if counterTS == "" {
+		opts := []slackapi.MsgOption{slackapi.MsgOptionText(counterText, false)}
+		if threadTS != "" {
+			opts = append(opts, slackapi.MsgOptionTS(threadTS))
+		}
+		if _, ts, err := c.api.PostMessage(channelID, opts...); err == nil {
+			return ts
+		}
+		return ""
+	}
+
+	c.api.UpdateMessage(channelID, counterTS, slackapi.MsgOptionText(counterText, false))
+	return counterTS
+}
+
+// sendTextMessage sends text respecting the response mode.
+func (c *Client) sendTextMessage(channelID, text, threadTS string, inputWasVoice bool) {
+	mode := c.getResponseMode()
+	switch mode {
+	case ResponseModeVoice:
+		return
+	case ResponseModeMirror:
+		if inputWasVoice {
+			return
+		}
+	}
+	c.postMessage(channelID, text, threadTS)
+}
+
+func (c *Client) callAgentSSE(agentID, sessionID, message string, handler func(msgutil.SSEEvent)) error {
+	if err := c.ensureSession(agentID, "default_user", sessionID); err != nil {
+		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
+	}
+
+	reqBody := map[string]interface{}{
+		"appName":   agentID,
+		"userId":    "default_user",
+		"sessionId": sessionID,
+		"newMessage": map[string]interface{}{
+			"role":  "user",
+			"parts": []map[string]string{{"text": message}},
+		},
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run_sse", bytes.NewReader(jsonBody))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call agent: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("agent returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return msgutil.ParseSSEStream(resp.Body, handler)
+}
+
+func (c *Client) sendVoiceResponse(channelID, text, threadTS, agentID string) {
+	audioData, err := c.generateTTS(text, agentID)
+	if err != nil {
+		c.logger.Error("Failed to generate TTS", "error", err)
+		c.postMessage(channelID, text, threadTS)
+		return
+	}
+
+	params := slackapi.UploadFileV2Parameters{
+		Channel:  channelID,
+		Filename: "voice.ogg",
+		FileSize: len(audioData),
+		Reader:   bytes.NewReader(audioData),
+		Title:    "Voice response",
+		AltTxt:   text,
+	}
+	if threadTS != "" {
+		params.ThreadTimestamp = threadTS
+	}
+
+	if _, err = c.api.UploadFileV2(params); err != nil {
+		c.logger.Error("Failed to upload voice file", "channel", channelID, "error", err)
+		c.postMessage(channelID, text, threadTS)
+	}
+}
+
 func (c *Client) getResponseMode() string {
 	c.responseMu.RLock()
 	defer c.responseMu.RUnlock()
 	if c.responseModeOverride != "" {
 		return c.responseModeOverride
 	}
-	mode := c.clientDef.Config.Slack.ResponseMode
-	if mode == "" {
-		return ResponseModeText
+	if mode := c.clientDef.Config.Slack.ResponseMode; mode != "" {
+		return mode
 	}
-	return mode
+	return ResponseModeText
 }
 
 func (c *Client) getShowTools() bool {
@@ -496,12 +657,36 @@ func (c *Client) getShowTools() bool {
 	return c.showTools
 }
 
-func (c *Client) buildSessionID(channelID, threadTS string) string {
-	agentID := c.getActiveAgentID(channelID)
+// buildSessionID builds a stable session ID scoped to a channel/thread + agent.
+// When threadTS is set, the session is scoped to that thread; otherwise to the channel.
+func (c *Client) buildSessionID(channelID, threadTS, agentID string) string {
 	if threadTS != "" {
 		return fmt.Sprintf("slack_%s_%s_%s", channelID, threadTS, agentID)
 	}
 	return fmt.Sprintf("slack_%s_%s", channelID, agentID)
+}
+
+func (c *Client) ensureSession(agentID, userID, sessionID string) error {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, userID, sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader([]byte("{}")))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
+		return fmt.Errorf("failed to create session: status %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (c *Client) deleteSession(agentID, sessionID string) error {
@@ -526,202 +711,114 @@ func (c *Client) deleteSession(agentID, sessionID string) error {
 	return nil
 }
 
-func (c *Client) processMessage(userID, channelID, channelType, text, threadTS, messageTS, teamID string, inputWasVoice bool) {
-	msgRef := slackapi.NewRefToMessage(channelID, messageTS)
-	c.addReaction("eyes", msgRef)
-
-	agentID := c.getActiveAgentID(channelID)
-	sessionID := c.buildSessionID(channelID, threadTS)
-
-	if err := c.ensureSession(agentID, "default_user", sessionID); err != nil {
-		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
+// fetchThreadContext returns prior messages in a thread as context for the agent.
+// Returns empty string when threadTS is empty (DM or first message in channel).
+// Excludes the current message (identified by currentMsgTS) to avoid duplication.
+func (c *Client) fetchThreadContext(channelID, threadTS, currentMsgTS string) string {
+	if threadTS == "" {
+		return ""
 	}
 
-	artifactsBefore := c.listArtifacts(agentID, "default_user", sessionID)
-
-	validatedText, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
-	if truncated {
-		c.logger.Warn("Inbound message truncated",
-			"channel", channelID,
-			"original_len", len([]rune(text)),
-		)
+	limit := c.clientDef.Config.Slack.ThreadHistoryLimit
+	if limit <= 0 {
+		limit = 50
 	}
-
-	meta := c.buildMessageContext(userID, channelID, channelType, threadTS, teamID)
-	fullMessage := meta + c.fetchThreadContext(channelID, threadTS, messageTS) + validatedText
-
-	reqBody := map[string]interface{}{
-		"appName":   agentID,
-		"userId":    "default_user",
-		"sessionId": sessionID,
-		"newMessage": map[string]interface{}{
-			"role": "user",
-			"parts": []map[string]string{
-				{"text": fullMessage},
-			},
-		},
-	}
-
-	jsonBody, err := json.Marshal(reqBody)
-	if err != nil {
-		c.logger.Error("Failed to marshal request", "error", err)
-		c.addReaction("x", msgRef)
-		return
-	}
-
-	c.addReaction("brain", msgRef)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "POST", c.agentURL+"/run_sse", bytes.NewReader(jsonBody))
-	if err != nil {
-		c.logger.Error("Failed to create request", "error", err)
-		c.addReaction("x", msgRef)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	c.setAuthHeader(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		c.logger.Error("Failed to call agent", "error", err)
-		c.addReaction("x", msgRef)
-		c.postMessage(channelID, fmt.Sprintf("Failed to reach the agent: %s", sanitizeError(err)), threadTS)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		c.logger.Error("Agent returned error", "status", resp.StatusCode, "body", string(body))
-		c.addReaction("x", msgRef)
-		c.postMessage(channelID, fmt.Sprintf("Agent returned an error (status %d). Please try again.", resp.StatusCode), threadTS)
-		return
-	}
-
-	var lastTextResponse string
-	hasText := false
-	hasToolActivity := false
-	var lastFinishReason string
-	var lastErrorMessage string
-	toolCount := 0
-	var toolCounterTS string
-	ssErr := msgutil.ParseSSEStream(resp.Body, func(evt msgutil.SSEEvent) {
-		if evt.FinishReason != "" {
-			lastFinishReason = evt.FinishReason
-		}
-		if evt.ErrorMessage != "" {
-			lastErrorMessage = evt.ErrorMessage
-		}
-		switch evt.Type {
-		case msgutil.SSEEventText:
-			hasText = true
-			lastTextResponse = evt.Text
-			toolCount = 0
-			toolCounterTS = ""
-			c.sendTextMessage(channelID, evt.Text, threadTS, inputWasVoice)
-		case msgutil.SSEEventToolCall:
-			hasToolActivity = true
-			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolCallSlack(evt)
-				c.postMessage(channelID, toolMsg, threadTS)
-			} else {
-				toolCount++
-				counterText := fmt.Sprintf("⚙️ x%d", toolCount)
-				if toolCounterTS == "" {
-					opts := []slackapi.MsgOption{
-						slackapi.MsgOptionText(counterText, false),
-					}
-					if threadTS != "" {
-						opts = append(opts, slackapi.MsgOptionTS(threadTS))
-					}
-					_, ts, err := c.api.PostMessage(channelID, opts...)
-					if err == nil {
-						toolCounterTS = ts
-					}
-				} else {
-					opts := []slackapi.MsgOption{
-						slackapi.MsgOptionText(counterText, false),
-					}
-					_, _, _, _ = c.api.UpdateMessage(channelID, toolCounterTS, opts...)
-				}
-			}
-		case msgutil.SSEEventToolResult:
-			hasToolActivity = true
-			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolResultSlack(evt)
-				c.postMessage(channelID, toolMsg, threadTS)
-			}
-		}
+	msgs, _, _, err := c.api.GetConversationReplies(&slackapi.GetConversationRepliesParameters{
+		ChannelID: channelID,
+		Timestamp: threadTS,
+		Limit:     limit,
 	})
-
-	if ssErr != nil {
-		c.logger.Error("SSE stream error", "error", ssErr)
-	}
-
-	if !hasText && !hasToolActivity {
-		c.postMessage(channelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage), threadTS)
-	}
-
-	mode := c.getResponseMode()
-	sendVoice := mode == ResponseModeVoice || mode == ResponseModeBoth || (mode == ResponseModeMirror && inputWasVoice)
-	if sendVoice && lastTextResponse != "" {
-		c.sendVoiceResponse(channelID, lastTextResponse, threadTS, agentID)
-	}
-
-	c.addReaction("white_check_mark", msgRef)
-	c.sendNewArtifacts(channelID, threadTS, agentID, "default_user", sessionID, artifactsBefore)
-}
-
-// sendTextMessage sends a text message respecting the response mode.
-// For voice-only modes, text is not sent (TTS is handled separately).
-func (c *Client) sendTextMessage(channelID, text, threadTS string, inputWasVoice bool) {
-	mode := c.getResponseMode()
-
-	sendText := false
-	switch mode {
-	case ResponseModeVoice:
-		// voice-only: don't send text
-	case ResponseModeMirror:
-		if !inputWasVoice {
-			sendText = true
-		}
-	default:
-		sendText = true
-	}
-
-	if sendText {
-		c.postMessage(channelID, text, threadTS)
-	}
-}
-
-func (c *Client) sendVoiceResponse(channelID, text, threadTS, agentID string) {
-	audioData, err := c.generateTTS(text, agentID)
 	if err != nil {
-		c.logger.Error("Failed to generate TTS", "error", err)
-		c.postMessage(channelID, text, threadTS)
-		return
+		c.logger.Debug("Failed to fetch thread context", "error", err)
+		return ""
+	}
+	if len(msgs) <= 1 {
+		return ""
 	}
 
-	params := slackapi.UploadFileV2Parameters{
-		Channel:        channelID,
-		Filename:       "voice.ogg",
-		FileSize:       len(audioData),
-		Reader:         bytes.NewReader(audioData),
-		Title:          "Voice response",
-		AltTxt:         text,
-		InitialComment: "",
+	var sb strings.Builder
+	sb.WriteString("<!--MAGEC_THREAD_HISTORY:\n")
+	for _, msg := range msgs {
+		if msg.Timestamp == currentMsgTS {
+			continue
+		}
+		text := strings.TrimSpace(msg.Text)
+		if text == "" {
+			continue
+		}
+		name := msg.Username
+		if name == "" {
+			if info, err := c.api.GetUserInfo(msg.User); err == nil && info != nil {
+				if info.RealName != "" {
+					name = info.RealName
+				} else {
+					name = info.Name
+				}
+			} else {
+				name = msg.User
+			}
+		}
+		if msg.BotID != "" && name == "" {
+			name = "assistant"
+		}
+		sb.WriteString(fmt.Sprintf("[%s]: %s\n", name, text))
+	}
+	sb.WriteString(":MAGEC_THREAD_HISTORY-->\n")
+	return sb.String()
+}
+
+func (c *Client) buildMessageContext(userID, channelID, channelType, threadTS, teamID string) string {
+	meta := map[string]interface{}{
+		"source":           "slack",
+		"slack_user_id":    userID,
+		"slack_channel_id": channelID,
+	}
+	if channelType != "" {
+		meta["slack_channel_type"] = channelType
+	}
+	if teamID != "" {
+		meta["slack_team_id"] = teamID
 	}
 	if threadTS != "" {
-		params.ThreadTimestamp = threadTS
+		meta["slack_thread_ts"] = threadTS
 	}
 
-	_, err = c.api.UploadFileV2(params)
+	if userInfo, err := c.api.GetUserInfo(userID); err == nil && userInfo != nil {
+		if userInfo.Name != "" {
+			meta["slack_username"] = userInfo.Name
+		}
+		if userInfo.RealName != "" {
+			meta["slack_name"] = userInfo.RealName
+		}
+		if userInfo.Profile.Email != "" {
+			meta["slack_email"] = userInfo.Profile.Email
+		}
+	}
+
+	jsonBytes, err := json.Marshal(meta)
 	if err != nil {
-		c.logger.Error("Failed to upload voice file", "channel", channelID, "error", err)
-		c.postMessage(channelID, text, threadTS)
+		c.logger.Warn("Failed to marshal message context metadata", "error", err)
+		return ""
+	}
+	return fmt.Sprintf("<!--MAGEC_META:%s:MAGEC_META-->\n", string(jsonBytes))
+}
+
+func (c *Client) postMessage(channelID, text, threadTS string) {
+	for _, chunk := range msgutil.SplitMessage(text, msgutil.SlackMaxMessageLength) {
+		opts := []slackapi.MsgOption{slackapi.MsgOptionText(chunk, false)}
+		if threadTS != "" {
+			opts = append(opts, slackapi.MsgOptionTS(threadTS))
+		}
+		if _, _, err := c.api.PostMessage(channelID, opts...); err != nil {
+			c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
+			break
+		}
+	}
+}
+
+func (c *Client) addReaction(emoji string, ref slackapi.ItemRef) {
+	if err := c.api.AddReaction(emoji, ref); err != nil {
+		c.logger.Debug("Failed to add reaction", "emoji", emoji, "error", err)
 	}
 }
 
@@ -730,18 +827,18 @@ func (c *Client) generateTTS(text string, agentID string) ([]byte, error) {
 		"input":           text,
 		"response_format": "opus",
 	}
-
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}
 
-	ttsURL := strings.TrimSuffix(c.agentURL, "/agent") + "/voice/" + agentID + "/speech"
-
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", ttsURL, bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		strings.TrimSuffix(c.agentURL, "/agent")+"/voice/"+agentID+"/speech",
+		bytes.NewReader(jsonBody),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -758,13 +855,11 @@ func (c *Client) generateTTS(text string, agentID string) ([]byte, error) {
 		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("TTS failed with status %d: %s", resp.StatusCode, string(body))
 	}
-
 	return io.ReadAll(resp.Body)
 }
 
 func (c *Client) downloadSlackFile(fileURL string) ([]byte, error) {
 	token := c.clientDef.Config.Slack.BotToken
-
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+token)
@@ -794,12 +889,11 @@ func (c *Client) downloadSlackFile(fileURL string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read file data: %w", err)
 	}
 
-	ct := resp.Header.Get("Content-Type")
-	if strings.Contains(ct, "text/html") {
+	if ct := resp.Header.Get("Content-Type"); strings.Contains(ct, "text/html") {
 		return nil, fmt.Errorf("download returned HTML instead of file data (Content-Type: %s, size: %d)", ct, len(data))
 	}
 
-	c.logger.Info("Downloaded slack file", "url", fileURL, "size", len(data), "contentType", ct)
+	c.logger.Info("Downloaded slack file", "url", fileURL, "size", len(data))
 	return data, nil
 }
 
@@ -816,14 +910,7 @@ func (c *Client) convertAudioToWav(audioData []byte) ([]byte, error) {
 	}
 	tmpIn.Close()
 
-	cmd := exec.Command("ffmpeg",
-		"-i", tmpIn.Name(),
-		"-ar", "16000",
-		"-ac", "1",
-		"-f", "wav",
-		"pipe:1",
-	)
-
+	cmd := exec.Command("ffmpeg", "-i", tmpIn.Name(), "-ar", "16000", "-ac", "1", "-f", "wav", "pipe:1")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -831,14 +918,12 @@ func (c *Client) convertAudioToWav(audioData []byte) ([]byte, error) {
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("ffmpeg conversion failed: %w, stderr: %s", err, stderr.String())
 	}
-
 	return stdout.Bytes(), nil
 }
 
 func (c *Client) transcribeAudio(wavData []byte, agentID string) (string, error) {
 	var buf bytes.Buffer
 	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW"
-
 	buf.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 	buf.WriteString("Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n")
 	buf.WriteString("Content-Type: audio/wav\r\n\r\n")
@@ -848,9 +933,10 @@ func (c *Client) transcribeAudio(wavData []byte, agentID string) (string, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	transcriptionURL := strings.TrimSuffix(c.agentURL, "/agent") + "/voice/" + agentID + "/transcription"
-
-	req, err := http.NewRequestWithContext(ctx, "POST", transcriptionURL, &buf)
+	req, err := http.NewRequestWithContext(ctx, "POST",
+		strings.TrimSuffix(c.agentURL, "/agent")+"/voice/"+agentID+"/transcription",
+		&buf,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -874,136 +960,7 @@ func (c *Client) transcribeAudio(wavData []byte, agentID string) (string, error)
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
-
 	return result.Text, nil
-}
-
-func (c *Client) fetchThreadContext(channelID, threadTS, currentMsgTS string) string {
-	if threadTS == "" {
-		return ""
-	}
-
-	c.logger.Debug("Fetching thread context", "channelID", channelID, "threadTS", threadTS, "currentMsgTS", currentMsgTS)
-
-	msgs, _, _, err := c.api.GetConversationReplies(&slackapi.GetConversationRepliesParameters{
-		ChannelID: channelID,
-		Timestamp: threadTS,
-		Limit:     20,
-	})
-	if err != nil {
-		c.logger.Debug("Failed to fetch thread context", "error", err)
-		return ""
-	}
-
-	c.logger.Debug("Thread context fetched", "count", len(msgs))
-
-	if len(msgs) <= 1 {
-		return ""
-	}
-
-	var sb strings.Builder
-	sb.WriteString("<!--THREAD_CONTEXT_START-->\n")
-	for _, msg := range msgs {
-		if msg.Timestamp == currentMsgTS {
-			continue
-		}
-		text := strings.TrimSpace(msg.Text)
-		if text == "" {
-			continue
-		}
-		name := msg.Username
-		if name == "" {
-			if info, err := c.api.GetUserInfo(msg.User); err == nil && info != nil {
-				if info.RealName != "" {
-					name = info.RealName
-				} else {
-					name = info.Name
-				}
-			} else {
-				name = msg.User
-			}
-		}
-		if msg.BotID != "" && name == "" {
-			name = "assistant"
-		}
-		sb.WriteString(fmt.Sprintf("[%s]: %s\n", name, text))
-	}
-	sb.WriteString("<!--THREAD_CONTEXT_END-->\n")
-	return sb.String()
-}
-
-func (c *Client) buildMessageContext(userID, channelID, channelType, threadTS, teamID string) string {
-	meta := map[string]interface{}{
-		"source":           "slack",
-		"slack_user_id":    userID,
-		"slack_channel_id": channelID,
-	}
-
-	if channelType != "" {
-		meta["slack_channel_type"] = channelType
-	}
-	if teamID != "" {
-		meta["slack_team_id"] = teamID
-	}
-	if threadTS != "" {
-		meta["slack_thread_ts"] = threadTS
-	}
-
-	userInfo, err := c.api.GetUserInfo(userID)
-	if err == nil && userInfo != nil {
-		if userInfo.Name != "" {
-			meta["slack_username"] = userInfo.Name
-		}
-		if userInfo.RealName != "" {
-			meta["slack_name"] = userInfo.RealName
-		}
-		if userInfo.Profile.Email != "" {
-			meta["slack_email"] = userInfo.Profile.Email
-		}
-	}
-
-	jsonBytes, err := json.Marshal(meta)
-	if err != nil {
-		c.logger.Warn("Failed to marshal message context metadata", "error", err)
-		return ""
-	}
-	return fmt.Sprintf("<!--MAGEC_META:%s:MAGEC_META-->\n", string(jsonBytes))
-}
-
-func (c *Client) postMessage(channelID, text, threadTS string) {
-	chunks := msgutil.SplitMessage(text, msgutil.SlackMaxMessageLength)
-	for _, chunk := range chunks {
-		opts := []slackapi.MsgOption{
-			slackapi.MsgOptionText(chunk, false),
-		}
-		if threadTS != "" {
-			opts = append(opts, slackapi.MsgOptionTS(threadTS))
-		}
-		_, _, err := c.api.PostMessage(channelID, opts...)
-		if err != nil {
-			c.logger.Error("Failed to send Slack message", "channel", channelID, "error", err)
-			break
-		}
-	}
-}
-
-func (c *Client) addReaction(emoji string, ref slackapi.ItemRef) {
-	if err := c.api.AddReaction(emoji, ref); err != nil {
-		c.logger.Debug("Failed to add reaction", "emoji", emoji, "error", err)
-	}
-}
-
-func sanitizeError(err error) string {
-	msg := err.Error()
-	if len(msg) > 200 {
-		msg = msg[:200] + "..."
-	}
-	for _, secret := range []string{"Bearer ", "xoxb-", "xapp-", "bot", "token"} {
-		if strings.Contains(strings.ToLower(msg), strings.ToLower(secret)) {
-			return "an internal error occurred"
-		}
-	}
-	return msg
 }
 
 func (c *Client) listArtifacts(agentID, userID, sessionID string) []string {
@@ -1076,7 +1033,6 @@ func (c *Client) downloadArtifact(agentID, userID, sessionID, name string) ([]by
 		}
 		return data, artifact.InlineData.MIMEType, nil
 	}
-
 	return []byte(artifact.Text), "text/plain", nil
 }
 
@@ -1095,13 +1051,11 @@ func (c *Client) sendNewArtifacts(channelID, threadTS, agentID, userID, sessionI
 		if beforeSet[name] {
 			continue
 		}
-
 		data, _, err := c.downloadArtifact(agentID, userID, sessionID, name)
 		if err != nil {
 			c.logger.Error("Failed to download artifact", "name", name, "error", err)
 			continue
 		}
-
 		params := slackapi.UploadFileV2Parameters{
 			Channel:  channelID,
 			Filename: name,
@@ -1112,9 +1066,7 @@ func (c *Client) sendNewArtifacts(channelID, threadTS, agentID, userID, sessionI
 		if threadTS != "" {
 			params.ThreadTimestamp = threadTS
 		}
-
-		_, err = c.api.UploadFileV2(params)
-		if err != nil {
+		if _, err = c.api.UploadFileV2(params); err != nil {
 			c.logger.Error("Failed to upload artifact", "name", name, "error", err)
 		}
 	}
@@ -1124,35 +1076,6 @@ func (c *Client) setAuthHeader(req *http.Request) {
 	if c.clientDef.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.clientDef.Token)
 	}
-}
-
-func (c *Client) ensureSession(agentID, userID, sessionID string) error {
-	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, userID, sessionID)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader([]byte("{}")))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	c.setAuthHeader(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusConflict {
-		return fmt.Errorf("failed to create session: status %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func (c *Client) stripBotMention(text string) string {
-	mention := fmt.Sprintf("<@%s>", c.botUserID)
-	text = strings.ReplaceAll(text, mention, "")
-	return strings.TrimSpace(text)
 }
 
 func (c *Client) isAllowed(userID, channelID string) bool {
@@ -1175,13 +1098,23 @@ func (c *Client) getActiveAgentID(channelID string) string {
 	if id, ok := c.activeAgent[channelID]; ok {
 		return id
 	}
+	if def := c.clientDef.Config.Slack.DefaultAgent; def != "" {
+		return def
+	}
 	return c.clientDef.AllowedAgents[0]
 }
 
 func (c *Client) setActiveAgentID(channelID, agentID string) {
 	c.activeAgentMu.Lock()
-	defer c.activeAgentMu.Unlock()
 	c.activeAgent[channelID] = agentID
+	c.activeAgentMu.Unlock()
+
+	def := c.clientDef
+	def.Config.Slack.DefaultAgent = agentID
+	c.clientDef = def
+	if err := c.store.UpdateClient(def.ID, def); err != nil {
+		c.logger.Warn("Failed to persist default agent", "error", err)
+	}
 }
 
 func (c *Client) getAgentInfo(agentID string) *AgentInfo {
@@ -1191,4 +1124,21 @@ func (c *Client) getAgentInfo(agentID string) *AgentInfo {
 		}
 	}
 	return nil
+}
+
+func (c *Client) stripBotMention(text string) string {
+	return strings.TrimSpace(strings.ReplaceAll(text, fmt.Sprintf("<@%s>", c.botUserID), ""))
+}
+
+func sanitizeError(err error) string {
+	msg := err.Error()
+	if len(msg) > 200 {
+		msg = msg[:200] + "..."
+	}
+	for _, secret := range []string{"Bearer ", "xoxb-", "xapp-", "bot", "token"} {
+		if strings.Contains(strings.ToLower(msg), strings.ToLower(secret)) {
+			return "an internal error occurred"
+		}
+	}
+	return msg
 }

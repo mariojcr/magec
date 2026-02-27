@@ -1,5 +1,71 @@
 # Magec - TODO
 
+## IN PROGRESS: Client Config — DefaultAgent + ThreadHistoryLimit
+
+### Goal
+Two new fields in Discord and Slack client config:
+1. **`defaultAgent`** — the agent that starts active on boot, persisted to store when user runs `!agent <id>`
+2. **`threadHistoryLimit`** — number of previous thread messages passed as context to the agent (1–100 for Discord, 1–1000 for Slack)
+
+Telegram is excluded from `threadHistoryLimit` because it accumulates all messages via ADK session directly (no mention filter). Telegram does get `defaultAgent`.
+
+### Current state of active agent (before this change)
+- Stored as `map[channelID]agentID` (Discord/Slack) or `map[chatID]agentID` (Telegram) in memory only
+- Lost on restart — fallback is always `clientDef.AllowedAgents[0]`
+- `!agent <id>` only updates the in-memory map, does NOT persist
+
+### Design decisions
+- `defaultAgent` is **global per client** (not per channel) — whoever configures the client knows which model/agent it will use
+- `!agent <id>` does two things: updates in-memory map AND persists `defaultAgent` to the store via the store's update mechanism
+- `getActiveAgentID` fallback order: in-memory map → `defaultAgent` from config → `allowedAgents[0]`
+- `threadHistoryLimit` replaces the hardcoded `50` in `fetchThreadContext`; defaults to `50` if not set
+
+### Files to modify
+
+**`server/store/types.go`**:
+- Add `DefaultAgent string` and `ThreadHistoryLimit int` to `DiscordClientConfig` and `SlackClientConfig`
+- Add `DefaultAgent string` to `TelegramClientConfig`
+
+**`server/clients/discord/spec.go`**:
+- Add `defaultAgent` (string, description: "Default agent ID to use on startup") to JSON Schema
+- Add `threadHistoryLimit` (integer, min: 1, max: 100, description: "Thread history messages passed to the agent as context") to JSON Schema
+
+**`server/clients/slack/spec.go`**:
+- Same as Discord but max: 1000
+
+**`server/clients/telegram/spec.go`** (if exists):
+- Add `defaultAgent` only
+
+**`server/clients/discord/bot.go`**:
+- `getActiveAgentID`: fallback chain → in-memory map → `c.clientDef.Config.Discord.DefaultAgent` → `allowedAgents[0]`
+- `setActiveAgentID`: keep updating in-memory map + call store update to persist `DefaultAgent`
+- `fetchThreadContext`: replace literal `50` with `c.clientDef.Config.Discord.ThreadHistoryLimit` (with fallback to 50 if 0)
+
+**`server/clients/slack/bot.go`**:
+- Same pattern as Discord
+
+**`server/clients/telegram/bot.go`**:
+- `getActiveAgentID`: fallback chain → in-memory map → `c.clientDef.Config.Telegram.DefaultAgent` → `allowedAgents[0]`
+- `setActiveAgentID`: persist `DefaultAgent` to store
+
+### How to persist DefaultAgent to store
+The store exposes `UpdateClient(def ClientDefinition) error` (or equivalent). After `!agent <id>`:
+1. Copy `c.clientDef`
+2. Set `clientDef.Config.Discord.DefaultAgent = agentID` (or Slack/Telegram)
+3. Call store update
+The store's `persist()` writes to disk automatically.
+
+Check exact store method signature in `server/store/store.go` before implementing.
+
+### Frontend (admin-ui)
+- Discord client form: add "Default agent" text field + "Thread history messages" number input (1–100)
+- Slack client form: same but max 1000
+- Telegram client form: add "Default agent" text field only
+- Labels: "Default agent" and "Thread history messages"
+- Tooltip for thread history: "Number of previous thread messages passed to the agent as context. Use lower values for smaller models."
+
+---
+
 ## ~~Large Message Handling in Telegram and Slack~~ ✅
 
 Implemented. See `server/clients/msgutil/` package.
@@ -221,6 +287,30 @@ Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_ar
 ---
 
 ## Medium Priority
+
+### Filter Tool Messages from `fetchThreadContext`
+
+**Background**: `fetchThreadContext` is confirmed necessary. ADK only accumulates messages that go through the bot — it has no visibility into messages other users post in the channel/thread. Without `fetchThreadContext`, the agent answers as if it has no prior context from the conversation.
+
+**Problem**: When `!showtools` is active, tool call/result messages posted by the bot into the thread are picked up by `fetchThreadContext` and injected into the next turn's `THREAD_HISTORY` as noise. The LLM already has that tool activity in its ADK session.
+
+**Solution**: In both `fetchThreadContext` implementations, skip messages from the bot itself that look like tool output. These are identifiable because they are sent by the bot (`msg.Author.ID == botID` in Discord, `msg.BotID != ""` in Slack) and their text starts with the tool formatting prefix (`⚡` for tool calls, `✅` for tool results, `⚙️` for the counter).
+
+**Files**: `server/clients/slack/bot.go`, `server/clients/discord/bot.go`
+
+---
+
+### Admin UI: Strip Metadata from Messages in ConversationDetail
+
+**Problem**: `msg.content` in the conversation detail view is rendered raw via `renderMarkdown()`. If a message contains `<!--MAGEC_META:...:MAGEC_META-->` or `<!--MAGEC_THREAD_HISTORY:...:MAGEC_THREAD_HISTORY-->`, those tags and their contents are visible to the admin — noise that adds nothing for a human reader.
+
+**Solution**: Import `stripMetadata` from `src/lib/metadata.js` (already exists and is already used in `ConversationsList.vue`) and apply it in `renderMarkdown()` or directly on the `v-html` binding in `ConversationDetail.vue` (line 210).
+
+Also apply strip in the PDF export (`handleExportPDF`, line 551 — `marked.parse(m.content)` also renders content without stripping).
+
+**Files**: `frontend/admin-ui/src/views/conversations/ConversationDetail.vue`
+
+---
 
 ### Composable Flows (flow-as-step)
 

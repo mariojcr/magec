@@ -747,7 +747,7 @@ func (m *clientManager) startTelegram(ctx context.Context, cl store.ClientDefini
 		return
 	}
 
-	tgClient, err := telegram.New(cl, m.agentURL, agents, m.logger)
+	tgClient, err := telegram.New(cl, m.agentURL, agents, m.store, m.logger)
 	if err != nil {
 		m.logger.Error("Failed to create Telegram client", "client", cl.Name, "error", err)
 		return
@@ -792,7 +792,7 @@ func (m *clientManager) startSlack(ctx context.Context, cl store.ClientDefinitio
 		return
 	}
 
-	skClient, err := slackclient.New(cl, m.agentURL, agents, m.logger)
+	skClient, err := slackclient.New(cl, m.agentURL, agents, m.store, m.logger)
 	if err != nil {
 		m.logger.Error("Failed to create Slack client", "client", cl.Name, "error", err)
 		return
@@ -837,7 +837,7 @@ func (m *clientManager) startDiscord(ctx context.Context, cl store.ClientDefinit
 		return
 	}
 
-	dcClient, err := discordclient.New(cl, m.agentURL, agents, m.logger)
+	dcClient, err := discordclient.New(cl, m.agentURL, agents, m.store, m.logger)
 	if err != nil {
 		m.logger.Error("Failed to create Discord client", "client", cl.Name, "error", err)
 		return
