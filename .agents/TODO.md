@@ -222,6 +222,30 @@ Implemented. See `server/agent/tools/artifacts/toolset.go` — provides `save_ar
 
 ## Medium Priority
 
+### Filter Tool Messages from `fetchThreadContext`
+
+**Background**: `fetchThreadContext` is confirmed necessary. ADK only accumulates messages that go through the bot — it has no visibility into messages other users post in the channel/thread. Without `fetchThreadContext`, the agent answers as if it has no prior context from the conversation.
+
+**Problem**: When `!showtools` is active, tool call/result messages posted by the bot into the thread are picked up by `fetchThreadContext` and injected into the next turn's `THREAD_HISTORY` as noise. The LLM already has that tool activity in its ADK session.
+
+**Solution**: In both `fetchThreadContext` implementations, skip messages from the bot itself that look like tool output. These are identifiable because they are sent by the bot (`msg.Author.ID == botID` in Discord, `msg.BotID != ""` in Slack) and their text starts with the tool formatting prefix (`⚡` for tool calls, `✅` for tool results, `⚙️` for the counter).
+
+**Files**: `server/clients/slack/bot.go`, `server/clients/discord/bot.go`
+
+---
+
+### Admin UI: Strip Metadata from Messages in ConversationDetail
+
+**Problem**: `msg.content` in the conversation detail view is rendered raw via `renderMarkdown()`. If a message contains `<!--MAGEC_META:...:MAGEC_META-->` or `<!--MAGEC_THREAD_HISTORY:...:MAGEC_THREAD_HISTORY-->`, those tags and their contents are visible to the admin — noise that adds nothing for a human reader.
+
+**Solution**: Import `stripMetadata` from `src/lib/metadata.js` (already exists and is already used in `ConversationsList.vue`) and apply it in `renderMarkdown()` or directly on the `v-html` binding in `ConversationDetail.vue` (line 210).
+
+Also apply strip in the PDF export (`handleExportPDF`, line 551 — `marked.parse(m.content)` also renders content without stripping).
+
+**Files**: `frontend/admin-ui/src/views/conversations/ConversationDetail.vue`
+
+---
+
 ### Composable Flows (flow-as-step)
 
 **Problem**: Flows can only reference agents in their steps. To build complex pipelines (e.g. a content pipeline that includes a review sub-pipeline), users have to flatten everything into a single flow, which becomes unwieldy.

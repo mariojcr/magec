@@ -160,6 +160,52 @@ func (c *Client) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 	c.handleTextMessage(s, m, text)
 }
 
+// resolveThread returns the channel ID where replies should be sent.
+//
+// Rules:
+//   - DM (no guild): reply in the same DM channel
+//   - Message already in a thread: reply in that same thread
+//   - Message in a regular guild channel: create a new thread anchored to that
+//     message and reply inside it
+func (c *Client) resolveThread(s *discordgo.Session, m *discordgo.MessageCreate, threadName string) string {
+	if m.GuildID == "" {
+		return m.ChannelID
+	}
+
+	ch, err := s.Channel(m.ChannelID)
+	if err != nil {
+		c.logger.Error("Failed to get channel info", "error", err)
+		return m.ChannelID
+	}
+
+	if isDiscordThread(ch.Type) {
+		return m.ChannelID
+	}
+
+	name := threadName
+	if len([]rune(name)) > 40 {
+		name = string([]rune(name)[:37]) + "..."
+	}
+	if name == "" {
+		name = "Chat with Magec"
+		if info := c.getAgentInfo(c.getActiveAgentID(m.ChannelID)); info != nil && info.Name != "" {
+			name = "Chat with " + info.Name
+		}
+	}
+
+	th, err := s.MessageThreadStartComplex(m.ChannelID, m.ID, &discordgo.ThreadStart{
+		Name:                name,
+		AutoArchiveDuration: 60,
+		Type:                discordgo.ChannelTypeGuildPublicThread,
+	})
+	if err != nil {
+		c.logger.Error("Failed to create thread", "error", err)
+		return m.ChannelID
+	}
+
+	return th.ID
+}
+
 func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCreate, text string) {
 	c.logger.Info("Discord message received",
 		"user", m.Author.Username,
@@ -168,7 +214,11 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 	)
 
 	c.addReaction(s, m.ChannelID, m.ID, "👀")
-	s.ChannelTyping(m.ChannelID)
+
+	targetID := c.resolveThread(s, m, text)
+	agentID := c.getActiveAgentID(targetID)
+
+	s.ChannelTyping(targetID)
 	c.addReaction(s, m.ChannelID, m.ID, "🧠")
 
 	typingDone := make(chan struct{})
@@ -180,32 +230,20 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			case <-typingDone:
 				return
 			case <-ticker.C:
-				s.ChannelTyping(m.ChannelID)
+				s.ChannelTyping(targetID)
 			}
 		}
 	}()
 
 	inputText, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
 	if truncated {
-		c.logger.Warn("Inbound message truncated",
-			"channel", m.ChannelID,
-			"original_len", len([]rune(text)),
-		)
+		c.logger.Warn("Inbound message truncated", "channel", targetID, "original_len", len([]rune(text)))
 	}
 
-	agentID := c.getActiveAgentID(m.ChannelID)
-	sessionID := c.buildSessionID(m.ChannelID)
+	sessionID := c.buildSessionID(targetID, agentID)
 	userIDStr := "default_user"
 
 	artifactsBefore := c.listArtifacts(agentID, userIDStr, sessionID)
-
-	replyRef := &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-	}
-	if m.GuildID != "" {
-		replyRef.GuildID = m.GuildID
-	}
 
 	firstText := true
 	hasText := false
@@ -214,7 +252,8 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterMsgID string
-	err := c.callAgentSSE(m, inputText, func(evt msgutil.SSEEvent) {
+
+	err := c.callAgentSSE(m, targetID, agentID, sessionID, inputText, func(evt msgutil.SSEEvent) {
 		if evt.FinishReason != "" {
 			lastFinishReason = evt.FinishReason
 		}
@@ -226,48 +265,24 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			hasText = true
 			toolCount = 0
 			toolCounterMsgID = ""
-			chunks := msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength)
-			for i, chunk := range chunks {
+			for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 				msg := &discordgo.MessageSend{Content: chunk}
-				if firstText && i == 0 && m.GuildID != "" {
-					ch, chErr := s.Channel(m.ChannelID)
-					isThread := chErr == nil &&
-						(ch.Type == discordgo.ChannelTypeGuildNewsThread ||
-							ch.Type == discordgo.ChannelTypeGuildPublicThread ||
-							ch.Type == discordgo.ChannelTypeGuildPrivateThread)
-					if !isThread {
-						msg.Reference = replyRef
-					}
+				if firstText && i == 0 {
+					msg.Reference = &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}
 					firstText = false
 				}
-				_, err := s.ChannelMessageSendComplex(m.ChannelID, msg)
-				if err != nil {
+				if _, err := s.ChannelMessageSendComplex(targetID, msg); err != nil {
 					c.logger.Error("Failed to send message", "error", err)
 					break
 				}
 			}
 		case msgutil.SSEEventToolCall:
 			hasToolActivity = true
-			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolCallDiscord(evt)
-				s.ChannelMessageSend(m.ChannelID, toolMsg)
-			} else {
-				toolCount++
-				counterText := fmt.Sprintf("⚙️ x%d", toolCount)
-				if toolCounterMsgID == "" {
-					sent, err := s.ChannelMessageSend(m.ChannelID, counterText)
-					if err == nil {
-						toolCounterMsgID = sent.ID
-					}
-				} else {
-					s.ChannelMessageEdit(m.ChannelID, toolCounterMsgID, counterText)
-				}
-			}
+			toolCounterMsgID = c.sendToolCounter(s, targetID, toolCounterMsgID, &toolCount, evt)
 		case msgutil.SSEEventToolResult:
 			hasToolActivity = true
 			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolResultDiscord(evt)
-				s.ChannelMessageSend(m.ChannelID, toolMsg)
+				s.ChannelMessageSend(targetID, msgutil.FormatToolResultDiscord(evt))
 			}
 		}
 	})
@@ -276,17 +291,16 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
+		s.ChannelMessageSend(targetID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
 		return
 	}
 
 	if !hasText && !hasToolActivity {
-		s.ChannelMessageSend(m.ChannelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
+		s.ChannelMessageSend(targetID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
 	}
 
 	c.addReaction(s, m.ChannelID, m.ID, "✅")
-
-	c.sendNewArtifacts(s, m.ChannelID, agentID, userIDStr, sessionID, artifactsBefore)
+	c.sendNewArtifacts(s, targetID, agentID, userIDStr, sessionID, artifactsBefore)
 }
 
 func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -308,22 +322,25 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	)
 
 	c.addReaction(s, m.ChannelID, m.ID, "👀")
-	s.ChannelTyping(m.ChannelID)
+
+	targetID := c.resolveThread(s, m, "")
+	agentID := c.getActiveAgentID(targetID)
+
+	s.ChannelTyping(targetID)
 
 	audioData, err := c.downloadFile(audioAttachment.URL)
 	if err != nil {
 		c.logger.Error("Failed to download voice attachment", "error", err)
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
-		s.ChannelMessageSend(m.ChannelID, "Failed to download your voice message. Please try again.")
+		s.ChannelMessageSend(targetID, "Failed to download your voice message. Please try again.")
 		return
 	}
 
-	agentID := c.getActiveAgentID(m.ChannelID)
 	wavData, err := c.convertAudioToWav(audioData)
 	if err != nil {
 		c.logger.Error("Failed to convert audio", "error", err)
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
-		s.ChannelMessageSend(m.ChannelID, "Failed to process your voice message. Please try again.")
+		s.ChannelMessageSend(targetID, "Failed to process your voice message. Please try again.")
 		return
 	}
 
@@ -331,7 +348,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if err != nil {
 		c.logger.Error("Failed to transcribe audio", "error", err)
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
-		s.ChannelMessageSend(m.ChannelID, "Sorry, I couldn't transcribe your voice message.")
+		s.ChannelMessageSend(targetID, "Sorry, I couldn't transcribe your voice message.")
 		return
 	}
 
@@ -347,31 +364,20 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 			case <-typingDone:
 				return
 			case <-ticker.C:
-				s.ChannelTyping(m.ChannelID)
+				s.ChannelTyping(targetID)
 			}
 		}
 	}()
 
 	voiceInput, truncated := msgutil.ValidateInputLength(text, msgutil.DefaultMaxInputLength)
 	if truncated {
-		c.logger.Warn("Transcribed voice message truncated",
-			"channel", m.ChannelID,
-			"original_len", len([]rune(text)),
-		)
+		c.logger.Warn("Transcribed voice message truncated", "channel", targetID, "original_len", len([]rune(text)))
 	}
 
-	sessionID := c.buildSessionID(m.ChannelID)
+	sessionID := c.buildSessionID(targetID, agentID)
 	userIDStr := "default_user"
 
 	artifactsBefore := c.listArtifacts(agentID, userIDStr, sessionID)
-
-	replyRef := &discordgo.MessageReference{
-		MessageID: m.ID,
-		ChannelID: m.ChannelID,
-	}
-	if m.GuildID != "" {
-		replyRef.GuildID = m.GuildID
-	}
 
 	firstText := true
 	var lastTextResponse string
@@ -381,7 +387,8 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var lastErrorMessage string
 	toolCount := 0
 	var toolCounterMsgID string
-	err = c.callAgentSSE(m, voiceInput, func(evt msgutil.SSEEvent) {
+
+	err = c.callAgentSSE(m, targetID, agentID, sessionID, voiceInput, func(evt msgutil.SSEEvent) {
 		if evt.FinishReason != "" {
 			lastFinishReason = evt.FinishReason
 		}
@@ -395,40 +402,23 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 			toolCount = 0
 			toolCounterMsgID = ""
 			mode := c.getResponseMode()
-			sendText := mode == ResponseModeText || mode == ResponseModeBoth
-			if sendText {
-				chunks := msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength)
-				for i, chunk := range chunks {
+			if mode == ResponseModeText || mode == ResponseModeBoth {
+				for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 					msg := &discordgo.MessageSend{Content: chunk}
 					if firstText && i == 0 {
-						msg.Reference = replyRef
+						msg.Reference = &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}
 						firstText = false
 					}
-					s.ChannelMessageSendComplex(m.ChannelID, msg)
+					s.ChannelMessageSendComplex(targetID, msg)
 				}
 			}
 		case msgutil.SSEEventToolCall:
 			hasToolActivity = true
-			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolCallDiscord(evt)
-				s.ChannelMessageSend(m.ChannelID, toolMsg)
-			} else {
-				toolCount++
-				counterText := fmt.Sprintf("⚙️ x%d", toolCount)
-				if toolCounterMsgID == "" {
-					sent, err := s.ChannelMessageSend(m.ChannelID, counterText)
-					if err == nil {
-						toolCounterMsgID = sent.ID
-					}
-				} else {
-					s.ChannelMessageEdit(m.ChannelID, toolCounterMsgID, counterText)
-				}
-			}
+			toolCounterMsgID = c.sendToolCounter(s, targetID, toolCounterMsgID, &toolCount, evt)
 		case msgutil.SSEEventToolResult:
 			hasToolActivity = true
 			if c.getShowTools() {
-				toolMsg := msgutil.FormatToolResultDiscord(evt)
-				s.ChannelMessageSend(m.ChannelID, toolMsg)
+				s.ChannelMessageSend(targetID, msgutil.FormatToolResultDiscord(evt))
 			}
 		}
 	})
@@ -437,23 +427,44 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if err != nil {
 		c.logger.Error("Failed to call agent", "error", err)
 		c.addReaction(s, m.ChannelID, m.ID, "❌")
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
+		s.ChannelMessageSend(targetID, fmt.Sprintf("Failed to process your request: %s", sanitizeError(err)))
 		return
 	}
 
 	if !hasText && !hasToolActivity {
-		s.ChannelMessageSend(m.ChannelID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
+		s.ChannelMessageSend(targetID, msgutil.ExplainNoResponse(lastFinishReason, lastErrorMessage))
 	}
 
 	mode := c.getResponseMode()
-	sendVoice := mode == ResponseModeVoice || mode == ResponseModeBoth || mode == ResponseModeMirror
-	if sendVoice && lastTextResponse != "" {
-		c.sendVoiceResponse(s, m.ChannelID, lastTextResponse, agentID)
+	if (mode == ResponseModeVoice || mode == ResponseModeBoth || mode == ResponseModeMirror) && lastTextResponse != "" {
+		c.sendVoiceResponse(s, targetID, lastTextResponse, agentID)
 	}
 
 	c.addReaction(s, m.ChannelID, m.ID, "✅")
+	c.sendNewArtifacts(s, targetID, agentID, userIDStr, sessionID, artifactsBefore)
+}
 
-	c.sendNewArtifacts(s, m.ChannelID, agentID, userIDStr, sessionID, artifactsBefore)
+// sendToolCounter posts or edits a compact tool activity counter in the target channel.
+// Returns the updated message ID for subsequent edits.
+func (c *Client) sendToolCounter(s *discordgo.Session, channelID, counterMsgID string, toolCount *int, evt msgutil.SSEEvent) string {
+	if c.getShowTools() {
+		s.ChannelMessageSend(channelID, msgutil.FormatToolCallDiscord(evt))
+		return counterMsgID
+	}
+
+	*toolCount++
+	counterText := fmt.Sprintf("⚙️ x%d", *toolCount)
+
+	if counterMsgID == "" {
+		sent, err := s.ChannelMessageSend(channelID, counterText)
+		if err == nil {
+			return sent.ID
+		}
+		return ""
+	}
+
+	s.ChannelMessageEdit(channelID, counterMsgID, counterText)
+	return counterMsgID
 }
 
 func (c *Client) handleBotCommand(s *discordgo.Session, m *discordgo.MessageCreate, text string) bool {
@@ -532,7 +543,7 @@ func (c *Client) handleBotCommand(s *discordgo.Session, m *discordgo.MessageCrea
 
 	if lower == "reset" {
 		agentID := c.getActiveAgentID(m.ChannelID)
-		sessionID := c.buildSessionID(m.ChannelID)
+		sessionID := c.buildSessionID(m.ChannelID, agentID)
 		if err := c.deleteSession(agentID, sessionID); err != nil {
 			c.logger.Error("Failed to delete session", "error", err)
 			s.ChannelMessageSend(m.ChannelID, "Failed to reset session.")
@@ -591,9 +602,7 @@ func (c *Client) handleResponseModeCommand(s *discordgo.Session, channelID, arg 
 		c.responseMu.Lock()
 		c.responseModeOverride = ""
 		c.responseMu.Unlock()
-		c.logger.Info("Response mode override cleared",
-			"config_mode", c.clientDef.Config.Discord.ResponseMode,
-		)
+		c.logger.Info("Response mode override cleared", "config_mode", c.clientDef.Config.Discord.ResponseMode)
 		s.ChannelMessageSend(channelID, fmt.Sprintf("Response mode reset to config default: `%s`", c.clientDef.Config.Discord.ResponseMode))
 		return true
 	}
@@ -652,47 +661,22 @@ func (c *Client) getShowTools() bool {
 	return c.showTools
 }
 
-func (c *Client) buildSessionID(channelID string) string {
-	agentID := c.getActiveAgentID(channelID)
+// buildSessionID builds a stable session ID scoped to a channel/thread + agent.
+// Uses the same format as Slack: discord_{channelID}_{agentID}.
+func (c *Client) buildSessionID(channelID, agentID string) string {
 	return fmt.Sprintf("discord_%s_%s", channelID, agentID)
 }
 
-func (c *Client) deleteSession(agentID, sessionID string) error {
-	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, "default_user", sessionID)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
-	if err != nil {
-		return err
-	}
-	c.setAuthHeader(req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
-		return fmt.Errorf("failed to delete session: status %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func (c *Client) callAgentSSE(m *discordgo.MessageCreate, message string, handler func(msgutil.SSEEvent)) error {
-	agentID := c.getActiveAgentID(m.ChannelID)
-	sessionID := c.buildSessionID(m.ChannelID)
-	userIDStr := "default_user"
-
-	if err := c.ensureSession(agentID, userIDStr, sessionID); err != nil {
+func (c *Client) callAgentSSE(m *discordgo.MessageCreate, targetID, agentID, sessionID, message string, handler func(msgutil.SSEEvent)) error {
+	if err := c.ensureSession(agentID, "default_user", sessionID); err != nil {
 		c.logger.Warn("Failed to ensure session, continuing anyway", "error", err)
 	}
 
-	fullMessage := c.buildMessageContext(m) + c.fetchThreadContext(m) + message
+	fullMessage := c.buildMessageContext(m, targetID) + c.fetchThreadContext(targetID, m.ID) + message
 
 	reqBody := map[string]interface{}{
 		"appName":   agentID,
-		"userId":    userIDStr,
+		"userId":    "default_user",
 		"sessionId": sessionID,
 		"newMessage": map[string]interface{}{
 			"role": "user",
@@ -755,20 +739,42 @@ func (c *Client) ensureSession(agentID, userID, sessionID string) error {
 	return nil
 }
 
-func (c *Client) fetchThreadContext(m *discordgo.MessageCreate) string {
-	ch, err := c.session.Channel(m.ChannelID)
+func (c *Client) deleteSession(agentID, sessionID string) error {
+	url := fmt.Sprintf("%s/apps/%s/users/%s/sessions/%s", c.agentURL, agentID, "default_user", sessionID)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
-		c.logger.Debug("Failed to get channel info", "error", err)
+		return err
+	}
+	c.setAuthHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("failed to delete session: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// fetchThreadContext returns prior messages in a thread as context for the agent.
+// Only called when targetID is a thread channel; returns empty string otherwise.
+// Excludes the current message (identified by currentMsgID) to avoid duplication.
+func (c *Client) fetchThreadContext(targetID, currentMsgID string) string {
+	ch, err := c.session.Channel(targetID)
+	if err != nil {
+		c.logger.Debug("Failed to get channel info for thread context", "error", err)
 		return ""
 	}
-	isThread := ch.Type == discordgo.ChannelTypeGuildNewsThread ||
-		ch.Type == discordgo.ChannelTypeGuildPublicThread ||
-		ch.Type == discordgo.ChannelTypeGuildPrivateThread
-	if !isThread {
+	if !isDiscordThread(ch.Type) {
 		return ""
 	}
 
-	msgs, err := c.session.ChannelMessages(m.ChannelID, 20, m.ID, "", "")
+	msgs, err := c.session.ChannelMessages(targetID, 20, currentMsgID, "", "")
 	if err != nil {
 		c.logger.Debug("Failed to fetch thread context", "error", err)
 		return ""
@@ -777,18 +783,14 @@ func (c *Client) fetchThreadContext(m *discordgo.MessageCreate) string {
 		return ""
 	}
 
-	// Messages come newest-first; reverse for chronological order
+	// ChannelMessages returns newest-first; reverse for chronological order.
 	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<!--THREAD_CONTEXT_START-->\n")
+	sb.WriteString("<!--MAGEC_THREAD_HISTORY:\n")
 	for _, msg := range msgs {
-		name := msg.Author.Username
-		if msg.Author.GlobalName != "" {
-			name = msg.Author.GlobalName
-		}
 		text := strings.TrimSpace(msg.Content)
 		if text == "" {
 			continue
@@ -796,17 +798,21 @@ func (c *Client) fetchThreadContext(m *discordgo.MessageCreate) string {
 		if msg.Author.ID == c.session.State.User.ID {
 			text = c.stripBotMention(text, c.session.State.User.ID)
 		}
+		name := msg.Author.Username
+		if msg.Author.GlobalName != "" {
+			name = msg.Author.GlobalName
+		}
 		sb.WriteString(fmt.Sprintf("[%s]: %s\n", name, text))
 	}
-	sb.WriteString("<!--THREAD_CONTEXT_END-->\n")
+	sb.WriteString(":MAGEC_THREAD_HISTORY-->\n")
 	return sb.String()
 }
 
-func (c *Client) buildMessageContext(m *discordgo.MessageCreate) string {
+func (c *Client) buildMessageContext(m *discordgo.MessageCreate, targetID string) string {
 	meta := map[string]interface{}{
 		"source":             "discord",
 		"discord_user_id":    m.Author.ID,
-		"discord_channel_id": m.ChannelID,
+		"discord_channel_id": targetID,
 	}
 
 	if m.Author.Username != "" {
@@ -875,10 +881,8 @@ func (c *Client) getAgentInfo(agentID string) *AgentInfo {
 }
 
 func (c *Client) stripBotMention(text, botID string) string {
-	mention := fmt.Sprintf("<@%s>", botID)
-	mentionNick := fmt.Sprintf("<@!%s>", botID)
-	text = strings.ReplaceAll(text, mention, "")
-	text = strings.ReplaceAll(text, mentionNick, "")
+	text = strings.ReplaceAll(text, fmt.Sprintf("<@%s>", botID), "")
+	text = strings.ReplaceAll(text, fmt.Sprintf("<@!%s>", botID), "")
 	return strings.TrimSpace(text)
 }
 
@@ -1115,6 +1119,13 @@ func (c *Client) sendNewArtifacts(s *discordgo.Session, channelID, agentID, user
 			c.logger.Error("Failed to send artifact", "name", name, "error", err)
 		}
 	}
+}
+
+// isDiscordThread returns true for any thread channel type.
+func isDiscordThread(t discordgo.ChannelType) bool {
+	return t == discordgo.ChannelTypeGuildNewsThread ||
+		t == discordgo.ChannelTypeGuildPublicThread ||
+		t == discordgo.ChannelTypeGuildPrivateThread
 }
 
 func sanitizeError(err error) string {
