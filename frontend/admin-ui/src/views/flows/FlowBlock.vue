@@ -74,7 +74,11 @@
   </div>
 
   <!-- CONTAINER NODE -->
-  <div v-else class="flow-container" :class="containerClass">
+  <div
+    v-else
+    class="flow-container"
+    :class="[containerClass, dropHighlight ? dropActiveClass : '']"
+  >
     <div class="flow-container-header flex items-center gap-2 px-3 py-1.5 cursor-grab active:cursor-grabbing" :class="headerClass">
       <span class="text-[10px] font-bold uppercase tracking-wider select-none" :class="labelClass">{{ typeLabel }}</span>
 
@@ -83,7 +87,6 @@
           class="text-[9px] px-1.5 py-0.5 rounded font-semibold hover:brightness-125 transition-all" :class="badgeClass">
           ×{{ step.maxIterations || '∞' }}
         </button>
-
       </template>
 
       <div class="flex-1" />
@@ -94,15 +97,16 @@
           ↻
         </button>
         <button v-if="!isRoot" @click.stop="$emit('remove')" @mousedown.stop
-          class="text-[9px] px-1 py-0.5 rounded hover:bg-white/10 transition-colors text-lava-400/60 hover:text-lava-400 select-none">
+          class="text-[11px] px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors text-lava-400/60 hover:text-lava-400 select-none">
           ✕
         </button>
       </div>
     </div>
 
     <div
-      class="flow-drop-zone p-2 min-h-[52px] transition-colors"
-      :class="[dropHighlight ? 'flow-drop-active' : '']"
+      ref="dropZoneRef"
+      class="flow-drop-zone p-4 min-h-[80px]"
+      @dragenter.stop="onDragEnter"
       @dragover.prevent.stop="onDragOver"
       @dragleave.stop="onDragLeave"
       @drop.prevent.stop="onDrop"
@@ -118,7 +122,9 @@
         @change="onDragChange"
       >
         <template #item="{ element, index }">
-          <div class="flow-item" :class="itemClass(index)">
+          <div class="flow-item-wrap" :class="isHorizontal ? 'flow-item-wrap-h' : 'flow-item-wrap-v'">
+            <div v-if="dropHighlight && dropIndex === index"
+              class="drop-indicator" :class="isHorizontal ? 'drop-indicator-h' : 'drop-indicator-v'" />
             <FlowBlock
               :step="element"
               :agents="agents"
@@ -127,12 +133,14 @@
               @update="updateChild(index, $event)"
               @remove="removeChild(index)"
             />
+            <div v-if="dropHighlight && dropIndex === (step.steps?.length || 0) && index === (step.steps?.length || 0) - 1"
+              class="drop-indicator drop-indicator-after" :class="isHorizontal ? 'drop-indicator-h' : 'drop-indicator-v'" />
           </div>
         </template>
       </draggable>
 
       <div v-if="!step.steps?.length"
-        class="flex items-center justify-center py-6 border-2 border-dashed rounded-lg text-[10px] italic select-none"
+        class="flex items-center justify-center py-8 border-2 border-dashed rounded-lg text-[10px] italic select-none"
         :class="emptyClass">
         Drop here
       </div>
@@ -152,108 +160,96 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import draggable from 'vuedraggable'
 
 const props = defineProps({
-  step: { type: Object, required: true },
-  agents: { type: Array, default: () => [] },
-  isRoot: { type: Boolean, default: false },
-  parentType: { type: String, default: '' },
+  step:       { type: Object,  required: true },
+  agents:     { type: Array,   default: () => [] },
+  isRoot:     { type: Boolean, default: false },
+  parentType: { type: String,  default: '' },
 })
 
 const emit = defineEmits(['update', 'remove'])
 
+// ── drop state ───────────────────────────────────────────────────────────────
+const dropZoneRef  = ref(null)
 const dropHighlight = ref(false)
-const pickerOpen = ref(false)
+const dropIndex    = ref(null)
+let dragDepth = 0
 
-function toggleAgentPicker() {
-  pickerOpen.value = !pickerOpen.value
+function hasToolbarPayload(e) {
+  return e.dataTransfer.types.includes('text/plain')
 }
 
-function pickAgent(id) {
-  pickerOpen.value = false
-  emit('update', { ...props.step, agentId: id })
+function computeDropIndex(e) {
+  if (!dropZoneRef.value) return props.step.steps?.length || 0
+
+  const allWraps    = dropZoneRef.value.querySelectorAll('.flow-item-wrap')
+  const directWraps = [...allWraps].filter(el => el.closest('.flow-drop-zone') === dropZoneRef.value)
+  if (!directWraps.length) return 0
+
+  const horizontal = isHorizontal.value
+  for (const [i, wrap] of directWraps.entries()) {
+    const rect   = wrap.getBoundingClientRect()
+    const cursor = horizontal ? e.clientX : e.clientY
+    const mid    = horizontal ? rect.left + rect.width * 0.5 : rect.top + rect.height * 0.5
+    if (cursor < mid) return i
+  }
+  return directWraps.length
 }
 
-function toggleResponse() {
-  emit('update', { ...props.step, responseAgent: !props.step.responseAgent })
+function onDragEnter(e) {
+  if (!hasToolbarPayload(e)) return
+  dragDepth++
+  dropHighlight.value = true
+  dropIndex.value = computeDropIndex(e)
 }
 
-function onClickOutside(e) {
-  if (pickerOpen.value) pickerOpen.value = false
+function onDragOver(e) {
+  if (!hasToolbarPayload(e)) return
+  e.dataTransfer.dropEffect = 'copy'
+  dropIndex.value = computeDropIndex(e)
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
-
-let keyCounter = 0
-function ensureKeys(steps) {
-  if (!steps) return
-  for (const s of steps) {
-    if (!s.__key) s.__key = `k${++keyCounter}`
-    if (s.steps) ensureKeys(s.steps)
+function onDragLeave() {
+  if (--dragDepth <= 0) {
+    dragDepth = 0
+    dropHighlight.value = false
+    dropIndex.value = null
   }
 }
 
-watch(() => props.step.steps, (steps) => ensureKeys(steps), { immediate: true, deep: true })
+function onDrop(e) {
+  const insertAt = dropIndex.value ?? props.step.steps?.length ?? 0
+  dragDepth = 0
+  dropHighlight.value = false
+  dropIndex.value = null
 
-const agentName = computed(() => {
-  if (props.step.type !== 'agent') return ''
-  const a = props.agents.find(a => a.id === props.step.agentId)
-  return a?.name || props.step.agentId || 'Select agent...'
-})
+  try {
+    const data = JSON.parse(e.dataTransfer.getData('text/plain') || 'null')
+    if (!data?.fromToolbar) return
 
-const typeLabel = computed(() => ({
-  sequential: 'Sequential',
-  parallel: 'Parallel',
-  loop: 'Loop',
-})[props.step.type] || props.step.type)
+    const newStep = data.type === 'agent'
+      ? { type: 'agent', agentId: '' }
+      : { type: data.type, steps: [], ...(data.type === 'loop' ? { maxIterations: 3 } : {}) }
 
-const containerColors = {
-  sequential: {
-    border: 'border-atlantico-500/25',
-    header: 'bg-atlantico-500/8 rounded-t-xl',
-    label: 'text-atlantico-400',
-    badge: 'bg-atlantico-500/20 text-atlantico-300',
-    empty: 'text-atlantico-400/30 border-atlantico-500/15',
-  },
-  parallel: {
-    border: 'border-sol-500/25',
-    header: 'bg-sol-500/8 rounded-t-xl',
-    label: 'text-sol-400',
-    badge: 'bg-sol-500/20 text-sol-300',
-    empty: 'text-sol-400/30 border-sol-500/15',
-  },
-  loop: {
-    border: 'border-lava-500/25',
-    header: 'bg-lava-500/8 rounded-t-xl',
-    label: 'text-lava-400',
-    badge: 'bg-lava-500/20 text-lava-300',
-    empty: 'text-lava-400/30 border-lava-500/15',
-  },
+    addStepAt(newStep, insertAt)
+  } catch { /* */ }
 }
 
-const colors = computed(() => containerColors[props.step.type] || containerColors.sequential)
-const containerClass = computed(() => `rounded-xl border ${colors.value.border} bg-piedra-900/60`)
-const headerClass = computed(() => colors.value.header)
-const labelClass = computed(() => colors.value.label)
-const badgeClass = computed(() => colors.value.badge)
-const emptyClass = computed(() => colors.value.empty)
+// ── step management ──────────────────────────────────────────────────────────
+let keyCounter = 0
 
-const isHorizontal = computed(() => props.step.type === 'sequential' || props.step.type === 'loop')
-
-const dragAreaClass = computed(() =>
-  isHorizontal.value
-    ? 'flex flex-row flex-nowrap items-center gap-0'
-    : 'flex flex-col gap-1.5'
-)
-
-function itemClass(index) {
-  if (!isHorizontal.value) return ''
-  const isLast = index === (props.step.steps?.length || 0) - 1
-  return isLast ? '' : 'seq-item'
+function ensureKeys(steps) {
+  steps?.forEach(s => {
+    if (!s.__key) s.__key = `k${++keyCounter}`
+    if (s.steps) ensureKeys(s.steps)
+  })
 }
 
-function addStep(newStep) {
+watch(() => props.step.steps, ensureKeys, { immediate: true, deep: true })
+
+function addStepAt(newStep, index) {
   newStep.__key = `k${++keyCounter}`
-  const steps = [...(props.step.steps || []), newStep]
+  const steps = [...(props.step.steps || [])]
+  steps.splice(index, 0, newStep)
   emit('update', { ...props.step, steps })
 }
 
@@ -264,89 +260,97 @@ function updateChild(index, newChild) {
 }
 
 function removeChild(index) {
-  const steps = props.step.steps.filter((_, i) => i !== index)
-  emit('update', { ...props.step, steps })
+  emit('update', { ...props.step, steps: props.step.steps.filter((_, i) => i !== index) })
 }
 
 function onDragChange() {
   emit('update', { ...props.step, steps: [...props.step.steps] })
 }
 
-const typeOrder = ['sequential', 'parallel', 'loop']
+// ── agent picker ─────────────────────────────────────────────────────────────
+const pickerOpen = ref(false)
+
+function toggleAgentPicker() { pickerOpen.value = !pickerOpen.value }
+function pickAgent(id)       { pickerOpen.value = false; emit('update', { ...props.step, agentId: id }) }
+function toggleResponse()    { emit('update', { ...props.step, responseAgent: !props.step.responseAgent }) }
+
+function onClickOutside() { if (pickerOpen.value) pickerOpen.value = false }
+onMounted(()        => document.addEventListener('click', onClickOutside))
+onBeforeUnmount(()  => document.removeEventListener('click', onClickOutside))
+
+// ── container appearance ─────────────────────────────────────────────────────
+const COLORS = {
+  sequential: {
+    border:     'border-atlantico-500/25',
+    dropActive: 'border-atlantico-500/70 shadow-[0_0_0_2px_rgba(8,145,178,0.15)]',
+    header:     'bg-atlantico-500/8 rounded-t-xl',
+    label:      'text-atlantico-400',
+    badge:      'bg-atlantico-500/20 text-atlantico-300',
+    empty:      'text-atlantico-400/30 border-atlantico-500/15',
+  },
+  parallel: {
+    border:     'border-sol-500/25',
+    dropActive: 'border-sol-500/70 shadow-[0_0_0_2px_rgba(234,179,8,0.15)]',
+    header:     'bg-sol-500/8 rounded-t-xl',
+    label:      'text-sol-400',
+    badge:      'bg-sol-500/20 text-sol-300',
+    empty:      'text-sol-400/30 border-sol-500/15',
+  },
+  loop: {
+    border:     'border-lava-500/25',
+    dropActive: 'border-lava-500/70 shadow-[0_0_0_2px_rgba(239,68,68,0.15)]',
+    header:     'bg-lava-500/8 rounded-t-xl',
+    label:      'text-lava-400',
+    badge:      'bg-lava-500/20 text-lava-300',
+    empty:      'text-lava-400/30 border-lava-500/15',
+  },
+}
+
+const agentName = computed(() => {
+  const a = props.agents.find(a => a.id === props.step.agentId)
+  return a?.name || props.step.agentId || 'Select agent...'
+})
+
+const typeLabel = computed(() => ({ sequential: 'Sequential', parallel: 'Parallel', loop: 'Loop' })[props.step.type] || props.step.type)
+
+const colors         = computed(() => COLORS[props.step.type] || COLORS.sequential)
+const containerClass = computed(() => `rounded-xl border transition-all duration-150 bg-piedra-900/60 ${colors.value.border}`)
+const dropActiveClass = computed(() => colors.value.dropActive)
+const headerClass    = computed(() => colors.value.header)
+const labelClass     = computed(() => colors.value.label)
+const badgeClass     = computed(() => colors.value.badge)
+const emptyClass     = computed(() => colors.value.empty)
+const isHorizontal   = computed(() => props.step.type === 'sequential' || props.step.type === 'loop')
+const dragAreaClass  = computed(() => isHorizontal.value ? 'flex flex-row flex-nowrap items-center gap-0' : 'flex flex-col gap-2.5')
+
+// ── container controls ───────────────────────────────────────────────────────
+const TYPE_ORDER = ['sequential', 'parallel', 'loop']
 
 function cycleType() {
-  const idx = typeOrder.indexOf(props.step.type)
-  const nextType = typeOrder[(idx + 1) % typeOrder.length]
-  const updated = { ...props.step, type: nextType }
-  if (nextType === 'loop' && !updated.maxIterations) {
-    updated.maxIterations = 3
-  }
-  emit('update', updated)
+  const next = TYPE_ORDER[(TYPE_ORDER.indexOf(props.step.type) + 1) % TYPE_ORDER.length]
+  emit('update', { ...props.step, type: next, ...(next === 'loop' && !props.step.maxIterations ? { maxIterations: 3 } : {}) })
 }
 
 function editIterations() {
   const val = prompt('Max iterations (0 = infinite):', props.step.maxIterations || 0)
-  if (val !== null) {
-    emit('update', { ...props.step, maxIterations: parseInt(val) || 0 })
-  }
-}
-
-function onDragOver(e) {
-  try {
-    const raw = e.dataTransfer.types.includes('text/plain')
-    if (raw) {
-      e.dataTransfer.dropEffect = 'copy'
-      dropHighlight.value = true
-    }
-  } catch { /* */ }
-}
-
-function onDragLeave(e) {
-  if (e.currentTarget.contains(e.relatedTarget)) return
-  dropHighlight.value = false
-}
-
-function onDrop(e) {
-  dropHighlight.value = false
-  try {
-    const raw = e.dataTransfer.getData('text/plain')
-    if (!raw) return
-    const data = JSON.parse(raw)
-    if (!data.fromToolbar) return
-
-    if (data.type === 'agent') {
-      addStep({ type: 'agent', agentId: '' })
-    } else {
-      const newContainer = { type: data.type, steps: [] }
-      if (data.type === 'loop') newContainer.maxIterations = 3
-      addStep(newContainer)
-    }
-  } catch { /* */ }
+  if (val !== null) emit('update', { ...props.step, maxIterations: parseInt(val) || 0 })
 }
 </script>
 
 <style scoped>
-.flow-ghost {
-  opacity: 0.25;
-  border-radius: 0.75rem;
-}
-
-.flow-drag {
-  opacity: 0.95;
-  transform: rotate(1deg);
-}
+.flow-ghost { opacity: 0.25; border-radius: 0.75rem; }
+.flow-drag  { opacity: 0.95; transform: rotate(1deg); }
 
 .flow-agent,
-.flow-container {
-  position: relative;
-}
+.flow-container { position: relative; }
 
-.seq-item {
-  display: flex;
-  align-items: center;
-}
+/* item wrapper */
+.flow-item-wrap   { position: relative; flex-shrink: 0; }
+.flow-item-wrap-h { display: flex; align-items: center; }
+.flow-item-wrap-v { display: flex; flex-direction: column; }
 
-.seq-item::after {
+/* sequential arrow between items */
+.flow-item-wrap-h:not(:last-child)::after {
   content: '›';
   display: flex;
   align-items: center;
@@ -359,25 +363,30 @@ function onDrop(e) {
   opacity: 0.7;
 }
 
-.flow-drop-active {
-  background: rgba(8, 145, 178, 0.06);
-  border-radius: 0.5rem;
-  outline: 2px dashed rgba(8, 145, 178, 0.3);
-  outline-offset: -2px;
+/* drop indicator — position:absolute so it never shifts layout */
+.drop-indicator {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.75); /* sol-500 */
+  animation: slot-pulse 0.6s ease-in-out infinite alternate;
 }
 
-.dropdown-enter-active {
-  transition: all 0.15s ease-out;
+.drop-indicator-h              { width: 6px; top: 0; bottom: 0; left: -12px; }
+.drop-indicator-h.drop-indicator-after { left: auto; right: -12px; }
+
+.drop-indicator-v              { height: 6px; left: 0; right: 0; top: -12px; }
+.drop-indicator-v.drop-indicator-after { top: auto; bottom: -12px; }
+
+@keyframes slot-pulse {
+  from { opacity: 0.25; }
+  to   { opacity: 0.55; }
 }
-.dropdown-leave-active {
-  transition: all 0.1s ease-in;
-}
-.dropdown-enter-from {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.97);
-}
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.97);
-}
+
+/* agent picker dropdown */
+.dropdown-enter-active { transition: all 0.15s ease-out; }
+.dropdown-leave-active { transition: all 0.1s ease-in; }
+.dropdown-enter-from,
+.dropdown-leave-to     { opacity: 0; transform: translateY(-4px) scale(0.97); }
 </style>
