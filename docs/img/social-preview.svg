@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0e0e10"/>
+      <stop offset="100%" stop-color="#16161a"/>
+    </linearGradient>
+    <linearGradient id="logoGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#f87171"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="topBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#38bcd8"/>
+      <stop offset="100%" stop-color="#f87171"/>
+    </linearGradient>
+    <radialGradient id="logoHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="logoGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="32" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <pattern id="grid" width="52" height="52" patternUnits="userSpaceOnUse">
+    <path d="M52 0L0 0 0 52" fill="none" stroke="#ffffff" stroke-width="0.2" stroke-opacity="0.025"/>
+  </pattern>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1280" height="6" fill="url(#topBar)"/>
+
+  <!-- Halo -->
+  <ellipse cx="640" cy="188" rx="340" ry="340" fill="url(#logoHalo)"/>
+
+  <!-- Dust -->
+  <circle cx="110"  cy="130" r="1.8" fill="#f59e0b" opacity="0.18"/>
+  <circle cx="190"  cy="510" r="1.4" fill="#38bcd8" opacity="0.15"/>
+  <circle cx="65"   cy="380" r="1.6" fill="#f59e0b" opacity="0.12"/>
+  <circle cx="1170" cy="95"  r="1.8" fill="#f59e0b" opacity="0.18"/>
+  <circle cx="1225" cy="195" r="1.4" fill="#38bcd8" opacity="0.14"/>
+  <circle cx="1185" cy="515" r="1.6" fill="#f87171" opacity="0.15"/>
+  <circle cx="360"  cy="585" r="1.4" fill="#f59e0b" opacity="0.10"/>
+  <circle cx="925"  cy="575" r="1.4" fill="#38bcd8" opacity="0.10"/>
+  <!-- Logo: 180px, centro (640,188) → translate(550,98), scale=180/64=2.8125 -->
+  <g transform="translate(550,98)" filter="url(#logoGlow)">
+    <circle cx="90" cy="90" r="78.1875" fill="url(#logoGrad)"/>
+    <circle cx="56.25"  cy="67.5"   r="5.625" fill="white" opacity="0.9"/>
+    <circle cx="73.125" cy="50.625" r="4.219" fill="white" opacity="0.7"/>
+    <circle cx="112.5"  cy="61.875" r="5.063" fill="white" opacity="0.8"/>
+    <circle cx="129.375" cy="84.375" r="3.375" fill="white" opacity="0.6"/>
+    <circle cx="106.875" cy="106.875" r="5.625" fill="white" opacity="0.75"/>
+    <circle cx="67.5"   cy="112.5"  r="3.938" fill="white" opacity="0.65"/>
+    <circle cx="90"     cy="78.75"  r="2.813" fill="white" opacity="0.8"/>
+    <circle cx="50.625" cy="95.625" r="3.656" fill="white" opacity="0.5"/>
+    <circle cx="123.75" cy="118.125" r="4.5"  fill="white" opacity="0.55"/>
+    <circle cx="84.375" cy="129.375" r="3.375" fill="white" opacity="0.6"/>
+    <circle cx="101.25" cy="45"     r="2.813" fill="white" opacity="0.7"/>
+    <circle cx="61.875" cy="84.375" r="2.25"  fill="white" opacity="0.5"/>
+  </g>
+
+  <!-- Magec -->
+  <text x="640" y="406" text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',sans-serif"
+    font-size="112" font-weight="800" letter-spacing="-2"
+    fill="url(#titleGrad)">Magec</text>
+
+  <!-- Slogan -->
+  <text x="640" y="462" text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',sans-serif"
+    font-size="23" fill="#8a847e" letter-spacing="0.3">Self-hosted multi-agent AI platform</text>
+
+  <!-- Separador -->
+  <rect x="530" y="487" width="220" height="1" fill="#222226" rx="0.5"/>
+
+  <!-- Fila de conceptos: línea 1 -->
+  <text x="640" y="512" text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',sans-serif"
+    font-size="18" font-weight="400" fill="#524f4a"><tspan>MULTI-AGENT</tspan><tspan dx="10">·</tspan><tspan dx="10">VISUAL WORKFLOWS</tspan><tspan dx="10">·</tspan><tspan dx="10">LONG-TERM MEMORY</tspan></text>
+
+  <!-- Fila de conceptos: línea 2 -->
+  <text x="640" y="536" text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',sans-serif"
+    font-size="18" font-weight="400" fill="#524f4a"><tspan>INFINITE TOOLS</tspan><tspan dx="10">·</tspan><tspan dx="10">ANY PLATFORM</tspan></text>
+
+  <rect x="0" y="637" width="1280" height="3" fill="#26262b"/>
+
+  <!-- With love from Canary Islands -->
+  <text x="640" y="622" text-anchor="middle"
+    font-family="Noto Color Emoji,system-ui,-apple-system,sans-serif"
+    font-size="12" fill="#5a5650">MADE WITH ❤️ FROM 🇮🇨</text>
+</svg>
