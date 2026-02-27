@@ -38,6 +38,9 @@ type Client struct {
 	agentURL  string
 	agents    []AgentInfo
 	logger    *slog.Logger
+	store     interface {
+		UpdateClient(id string, c store.ClientDefinition) error
+	}
 
 	session *discordgo.Session
 	cancel  context.CancelFunc
@@ -52,7 +55,9 @@ type Client struct {
 	showTools   bool
 }
 
-func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, logger *slog.Logger) (*Client, error) {
+func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, s interface {
+	UpdateClient(id string, c store.ClientDefinition) error
+}, logger *slog.Logger) (*Client, error) {
 	if clientDef.Config.Discord == nil {
 		return nil, fmt.Errorf("discord config is required")
 	}
@@ -76,6 +81,7 @@ func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, 
 		clientDef:   clientDef,
 		agentURL:    agentURL,
 		agents:      agents,
+		store:       s,
 		activeAgent: make(map[string]string),
 		logger:      logger,
 	}, nil
@@ -160,26 +166,27 @@ func (c *Client) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreat
 	c.handleTextMessage(s, m, text)
 }
 
-// resolveThread returns the channel ID where replies should be sent.
+// resolveThread returns the channel ID where replies should be sent, and
+// whether that channel is a thread.
 //
 // Rules:
-//   - DM (no guild): reply in the same DM channel
+//   - DM (no guild): reply in the same DM channel (not a thread)
 //   - Message already in a thread: reply in that same thread
 //   - Message in a regular guild channel: create a new thread anchored to that
 //     message and reply inside it
-func (c *Client) resolveThread(s *discordgo.Session, m *discordgo.MessageCreate, threadName string) string {
+func (c *Client) resolveThread(s *discordgo.Session, m *discordgo.MessageCreate, threadName string) (string, bool) {
 	if m.GuildID == "" {
-		return m.ChannelID
+		return m.ChannelID, false
 	}
 
 	ch, err := s.Channel(m.ChannelID)
 	if err != nil {
 		c.logger.Error("Failed to get channel info", "error", err)
-		return m.ChannelID
+		return m.ChannelID, false
 	}
 
 	if isDiscordThread(ch.Type) {
-		return m.ChannelID
+		return m.ChannelID, true
 	}
 
 	name := threadName
@@ -200,10 +207,10 @@ func (c *Client) resolveThread(s *discordgo.Session, m *discordgo.MessageCreate,
 	})
 	if err != nil {
 		c.logger.Error("Failed to create thread", "error", err)
-		return m.ChannelID
+		return m.ChannelID, false
 	}
 
-	return th.ID
+	return th.ID, true
 }
 
 func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCreate, text string) {
@@ -215,7 +222,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 
 	c.addReaction(s, m.ChannelID, m.ID, "👀")
 
-	targetID := c.resolveThread(s, m, text)
+	targetID, inThread := c.resolveThread(s, m, text)
 	agentID := c.getActiveAgentID(targetID)
 
 	s.ChannelTyping(targetID)
@@ -268,7 +275,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 				msg := &discordgo.MessageSend{Content: chunk}
 				if firstText && i == 0 {
-					msg.Reference = crossChannelRef(m, targetID)
+					msg.Reference = crossChannelRef(m, targetID, inThread)
 					firstText = false
 				}
 				if _, err := s.ChannelMessageSendComplex(targetID, msg); err != nil {
@@ -323,7 +330,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	c.addReaction(s, m.ChannelID, m.ID, "👀")
 
-	targetID := c.resolveThread(s, m, "")
+	targetID, inThread := c.resolveThread(s, m, "")
 	agentID := c.getActiveAgentID(targetID)
 
 	s.ChannelTyping(targetID)
@@ -406,7 +413,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 				for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 					msg := &discordgo.MessageSend{Content: chunk}
 					if firstText && i == 0 {
-						msg.Reference = crossChannelRef(m, targetID)
+						msg.Reference = crossChannelRef(m, targetID, inThread)
 						firstText = false
 					}
 					s.ChannelMessageSendComplex(targetID, msg)
@@ -779,7 +786,11 @@ func (c *Client) fetchThreadContext(targetID, currentMsgID string) string {
 		return ""
 	}
 
-	msgs, err := c.session.ChannelMessages(targetID, 100, "", "", "")
+	limit := c.clientDef.Config.Discord.ThreadHistoryLimit
+	if limit <= 0 {
+		limit = 50
+	}
+	msgs, err := c.session.ChannelMessages(targetID, limit, "", "", "")
 	if err != nil {
 		c.logger.Debug("Failed to fetch thread context", "error", err)
 		return ""
@@ -870,13 +881,23 @@ func (c *Client) getActiveAgentID(channelID string) string {
 	if id, ok := c.activeAgent[channelID]; ok {
 		return id
 	}
+	if def := c.clientDef.Config.Discord.DefaultAgent; def != "" {
+		return def
+	}
 	return c.clientDef.AllowedAgents[0]
 }
 
 func (c *Client) setActiveAgentID(channelID, agentID string) {
 	c.activeAgentMu.Lock()
-	defer c.activeAgentMu.Unlock()
 	c.activeAgent[channelID] = agentID
+	c.activeAgentMu.Unlock()
+
+	def := c.clientDef
+	def.Config.Discord.DefaultAgent = agentID
+	c.clientDef = def
+	if err := c.store.UpdateClient(def.ID, def); err != nil {
+		c.logger.Warn("Failed to persist default agent", "error", err)
+	}
 }
 
 func (c *Client) getAgentInfo(agentID string) *AgentInfo {
@@ -1130,11 +1151,11 @@ func (c *Client) sendNewArtifacts(s *discordgo.Session, channelID, agentID, user
 }
 
 // crossChannelRef returns a MessageReference anchoring the reply to the
-// original message, but only when message and target are in the same channel.
-// If targetID is a freshly created thread (different channel), the reference
-// would be cross-channel and Discord would reject it, so we return nil.
-func crossChannelRef(m *discordgo.MessageCreate, targetID string) *discordgo.MessageReference {
-	if m.ChannelID != targetID {
+// original message, but only in plain channels (DMs or regular guild channels).
+// In threads — whether freshly created or pre-existing — references are
+// unnecessary (context is implicit) and look unnatural, so we return nil.
+func crossChannelRef(m *discordgo.MessageCreate, targetID string, inThread bool) *discordgo.MessageReference {
+	if m.ChannelID != targetID || inThread {
 		return nil
 	}
 	return &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}

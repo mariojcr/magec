@@ -64,6 +64,9 @@ type Client struct {
 	agentURL  string
 	agents    []AgentInfo
 	logger    *slog.Logger
+	store     interface {
+		UpdateClient(id string, c store.ClientDefinition) error
+	}
 
 	// Runtime: created during Start(), managed internally.
 	bot     *telego.Bot
@@ -83,7 +86,9 @@ type Client struct {
 
 // New creates a Telegram client ready to be started. It validates the bot token
 // and prepares the internal state, but does not connect to Telegram yet.
-func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, logger *slog.Logger) (*Client, error) {
+func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, s interface {
+	UpdateClient(id string, c store.ClientDefinition) error
+}, logger *slog.Logger) (*Client, error) {
 	if clientDef.Config.Telegram == nil {
 		return nil, fmt.Errorf("telegram config is required")
 	}
@@ -101,6 +106,7 @@ func New(clientDef store.ClientDefinition, agentURL string, agents []AgentInfo, 
 		clientDef:   clientDef,
 		agentURL:    agentURL,
 		agents:      agents,
+		store:       s,
 		activeAgent: make(map[int64]string),
 		logger:      logger,
 	}, nil
@@ -192,14 +198,24 @@ func (c *Client) getActiveAgentID(chatID int64) string {
 	if id, ok := c.activeAgent[chatID]; ok {
 		return id
 	}
+	if def := c.clientDef.Config.Telegram.DefaultAgent; def != "" {
+		return def
+	}
 	return c.clientDef.AllowedAgents[0]
 }
 
 // setActiveAgentID changes which agent a specific chat is talking to.
 func (c *Client) setActiveAgentID(chatID int64, agentID string) {
 	c.activeAgentMu.Lock()
-	defer c.activeAgentMu.Unlock()
 	c.activeAgent[chatID] = agentID
+	c.activeAgentMu.Unlock()
+
+	def := c.clientDef
+	def.Config.Telegram.DefaultAgent = agentID
+	c.clientDef = def
+	if err := c.store.UpdateClient(def.ID, def); err != nil {
+		c.logger.Warn("Failed to persist default agent", "error", err)
+	}
 }
 
 // getAgentInfo looks up an agent by ID in the allowed agents list.

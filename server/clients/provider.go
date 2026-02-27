@@ -16,3 +16,27 @@ type Provider interface {
 	DisplayName() string
 	ConfigSchema() Schema
 }
+
+// DefaultAgentSchema is the shared JSON Schema fragment for the defaultAgent
+// field, common to all bot clients (Discord, Slack, Telegram).
+func DefaultAgentSchema() Schema {
+	return Schema{
+		"type":        "string",
+		"title":       "Default Agent",
+		"description": "Agent ID to use on startup. Automatically updated when a user runs !agent <id>.",
+	}
+}
+
+// ThreadHistoryLimitSchema returns the shared JSON Schema fragment for the
+// threadHistoryLimit field. maxItems is platform-specific (100 for Discord,
+// 1000 for Slack).
+func ThreadHistoryLimitSchema(max int) Schema {
+	return Schema{
+		"type":        "integer",
+		"title":       "Thread History Messages",
+		"description": "Number of previous thread messages passed to the agent as context. Use lower values for smaller models.",
+		"default":     50,
+		"minimum":     1,
+		"maximum":     max,
+	}
+}
