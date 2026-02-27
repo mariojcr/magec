@@ -268,7 +268,7 @@ func (c *Client) handleTextMessage(s *discordgo.Session, m *discordgo.MessageCre
 			for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 				msg := &discordgo.MessageSend{Content: chunk}
 				if firstText && i == 0 {
-					msg.Reference = &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}
+					msg.Reference = crossChannelRef(m, targetID)
 					firstText = false
 				}
 				if _, err := s.ChannelMessageSendComplex(targetID, msg); err != nil {
@@ -406,7 +406,7 @@ func (c *Client) handleVoice(s *discordgo.Session, m *discordgo.MessageCreate) {
 				for i, chunk := range msgutil.SplitMessage(evt.Text, msgutil.DiscordMaxMessageLength) {
 					msg := &discordgo.MessageSend{Content: chunk}
 					if firstText && i == 0 {
-						msg.Reference = &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}
+						msg.Reference = crossChannelRef(m, targetID)
 						firstText = false
 					}
 					s.ChannelMessageSendComplex(targetID, msg)
@@ -764,6 +764,11 @@ func (c *Client) deleteSession(agentID, sessionID string) error {
 // fetchThreadContext returns prior messages in a thread as context for the agent.
 // Only called when targetID is a thread channel; returns empty string otherwise.
 // Excludes the current message (identified by currentMsgID) to avoid duplication.
+//
+// We fetch the last 100 messages without a 'before' cursor because currentMsgID
+// may belong to the parent channel (first invocation, thread just created), which
+// would cause the Discord API to return nothing when queried against the thread.
+// Instead we pull the full tail and skip the triggering message by ID.
 func (c *Client) fetchThreadContext(targetID, currentMsgID string) string {
 	ch, err := c.session.Channel(targetID)
 	if err != nil {
@@ -774,7 +779,7 @@ func (c *Client) fetchThreadContext(targetID, currentMsgID string) string {
 		return ""
 	}
 
-	msgs, err := c.session.ChannelMessages(targetID, 20, currentMsgID, "", "")
+	msgs, err := c.session.ChannelMessages(targetID, 100, "", "", "")
 	if err != nil {
 		c.logger.Debug("Failed to fetch thread context", "error", err)
 		return ""
@@ -791,6 +796,9 @@ func (c *Client) fetchThreadContext(targetID, currentMsgID string) string {
 	var sb strings.Builder
 	sb.WriteString("<!--MAGEC_THREAD_HISTORY:\n")
 	for _, msg := range msgs {
+		if msg.ID == currentMsgID {
+			continue
+		}
 		text := strings.TrimSpace(msg.Content)
 		if text == "" {
 			continue
@@ -1119,6 +1127,17 @@ func (c *Client) sendNewArtifacts(s *discordgo.Session, channelID, agentID, user
 			c.logger.Error("Failed to send artifact", "name", name, "error", err)
 		}
 	}
+}
+
+// crossChannelRef returns a MessageReference anchoring the reply to the
+// original message, but only when message and target are in the same channel.
+// If targetID is a freshly created thread (different channel), the reference
+// would be cross-channel and Discord would reject it, so we return nil.
+func crossChannelRef(m *discordgo.MessageCreate, targetID string) *discordgo.MessageReference {
+	if m.ChannelID != targetID {
+		return nil
+	}
+	return &discordgo.MessageReference{MessageID: m.ID, ChannelID: m.ChannelID, GuildID: m.GuildID}
 }
 
 // isDiscordThread returns true for any thread channel type.
