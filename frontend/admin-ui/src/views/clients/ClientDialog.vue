@@ -138,16 +138,12 @@
       </template>
 
       <!-- Options (responseMode, threadHistoryLimit, etc.) -->
-      <div v-if="Object.keys(optionProperties).length" class="border border-piedra-700/50 rounded-xl p-4">
-        <button
-          type="button"
-          @click="optionsExpanded = !optionsExpanded"
-          class="flex items-center gap-1.5 text-[11px] text-arena-500 hover:text-arena-300 transition-colors cursor-pointer"
-        >
-          <Icon name="chevronRight" size="sm" class="transition-transform" :class="{ 'rotate-90': optionsExpanded }" />
+      <details v-if="Object.keys(optionProperties).length" class="group border border-piedra-700/40 rounded-xl">
+        <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-xs font-medium text-arena-400 hover:text-arena-300">
           <span>Options</span>
-        </button>
-        <div v-if="optionsExpanded" class="mt-3 space-y-4">
+          <Icon name="chevronDown" size="md" class="text-arena-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div class="px-4 pb-4 space-y-4">
           <template v-for="(propSchema, key) in optionProperties" :key="key">
             <!-- Enum → select -->
             <div v-if="propSchema.enum">
@@ -169,19 +165,15 @@
             </div>
           </template>
         </div>
-      </div>
+      </details>
 
       <!-- Permissions (allowedUsers / allowedChannels / allowedChats) -->
-      <div v-if="Object.keys(permissionProperties).length" class="border border-piedra-700/50 rounded-xl p-4">
-        <button
-          type="button"
-          @click="permissionsExpanded = !permissionsExpanded"
-          class="flex items-center gap-1.5 text-[11px] text-arena-500 hover:text-arena-300 transition-colors cursor-pointer"
-        >
-          <Icon name="chevronRight" size="sm" class="transition-transform" :class="{ 'rotate-90': permissionsExpanded }" />
+      <details v-if="Object.keys(permissionProperties).length" class="group border border-piedra-700/40 rounded-xl">
+        <summary class="flex items-center justify-between px-4 py-3 cursor-pointer select-none text-xs font-medium text-arena-400 hover:text-arena-300">
           <span>Permissions</span>
-        </button>
-        <div v-if="permissionsExpanded" class="mt-3 space-y-4">
+          <Icon name="chevronDown" size="md" class="text-arena-500 transition-transform group-open:rotate-180" />
+        </summary>
+        <div class="px-4 pb-4 space-y-4">
           <template v-for="(propSchema, key) in permissionProperties" :key="key">
             <div>
               <FormLabel :label="propSchema.title || key" :required="isFieldRequired(key)" />
@@ -194,7 +186,7 @@
             </div>
           </template>
         </div>
-      </div>
+      </details>
 
       <!-- Token (edit only) -->
       <div v-if="isEdit && form.token">
@@ -240,8 +232,6 @@ const editId = ref(null)
 const isEdit = ref(false)
 const tokenVisible = ref(false)
 const showAllEntities = ref(false)
-const permissionsExpanded = ref(false)
-const optionsExpanded = ref(false)
 const maxVisibleEntities = 6
 
 const totalEntities = computed(() => store.agents.length + store.flows.length)
@@ -420,8 +410,6 @@ function open(client = null) {
   form.token = client?.token || ''
   tokenVisible.value = false
   showAllEntities.value = false
-  permissionsExpanded.value = false
-  optionsExpanded.value = false
   dialogRef.value?.open()
 }
 
