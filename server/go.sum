@@ -11,8 +11,8 @@ github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/a2aproject/a2a-go v0.3.3 h1:NqGDw2c8hCSW3/9MakeeRpw5yCZUUmW2Y/yINV15GwQ=
 github.com/a2aproject/a2a-go v0.3.3/go.mod h1:8C0O6lsfR7zWFEqVZz/+zWCoxe8gSWpknEpqm/Vgj3E=
-github.com/achetronic/adk-utils-go v0.9.0 h1:WBH075eqJk6qMzSHAYnV+CyKc9P5l28SeXTaDyK2N9w=
-github.com/achetronic/adk-utils-go v0.9.0/go.mod h1:9/8fMfP8VMIy3wU4Lgctw6ksrKxpuRKYo6vUEcQqTeg=
+github.com/achetronic/adk-utils-go v0.9.1 h1:e8MXfscsQAz4dRwufMPyyuoGiEqox14UbeUPzmfEAD0=
+github.com/achetronic/adk-utils-go v0.9.1/go.mod h1:9/8fMfP8VMIy3wU4Lgctw6ksrKxpuRKYo6vUEcQqTeg=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/anthropics/anthropic-sdk-go v1.19.0 h1:mO6E+ffSzLRvR/YUH9KJC0uGw0uV8GjISIuzem//3KE=
