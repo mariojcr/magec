@@ -283,16 +283,27 @@ const flowItems = [
 ]
 
 function onToolbarDragStart(e, item) {
+  const dragType = item.type === 'agent' ? 'agent' : item.subtype
   e.dataTransfer.effectAllowed = 'copy'
-  e.dataTransfer.setData('text/plain', JSON.stringify({
-    type: item.type === 'agent' ? 'agent' : item.subtype,
-    fromToolbar: true,
-  }))
-  document.body.classList.add('flow-dragging-from-toolbar')
+  e.dataTransfer.setData('text/plain', JSON.stringify({ type: dragType, fromToolbar: true }))
+  document.body.dataset.toolbarDragType = dragType
+}
+
+function stripPlaceholders(step) {
+  if (!step?.steps) return step
+  return {
+    ...step,
+    steps: step.steps
+      .filter(s => !s.__placeholder)
+      .map(s => s.steps ? stripPlaceholders(s) : s),
+  }
 }
 
 function onToolbarDragEnd() {
-  document.body.classList.remove('flow-dragging-from-toolbar')
+  delete document.body.dataset.toolbarDragType
+  if (props.modelValue) {
+    emit('update:modelValue', stripPlaceholders(props.modelValue))
+  }
 }
 
 onMounted(() => {
