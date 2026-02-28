@@ -123,9 +123,16 @@
       >
         <template #item="{ element, index }">
           <div class="flow-item-wrap" :class="isHorizontal ? 'flow-item-wrap-h' : 'flow-item-wrap-v'">
-            <div v-if="dropHighlight && dropIndex === index"
-              class="drop-indicator" :class="isHorizontal ? 'drop-indicator-h' : 'drop-indicator-v'" />
+            <div v-if="element.__placeholder" class="flow-ghost-wrap">
+              <FlowBlock
+                :step="ghostStep(element.__placeholderType)"
+                :agents="agents"
+                :is-root="false"
+                :parent-type="step.type"
+              />
+            </div>
             <FlowBlock
+              v-else
               :step="element"
               :agents="agents"
               :is-root="false"
@@ -133,8 +140,6 @@
               @update="updateChild(index, $event)"
               @remove="removeChild(index)"
             />
-            <div v-if="dropHighlight && dropIndex === (step.steps?.length || 0) && index === (step.steps?.length || 0) - 1"
-              class="drop-indicator drop-indicator-after" :class="isHorizontal ? 'drop-indicator-h' : 'drop-indicator-v'" />
           </div>
         </template>
       </draggable>
@@ -168,59 +173,107 @@ const props = defineProps({
 
 const emit = defineEmits(['update', 'remove'])
 
-// ── drop state ───────────────────────────────────────────────────────────────
-const dropZoneRef  = ref(null)
-const dropHighlight = ref(false)
-const dropIndex    = ref(null)
-let dragDepth = 0
+// ── helpers ─────────────────────────────────────────────────────────────────
+function emitSteps(steps) {
+  emit('update', { ...props.step, steps })
+}
 
-function hasToolbarPayload(e) {
-  return e.dataTransfer.types.includes('text/plain')
+function realSteps() {
+  return (props.step.steps || []).filter(s => !s.__placeholder)
+}
+
+function isToolbarDrag() {
+  return 'toolbarDragType' in document.body.dataset
+}
+
+function ghostStep(type) {
+  return type === 'agent'
+    ? { type: 'agent', agentId: '' }
+    : { type, steps: [] }
+}
+
+// ── toolbar drop (native HTML5 drag) ────────────────────────────────────────
+const dropZoneRef      = ref(null)
+const dropHighlight    = ref(false)
+const placeholderIndex = ref(null)
+const DEAD_ZONE        = 12
+
+function makePlaceholder() {
+  return {
+    __key: '__toolbar_placeholder__',
+    __placeholder: true,
+    __placeholderType: document.body.dataset.toolbarDragType || 'agent',
+  }
 }
 
 function computeDropIndex(e) {
-  if (!dropZoneRef.value) return props.step.steps?.length || 0
+  if (!dropZoneRef.value) return realSteps().length
 
-  const allWraps    = dropZoneRef.value.querySelectorAll('.flow-item-wrap')
-  const directWraps = [...allWraps].filter(el => el.closest('.flow-drop-zone') === dropZoneRef.value)
+  const directWraps = [...dropZoneRef.value.querySelectorAll('.flow-item-wrap')]
+    .filter(el => el.closest('.flow-drop-zone') === dropZoneRef.value && !el.querySelector('.flow-ghost-wrap'))
   if (!directWraps.length) return 0
 
   const horizontal = isHorizontal.value
+  const cursor = horizontal ? e.clientX : e.clientY
   for (const [i, wrap] of directWraps.entries()) {
-    const rect   = wrap.getBoundingClientRect()
-    const cursor = horizontal ? e.clientX : e.clientY
-    const mid    = horizontal ? rect.left + rect.width * 0.5 : rect.top + rect.height * 0.5
+    const rect = wrap.getBoundingClientRect()
+    const mid  = horizontal ? rect.left + rect.width * 0.5 : rect.top + rect.height * 0.5
     if (cursor < mid) return i
   }
   return directWraps.length
 }
 
+function cursorInsidePlaceholder(e) {
+  if (placeholderIndex.value === null || !dropZoneRef.value) return false
+  const wrap = dropZoneRef.value.querySelector('.flow-ghost-wrap')?.closest('.flow-item-wrap')
+  if (!wrap) return false
+  const rect = wrap.getBoundingClientRect()
+  const horizontal = isHorizontal.value
+  const cursor = horizontal ? e.clientX : e.clientY
+  const start  = horizontal ? rect.left  : rect.top
+  const end    = horizontal ? rect.right : rect.bottom
+  return cursor >= start - DEAD_ZONE && cursor <= end + DEAD_ZONE
+}
+
+function movePlaceholder(e) {
+  const index = computeDropIndex(e)
+  if (placeholderIndex.value === index) return
+  if (cursorInsidePlaceholder(e)) return
+  const steps = realSteps()
+  steps.splice(index, 0, makePlaceholder())
+  placeholderIndex.value = index
+  emitSteps(steps)
+}
+
+function removePlaceholder() {
+  if (placeholderIndex.value === null) return
+  placeholderIndex.value = null
+  emitSteps(realSteps())
+}
+
 function onDragEnter(e) {
-  if (!hasToolbarPayload(e)) return
-  dragDepth++
+  if (!isToolbarDrag()) return
   dropHighlight.value = true
-  dropIndex.value = computeDropIndex(e)
+  movePlaceholder(e)
 }
 
 function onDragOver(e) {
-  if (!hasToolbarPayload(e)) return
+  if (!isToolbarDrag()) return
   e.dataTransfer.dropEffect = 'copy'
-  dropIndex.value = computeDropIndex(e)
+  movePlaceholder(e)
 }
 
-function onDragLeave() {
-  if (--dragDepth <= 0) {
-    dragDepth = 0
-    dropHighlight.value = false
-    dropIndex.value = null
-  }
+function onDragLeave(e) {
+  if (!isToolbarDrag()) return
+  if (e.relatedTarget && dropZoneRef.value?.contains(e.relatedTarget)) return
+  dropHighlight.value = false
+  removePlaceholder()
 }
 
 function onDrop(e) {
-  const insertAt = dropIndex.value ?? props.step.steps?.length ?? 0
-  dragDepth = 0
   dropHighlight.value = false
-  dropIndex.value = null
+  const insertAt = placeholderIndex.value ?? realSteps().length
+  placeholderIndex.value = null
 
   try {
     const data = JSON.parse(e.dataTransfer.getData('text/plain') || 'null')
@@ -231,14 +284,15 @@ function onDrop(e) {
       : { type: data.type, steps: [], ...(data.type === 'loop' ? { maxIterations: 3 } : {}) }
 
     addStepAt(newStep, insertAt)
-  } catch { /* */ }
+  } catch { /* invalid payload — ignore */ }
 }
 
-// ── step management ──────────────────────────────────────────────────────────
+// ── step management (shared by both drag systems) ───────────────────────────
 let keyCounter = 0
 
 function ensureKeys(steps) {
   steps?.forEach(s => {
+    if (s.__placeholder) return
     if (!s.__key) s.__key = `k${++keyCounter}`
     if (s.steps) ensureKeys(s.steps)
   })
@@ -248,23 +302,23 @@ watch(() => props.step.steps, ensureKeys, { immediate: true, deep: true })
 
 function addStepAt(newStep, index) {
   newStep.__key = `k${++keyCounter}`
-  const steps = [...(props.step.steps || [])]
+  const steps = realSteps()
   steps.splice(index, 0, newStep)
-  emit('update', { ...props.step, steps })
+  emitSteps(steps)
 }
 
 function updateChild(index, newChild) {
   const steps = [...props.step.steps]
   steps[index] = newChild
-  emit('update', { ...props.step, steps })
+  emitSteps(steps)
 }
 
 function removeChild(index) {
-  emit('update', { ...props.step, steps: props.step.steps.filter((_, i) => i !== index) })
+  emitSteps(props.step.steps.filter((s, i) => i !== index && !s.__placeholder))
 }
 
 function onDragChange() {
-  emit('update', { ...props.step, steps: [...props.step.steps] })
+  emitSteps([...realSteps()])
 }
 
 // ── agent picker ─────────────────────────────────────────────────────────────
@@ -311,17 +365,16 @@ const agentName = computed(() => {
   return a?.name || props.step.agentId || 'Select agent...'
 })
 
-const typeLabel = computed(() => ({ sequential: 'Sequential', parallel: 'Parallel', loop: 'Loop' })[props.step.type] || props.step.type)
-
-const colors         = computed(() => COLORS[props.step.type] || COLORS.sequential)
-const containerClass = computed(() => `rounded-xl border transition-all duration-150 bg-piedra-900/60 ${colors.value.border}`)
+const typeLabel       = computed(() => ({ sequential: 'Sequential', parallel: 'Parallel', loop: 'Loop' })[props.step.type] || props.step.type)
+const colors          = computed(() => COLORS[props.step.type] || COLORS.sequential)
+const containerClass  = computed(() => `rounded-xl border transition-all duration-150 bg-piedra-900/60 ${colors.value.border}`)
 const dropActiveClass = computed(() => colors.value.dropActive)
-const headerClass    = computed(() => colors.value.header)
-const labelClass     = computed(() => colors.value.label)
-const badgeClass     = computed(() => colors.value.badge)
-const emptyClass     = computed(() => colors.value.empty)
-const isHorizontal   = computed(() => props.step.type === 'sequential' || props.step.type === 'loop')
-const dragAreaClass  = computed(() => isHorizontal.value ? 'flex flex-row flex-nowrap items-center gap-0' : 'flex flex-col gap-2.5')
+const headerClass     = computed(() => colors.value.header)
+const labelClass      = computed(() => colors.value.label)
+const badgeClass      = computed(() => colors.value.badge)
+const emptyClass      = computed(() => colors.value.empty)
+const isHorizontal    = computed(() => props.step.type === 'sequential' || props.step.type === 'loop')
+const dragAreaClass   = computed(() => isHorizontal.value ? 'flex flex-row flex-nowrap items-center gap-0' : 'flex flex-col gap-2.5')
 
 // ── container controls ───────────────────────────────────────────────────────
 const TYPE_ORDER = ['sequential', 'parallel', 'loop']
@@ -344,12 +397,10 @@ function editIterations() {
 .flow-agent,
 .flow-container { position: relative; }
 
-/* item wrapper */
 .flow-item-wrap   { position: relative; flex-shrink: 0; }
 .flow-item-wrap-h { display: flex; align-items: center; }
 .flow-item-wrap-v { display: flex; flex-direction: column; }
 
-/* sequential arrow between items */
 .flow-item-wrap-h:not(:last-child)::after {
   content: '›';
   display: flex;
@@ -363,28 +414,12 @@ function editIterations() {
   opacity: 0.7;
 }
 
-/* drop indicator — position:absolute so it never shifts layout */
-.drop-indicator {
-  position: absolute;
+.flow-ghost-wrap {
   pointer-events: none;
-  z-index: 20;
-  border-radius: 4px;
-  background: rgba(245, 158, 11, 0.75); /* sol-500 */
-  animation: slot-pulse 0.6s ease-in-out infinite alternate;
+  opacity: 0.25;
+  border-radius: 0.75rem;
 }
 
-.drop-indicator-h              { width: 6px; top: 0; bottom: 0; left: -12px; }
-.drop-indicator-h.drop-indicator-after { left: auto; right: -12px; }
-
-.drop-indicator-v              { height: 6px; left: 0; right: 0; top: -12px; }
-.drop-indicator-v.drop-indicator-after { top: auto; bottom: -12px; }
-
-@keyframes slot-pulse {
-  from { opacity: 0.25; }
-  to   { opacity: 0.55; }
-}
-
-/* agent picker dropdown */
 .dropdown-enter-active { transition: all 0.15s ease-out; }
 .dropdown-leave-active { transition: all 0.1s ease-in; }
 .dropdown-enter-from,
