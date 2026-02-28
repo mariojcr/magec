@@ -45,7 +45,6 @@ ARG TARGETARCH
 
 WORKDIR /build
 
-COPY adk-utils-go/ /adk-utils-go/
 COPY server/go.mod server/go.sum ./
 RUN go mod download
 

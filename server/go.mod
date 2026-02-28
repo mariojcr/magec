@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/a2aproject/a2a-go v0.3.3
-	github.com/achetronic/adk-utils-go v0.8.2
+	github.com/achetronic/adk-utils-go v0.9.0
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/google/jsonschema-go v0.3.0
@@ -24,8 +24,6 @@ require (
 	google.golang.org/genai v1.40.0
 	gopkg.in/yaml.v3 v3.0.1
 )
-
-replace github.com/achetronic/adk-utils-go => ../adk-utils-go
 
 require (
 	charm.land/catwalk v0.25.0 // indirect
