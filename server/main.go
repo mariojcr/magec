@@ -138,10 +138,8 @@ func main() {
 		}
 	}()
 
-	// cwRegistry caches LLM context window sizes fetched from Crush.
-	// It starts a background goroutine that refreshes every 6 hours.
+	// cwRegistry provides LLM context window sizes from catwalk's embedded database.
 	cwRegistry := contextguard.NewCrushRegistry()
-	cwRegistry.Start(ctx)
 
 	// A2A (Agent-to-Agent) protocol handler
 	a2aPublicURL := cfg.Server.PublicURL
@@ -300,7 +298,6 @@ func main() {
 		slog.Info("Shutting down...")
 		cronScheduler.Stop()
 		cm.stop()
-		cwRegistry.Stop()
 		if voiceDetector != nil {
 			voiceDetector.Close()
 		}
